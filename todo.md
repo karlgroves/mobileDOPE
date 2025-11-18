@@ -140,7 +140,7 @@
 - [x] Create optional light theme color palette
 - [x] Define typography scale (large, field-readable fonts)
 - [x] Create night-vision compatible red mode (optional)
-- [ ] Create button component with large touch targets
+- [x] Create button component with large touch targets (Button component with 44-72pt touch targets)
 - [ ] Create input field component with large touch targets
 - [ ] Create high-contrast form components
 - [ ] Implement theme switching mechanism
@@ -156,17 +156,18 @@
 - [ ] Create deep linking structure for future use - To be implemented later
 
 ### Common Components
-- [ ] Create reusable Card component
-- [ ] Create reusable List component
-- [ ] Create reusable Modal/Dialog component
+- [x] Create reusable Card component
+- [x] Create reusable List component (ListItem)
+- [x] Create reusable Modal/Dialog component
 - [ ] Create IconButton component
 - [ ] Create SegmentedControl component (for MIL/MOA switching)
 - [ ] Create NumberPicker component (for distance selection)
 - [ ] Create UnitToggle component (yards/meters, MIL/MOA)
 - [ ] Create ConfirmationDialog component
-- [ ] Create LoadingSpinner component
-- [ ] Create EmptyState component
-- [ ] Create ErrorBoundary component
+- [x] Create LoadingSpinner component
+- [x] Create EmptyState component
+- [x] Create ErrorBoundary component
+- [x] Create Button component (with variants: primary/secondary/danger and sizes)
 
 ---
 
