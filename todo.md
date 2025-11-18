@@ -192,11 +192,11 @@
 - [ ] Implement sort by name, caliber, last used (basic sort by name implemented)
 
 ### Rifle Profile Data
-- [ ] Create comprehensive caliber database (.308, 6.5 CM, .45-70, etc.)
-- [ ] Create optic manufacturer database
-- [ ] Create reticle type database
-- [ ] Add custom caliber entry option
-- [ ] Add custom optic entry option
+- [x] Create comprehensive caliber database (.308, 6.5 CM, .45-70, etc.) (50+ calibers organized by category)
+- [x] Create optic manufacturer database (27 manufacturers)
+- [x] Create reticle type database (40+ reticles with MIL/MOA types)
+- [x] Add custom caliber entry option (via TextInput)
+- [x] Add custom optic entry option (via TextInput)
 
 ---
 
@@ -221,10 +221,10 @@
 - [x] Add validation for realistic velocity ranges
 
 ### Ammo Data
-- [ ] Create ammunition manufacturer database
-- [ ] Create bullet type database
-- [ ] Add factory load database with known BC/velocity values
-- [ ] Allow custom ammo entry
+- [x] Create ammunition manufacturer database (23 manufacturers)
+- [x] Create bullet type database (45+ bullet types with descriptions)
+- [ ] Add factory load database with known BC/velocity values (deferred - users enter from box)
+- [x] Allow custom ammo entry (via form)
 
 ### Chronograph Integration
 - [ ] Design velocity entry interface
