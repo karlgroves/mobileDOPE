@@ -147,13 +147,13 @@
 - [ ] Test color contrast ratios for accessibility
 
 ### Navigation Structure
-- [ ] Design navigation architecture (tabs, stack, drawer)
-- [ ] Implement main tab navigator (Dashboard, Profiles, Range, Calculator, Logs)
-- [ ] Implement stack navigation for drill-down screens
-- [ ] Create navigation animations suitable for field use
-- [ ] Implement back button handling
-- [ ] Add navigation state persistence
-- [ ] Create deep linking structure for future use
+- [x] Design navigation architecture (tabs, stack, drawer)
+- [x] Implement main tab navigator (Dashboard, Profiles, Range, Calculator, Logs)
+- [x] Implement stack navigation for drill-down screens (Profiles, Range, Calculator, Logs)
+- [x] Implement back button handling (default React Navigation behavior)
+- [ ] Create navigation animations suitable for field use - Using defaults for now
+- [ ] Add navigation state persistence - To be implemented later
+- [ ] Create deep linking structure for future use - To be implemented later
 
 ### Common Components
 - [ ] Create reusable Card component
@@ -743,3 +743,19 @@
 
 ---
 
+
+## State Management
+
+### Zustand Stores
+- [x] App store (settings, theme, initialization state)
+- [x] Rifle store (rifle profiles, selected rifle)
+- [x] Ammo store (ammo profiles, selected ammo)
+- [x] DOPE store (DOPE logs, filtering)
+
+### App Initialization
+- [x] Database initialization on app start
+- [x] Migration runner integration
+- [x] Loading state handling
+- [x] Error state handling
+
+---
