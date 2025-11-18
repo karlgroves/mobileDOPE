@@ -1,8 +1,12 @@
 export { Button } from './Button';
 export { Card } from './Card';
+export { ConfirmationDialog } from './ConfirmationDialog';
 export { EmptyState } from './EmptyState';
 export { ErrorBoundary } from './ErrorBoundary';
+export { IconButton } from './IconButton';
 export { ListItem } from './ListItem';
 export { LoadingSpinner } from './LoadingSpinner';
 export { Modal } from './Modal';
+export { NumberInput } from './NumberInput';
+export { Picker } from './Picker';
 export { TextInput } from './TextInput';
