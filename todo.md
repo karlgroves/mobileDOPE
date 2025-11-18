@@ -241,26 +241,26 @@
 ## Feature: Environmental Data
 
 ### Environmental Input
-- [ ] Design environmental data entry screen
-- [ ] Implement manual temperature input
-- [ ] Implement manual humidity input
-- [ ] Implement manual barometric pressure input
-- [ ] Implement manual altitude input
-- [ ] Implement wind speed input (constant or gusting range)
-- [ ] Implement wind direction picker (compass rose UI)
-- [ ] Add light conditions slider (day/night)
-- [ ] Implement density altitude calculation and display
-- [ ] Add presets for common conditions
+- [x] Design environmental data entry screen
+- [x] Implement manual temperature input
+- [x] Implement manual humidity input
+- [x] Implement manual barometric pressure input
+- [x] Implement manual altitude input
+- [x] Implement wind speed input (constant or gusting range)
+- [x] Implement wind direction picker (compass rose UI)
+- [ ] Add light conditions slider (day/night) - Deferred to Phase 2
+- [x] Implement density altitude calculation and display
+- [x] Add presets for common conditions (Standard, Hot, Cold, High Altitude)
 
 ### Sensor Integration
-- [ ] Request device sensor permissions
-- [ ] Access device barometer (if available)
-- [ ] Access device GPS for altitude and latitude
-- [ ] Access device temperature sensor (if available)
-- [ ] Implement sensor data refresh mechanism
-- [ ] Add sensor availability detection
-- [ ] Implement fallback to manual entry when sensors unavailable
-- [ ] Add sensor calibration options
+- [x] Request device sensor permissions (Location for GPS)
+- [ ] Access device barometer (if available) - Deferred (not widely available on mobile)
+- [x] Access device GPS for altitude and latitude
+- [ ] Access device temperature sensor (if available) - Deferred (not available on mobile)
+- [x] Implement sensor data refresh mechanism (GPS fetch on demand)
+- [x] Add sensor availability detection (Location services check)
+- [x] Implement fallback to manual entry when sensors unavailable
+- [ ] Add sensor calibration options - Deferred to Phase 2
 
 ### Environmental Snapshot Management
 - [ ] Auto-save environmental snapshot with each DOPE log
