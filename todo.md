@@ -273,21 +273,21 @@
 ## Feature: Ballistic Calculator
 
 ### Calculator UI
-- [ ] Design ballistic calculator screen
-- [ ] Add rifle profile selector
-- [ ] Add ammo profile selector
-- [ ] Add target distance input
-- [ ] Add shooting angle input (incline/decline)
-- [ ] Add current environmental conditions section
-- [ ] Implement "Calculate" button
-- [ ] Display elevation correction prominently
-- [ ] Display windage correction table
-- [ ] Display time of flight
-- [ ] Display velocity at target
-- [ ] Display energy at target
-- [ ] Add unit toggle (MIL/MOA, yards/meters)
-- [ ] Add distance presets (100, 200, 300, 400, 500, 600+ yards)
-- [ ] Implement one-tap distance selection
+- [x] Design ballistic calculator screen
+- [x] Add rifle profile selector
+- [x] Add ammo profile selector
+- [x] Add target distance input
+- [x] Add shooting angle input (incline/decline)
+- [x] Add current environmental conditions section
+- [x] Implement "Calculate" button
+- [x] Display elevation correction prominently
+- [x] Display windage correction (single value for current wind)
+- [x] Display time of flight
+- [x] Display velocity at target
+- [x] Display energy at target
+- [x] Add unit toggle (MIL/MOA, yards/meters)
+- [x] Add distance presets (100, 200, 300, 400, 500, 600+ yards)
+- [x] Implement one-tap distance selection
 
 ### Calculator Features
 - [ ] Generate full wind table (0-20mph, various angles)
