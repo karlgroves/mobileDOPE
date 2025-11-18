@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   message: {
     marginTop: theme.spacing.md,
     color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
   },
 });

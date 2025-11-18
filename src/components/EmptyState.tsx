@@ -53,14 +53,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: theme.typography.fontSize.extraLarge,
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: '600',
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   message: {
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginBottom: theme.spacing.lg,

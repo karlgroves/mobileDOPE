@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   title: {
-    fontSize: theme.typography.fontSize.large,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.text.primary,
     flex: 1,

@@ -76,12 +76,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
     color: theme.colors.text.primary,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.small,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
     marginTop: 2,
   },
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rightText: {
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.text.secondary,
     marginRight: theme.spacing.sm,
   },

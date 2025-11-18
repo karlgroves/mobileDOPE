@@ -119,24 +119,24 @@ const styles = StyleSheet.create({
   },
   text_primary: {
     color: theme.colors.text.inverse,
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
   },
   text_secondary: {
     color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
   },
   text_danger: {
     color: theme.colors.text.inverse,
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
   },
   text_small: {
-    fontSize: theme.typography.fontSize.small,
+    fontSize: theme.typography.fontSize.sm,
   },
   text_medium: {
-    fontSize: theme.typography.fontSize.medium,
+    fontSize: theme.typography.fontSize.md,
   },
   text_large: {
-    fontSize: theme.typography.fontSize.large,
+    fontSize: theme.typography.fontSize.lg,
   },
   text_disabled: {
     opacity: 1,
