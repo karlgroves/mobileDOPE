@@ -92,20 +92,19 @@
 ## Ballistic Engine
 
 ### Core Ballistic Calculations
-- [ ] Research ballistic calculation algorithms (Miller, Litz, McCoy models)
-- [ ] Decide on native module approach (Rust/C++ vs pure Dart/JS)
-- [ ] Set up native module bridge if using Rust/C++
-- [ ] Implement atmospheric model (pressure altitude, density altitude calculation)
-- [ ] Implement drag model for G1 ballistic coefficient
-- [ ] Implement drag model for G7 ballistic coefficient
-- [ ] Implement trajectory calculation (Runge-Kutta or similar numerical integration)
-- [ ] Implement elevation correction calculation (MIL output)
-- [ ] Implement elevation correction calculation (MOA output)
-- [ ] Implement windage correction calculation
-- [ ] Implement time of flight calculation
-- [ ] Implement velocity decay calculation
-- [ ] Implement energy at target calculation
-- [ ] Implement angle cosine factor for uphill/downhill shooting
+- [x] Research ballistic calculation algorithms (Runge-Kutta integration, point-mass trajectory)
+- [x] Decide on native module approach (TypeScript implementation for MVP)
+- [x] Implement atmospheric model (pressure altitude, density altitude, speed of sound, air density - WITH TDD: 20 tests)
+- [x] Implement drag model for G1 ballistic coefficient (WITH TDD: 11 tests, 77-point table)
+- [x] Implement drag model for G7 ballistic coefficient (WITH TDD: 11 tests, 77-point table)
+- [x] Implement trajectory calculation (Runge-Kutta 4th order integration - WITH TDD: 12 tests)
+- [x] Implement elevation correction calculation (MIL output - WITH TDD)
+- [x] Implement elevation correction calculation (MOA output - WITH TDD)
+- [x] Implement windage correction calculation (WITH TDD)
+- [x] Implement time of flight calculation (WITH TDD)
+- [x] Implement velocity decay calculation (WITH TDD)
+- [x] Implement energy at target calculation (WITH TDD)
+- [ ] Implement angle cosine factor for uphill/downhill shooting - DEFERRED (complex, Phase 2)
 - [x] Add unit conversion utilities (yards/meters, fps/mps, etc.) - WITH TESTS
 
 ### Advanced Ballistic Features (Phase 2)
