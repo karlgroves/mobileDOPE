@@ -302,32 +302,32 @@
 ## Feature: DOPE Logging
 
 ### DOPE Log Entry
-- [ ] Design DOPE log entry screen
-- [ ] Implement quick-entry mode for field use
-- [ ] Add rifle profile auto-selection (from last used)
-- [ ] Add ammo profile auto-selection (from last used)
-- [ ] Add distance quick-select buttons
-- [ ] Add drop correction input (MIL/MOA)
-- [ ] Add windage correction input (MIL/MOA)
-- [ ] Add target type selector (steel, paper, vital zone)
-- [ ] Add group size input
-- [ ] Add POI marking on target image
-- [ ] Add notes field
-- [ ] Auto-populate environmental data
-- [ ] Add timestamp (auto or manual)
-- [ ] Implement one-tap save
-- [ ] Add voice input support for hands-free logging
+- [x] Design DOPE log entry screen
+- [x] Implement quick-entry mode for field use
+- [x] Add rifle profile auto-selection (from last used)
+- [x] Add ammo profile auto-selection (from last used)
+- [x] Add distance quick-select buttons (100-1000 yard presets)
+- [x] Add drop correction input (MIL/MOA)
+- [x] Add windage correction input (MIL/MOA)
+- [x] Add target type selector (steel, paper, vital zone, other)
+- [x] Add group size input
+- [ ] Add POI marking on target image - Deferred to Phase 2
+- [x] Add notes field
+- [x] Auto-populate environmental data
+- [x] Add timestamp (auto or manual)
+- [x] Implement one-tap save
+- [ ] Add voice input support for hands-free logging - Deferred to Phase 2
 
 ### DOPE Log Viewing
-- [ ] Design DOPE log list screen
-- [ ] Implement DOPE log table view
-- [ ] Add filtering by rifle, ammo, date, distance
-- [ ] Add sorting options
-- [ ] Implement DOPE log detail view
-- [ ] Allow editing of saved DOPE logs
-- [ ] Allow deletion of DOPE logs
-- [ ] Display environmental conditions for each log
-- [ ] Show attached target images
+- [x] Design DOPE log list screen
+- [x] Implement DOPE log table view (card-based list)
+- [ ] Add filtering by rifle, ammo, date, distance - Deferred to Phase 2
+- [ ] Add sorting options - Deferred to Phase 2
+- [x] Implement DOPE log detail view
+- [x] Allow editing of saved DOPE logs
+- [x] Allow deletion of DOPE logs
+- [x] Display environmental conditions for each log
+- [ ] Show attached target images - Deferred to Phase 2
 
 ### DOPE Visualization
 - [ ] Design ballistic curve graph view
