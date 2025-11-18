@@ -290,12 +290,12 @@
 - [x] Implement one-tap distance selection
 
 ### Calculator Features
-- [ ] Generate full wind table (0-20mph, various angles)
-- [ ] Display wind table in scrollable view
-- [ ] Implement moving target lead calculator
-- [ ] Add "Save to DOPE Log" quick action
-- [ ] Add comparison mode (compare two ammo profiles)
-- [ ] Export calculator results as PDF/image
+- [x] Generate full wind table (0-20mph, various angles)
+- [x] Display wind table in scrollable view
+- [ ] Implement moving target lead calculator - Deferred to Phase 2
+- [ ] Add "Save to DOPE Log" quick action - Requires DOPE logging feature
+- [ ] Add comparison mode (compare two ammo profiles) - Deferred to Phase 2
+- [ ] Export calculator results as PDF/image - Deferred to Phase 2
 
 ---
 
