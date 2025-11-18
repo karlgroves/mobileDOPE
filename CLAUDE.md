@@ -84,7 +84,69 @@ The app centers around four main entities:
 
 ## Development Commands
 
-(These will be populated once the project structure is established. Common commands will include building for iOS/Android, running tests, linting, and starting the development server.)
+### Running the App
+
+```bash
+npm start              # Start Expo development server
+npm run android        # Run on Android device/emulator
+npm run ios            # Run on iOS device/simulator
+npm run web            # Run in web browser
+```
+
+### Code Quality
+
+```bash
+npm run lint           # Run ESLint
+npm run lint:fix       # Fix ESLint issues automatically
+npm run format         # Format code with Prettier
+npm run format:check   # Check code formatting
+npm run type-check     # Run TypeScript type checking
+npm test               # Run tests (placeholder for now)
+```
+
+### Building
+
+```bash
+# Development build
+APP_ENV=development eas build --profile development
+
+# Staging build
+APP_ENV=staging eas build --profile staging
+
+# Production build
+APP_ENV=production eas build --profile production
+```
+
+### Installed Dependencies
+
+**Core:**
+- React Native with Expo
+- TypeScript with strict mode
+- React Navigation (stack and tab navigators)
+- Zustand (state management)
+
+**Database & Storage:**
+- expo-sqlite (local database)
+- @react-native-async-storage/async-storage (settings storage)
+
+**Data & Utilities:**
+- date-fns (date/time utilities)
+- victory-native (charting for ballistic curves)
+
+**File Operations:**
+- expo-print (PDF generation)
+- expo-file-system (file operations)
+- expo-sharing (share files)
+
+**Device Features:**
+- expo-image-picker (camera and photo library)
+- expo-location (GPS, altitude)
+- expo-sensors (accelerometer, barometer, etc.)
+
+**Development:**
+- ESLint + Prettier (code quality)
+- TypeScript (type safety)
+- GitHub Actions (CI/CD)
 
 ## Ballistic Engine Notes
 

@@ -3,44 +3,44 @@
 ## Project Setup & Infrastructure
 
 ### Initial Setup
-- [ ] Decide between React Native vs Flutter framework
-- [ ] Initialize project with CLI tool (expo/react-native-cli or flutter create)
-- [ ] Set up version control and .gitignore
-- [ ] Configure TypeScript/Dart for type safety
-- [ ] Set up project folder structure (screens, components, services, models, utils)
-- [ ] Configure linting (ESLint/TSLint or Flutter analysis)
-- [ ] Set up code formatting (Prettier or dartfmt)
-- [ ] Create development, staging, and production build configurations
+- [x] Decide between React Native vs Flutter framework (React Native with Expo)
+- [x] Initialize project with CLI tool (expo/react-native-cli or flutter create)
+- [x] Set up version control and .gitignore (Git Flow with main/develop branches)
+- [x] Configure TypeScript/Dart for type safety (TypeScript with strict mode)
+- [x] Set up project folder structure (screens, components, services, models, utils)
+- [x] Configure linting (ESLint/TSLint or Flutter analysis)
+- [x] Set up code formatting (Prettier or dartfmt)
+- [x] Create development, staging, and production build configurations (app.config.ts, eas.json)
 
 ### Development Environment
-- [ ] Set up iOS development environment (Xcode, simulators)
-- [ ] Set up Android development environment (Android Studio, emulators)
-- [ ] Configure Metro bundler / Flutter build system
-- [ ] Set up hot reload and fast refresh
-- [ ] Configure debugging tools (React DevTools / Flutter DevTools)
-- [ ] Set up device testing on physical iOS and Android devices
+- [ ] Set up iOS development environment (Xcode, simulators) - User setup required
+- [ ] Set up Android development environment (Android Studio, emulators) - User setup required
+- [x] Configure Metro bundler / Flutter build system (Expo configured)
+- [x] Set up hot reload and fast refresh (Expo default)
+- [x] Configure debugging tools (React DevTools / Flutter DevTools) (Expo default)
+- [ ] Set up device testing on physical iOS and Android devices - User setup required
 
 ### Dependencies & Libraries
-- [ ] Install and configure SQLite database library (react-native-sqlite-storage or sqflite)
-- [ ] Install navigation library (React Navigation or Flutter Navigator)
-- [ ] Install state management solution (Redux/MobX/Context or Provider/Riverpod)
-- [ ] Install form handling library (Formik/react-hook-form or Flutter Form)
-- [ ] Install date/time utilities
-- [ ] Install charting/graphing library for ballistic curves
-- [ ] Install PDF generation library
-- [ ] Install CSV export library
-- [ ] Install image picker/camera library for target photos
-- [ ] Install device sensor access libraries (accelerometer, barometer, GPS)
-- [ ] Install async storage for app settings
+- [x] Install and configure SQLite database library (expo-sqlite)
+- [x] Install navigation library (@react-navigation/native, native-stack, bottom-tabs)
+- [x] Install state management solution (Zustand)
+- [ ] Install form handling library (react-hook-form) - To be added when needed
+- [x] Install date/time utilities (date-fns)
+- [x] Install charting/graphing library for ballistic curves (victory-native)
+- [x] Install PDF generation library (expo-print)
+- [ ] Install CSV export library - Will implement custom utility
+- [x] Install image picker/camera library for target photos (expo-image-picker)
+- [x] Install device sensor access libraries (expo-sensors, expo-location)
+- [x] Install async storage for app settings (@react-native-async-storage/async-storage)
 
 ### Build & CI/CD
-- [ ] Configure build scripts for iOS
-- [ ] Configure build scripts for Android
-- [ ] Set up automated testing pipeline
-- [ ] Configure code signing for iOS
-- [ ] Configure signing keys for Android
-- [ ] Set up continuous integration (GitHub Actions, CircleCI, or similar)
-- [ ] Configure automated build numbering
+- [x] Configure build scripts for iOS (eas.json)
+- [x] Configure build scripts for Android (eas.json)
+- [x] Set up automated testing pipeline (GitHub Actions CI workflow)
+- [ ] Configure code signing for iOS - User setup required (EAS)
+- [ ] Configure signing keys for Android - User setup required (EAS)
+- [x] Set up continuous integration (GitHub Actions)
+- [ ] Configure automated build numbering - Will configure with EAS
 
 ---
 
