@@ -616,6 +616,459 @@
 
 ---
 
+## Feature: DOPE-Assisted Aiming (Hybrid Ballistic + Historical System)
+
+### DOPE Matching Algorithm
+
+#### Query System
+- [ ] Implement DOPE query builder with configurable distance delta (Δ)
+- [ ] Add WHERE clause filtering by rifleId, ammoId, and distance range
+- [ ] Set default Δ = 50 yards (configurable in settings)
+- [ ] Create user preference for custom Δ values
+- [ ] Write unit tests for query builder with various distance ranges
+
+#### Relevance Scoring Engine
+- [ ] Design relevance scoring data structure (weights + factors)
+- [ ] Implement distance similarity calculation (Gaussian falloff)
+- [ ] Implement environment similarity calculation (ΔDA, ΔTemp, ΔPressure)
+- [ ] Implement recency factor calculation (time-decay function)
+- [ ] Implement shot quality metrics (group consistency, extreme spread penalization)
+- [ ] Implement barrel state matching (cold bore, shot count in session)
+- [ ] Create weighted scoring function combining all factors
+- [ ] Add configurable weight parameters (w_distance, w_environment, w_recency, etc.)
+- [ ] Optimize scoring to select top N=3-10 entries
+- [ ] Write unit tests for relevance scoring with known data sets
+
+#### Gaussian Falloff Implementation
+- [ ] Research optimal sigma value for distance similarity
+- [ ] Implement Gaussian distance similarity function: `exp(-((d1-d2)^2) / (2*sigma^2))`
+- [ ] Test falloff curves with different sigma values
+- [ ] Add sigma as configurable parameter
+
+#### Environmental Similarity Calculation
+- [ ] Implement ΔDA (density altitude delta) calculation between logs
+- [ ] Implement ΔTemp calculation with normalized weighting
+- [ ] Implement ΔPressure calculation with normalized weighting
+- [ ] Combine environmental deltas into single similarity score
+- [ ] Test environmental similarity with extreme conditions (sea level vs mountain)
+
+#### Recency Factor
+- [ ] Implement time-decay function (exponential or linear)
+- [ ] Add half-life parameter for decay (default: 6 months)
+- [ ] Test recency scoring with timestamps spanning years
+- [ ] Add option to disable recency weighting
+
+#### Shot Quality Metrics
+- [ ] Calculate group consistency score from groupSizeInches
+- [ ] Penalize logs with high extreme spread
+- [ ] Boost logs with tight groups (< 1 MOA)
+- [ ] Implement outlier detection for group sizes
+
+#### Barrel State Matching
+- [ ] Add coldBoreShot boolean field to DOPE logs
+- [ ] Add shotNumberInSession field to DOPE logs
+- [ ] Implement cold bore matching logic
+- [ ] Implement warm bore matching logic
+- [ ] Calculate barrel temperature state similarity
+
+---
+
+### Correction Offset Generation
+
+#### Solver Integration
+- [ ] Create interface between DOPE system and ballistic solver
+- [ ] Get solver predictions for historical DOPE entries (elevation, windage)
+- [ ] Store solver predictions alongside actual DOPE data
+- [ ] Handle cases where solver parameters differ from log time
+
+#### Offset Calculation
+- [ ] Implement elevation offset calculation: `mean(actualElevationMil - solverElevationMil)`
+- [ ] Implement windage offset calculation: `mean(actualWindMil - solverWindMil)`
+- [ ] Apply relevance score weighting to offset means
+- [ ] Handle edge cases (no matching DOPE, single data point)
+
+#### Offset Application
+- [ ] Apply elevation offset to solver predictions: `solverElevationMil + offsetElevation`
+- [ ] Apply windage offset to solver predictions: `solverWindMil + offsetWind`
+- [ ] Display both raw solver and adjusted predictions in UI
+- [ ] Add toggle to disable DOPE adjustments (solver-only mode)
+
+#### Testing
+- [ ] Write unit tests for offset calculations with mock data
+- [ ] Test weighted offset with varying relevance scores
+- [ ] Test edge cases (zero matching DOPE, all perfect matches)
+- [ ] Validate against real-world DOPE data sets
+
+---
+
+### Interpolation for Missing Distances
+
+#### Cubic Spline Implementation
+- [ ] Research cubic spline interpolation algorithms
+- [ ] Implement natural cubic spline for elevation data
+- [ ] Implement natural cubic spline for windage data
+- [ ] Handle boundary conditions (start/end of curve)
+- [ ] Test spline smoothness and accuracy
+
+#### Linear Interpolation Fallback
+- [ ] Implement 2-point linear interpolation
+- [ ] Use linear interpolation when only 2 DOPE points exist
+- [ ] Use linear interpolation for distances outside spline range (extrapolation)
+- [ ] Add warning when extrapolating beyond known DOPE
+
+#### Blending Algorithm
+- [ ] Implement blending function: `α * dopeInterpolated + (1 - α) * solverPrediction`
+- [ ] Set default α = 0.7 (favor DOPE)
+- [ ] Make α configurable in settings
+- [ ] Adjust α based on DOPE density (more DOPE = higher α)
+- [ ] Adjust α based on confidence score
+- [ ] Display blend ratio in UI ("70% DOPE, 30% solver")
+
+#### Distance Coverage Analysis
+- [ ] Calculate DOPE coverage percentage for rifle+ammo combo
+- [ ] Identify gaps in DOPE data (missing distance ranges)
+- [ ] Suggest distances to practice based on gaps
+- [ ] Display DOPE coverage visualization (timeline/graph)
+
+#### Testing
+- [ ] Write unit tests for cubic spline with known curves
+- [ ] Test linear interpolation accuracy
+- [ ] Test blending with various α values
+- [ ] Test extrapolation beyond max/min DOPE distances
+
+---
+
+### Environmental Adjustment Engine (ΔDA Modeling)
+
+#### Density Altitude Computation
+- [ ] Implement computeDA(temperature, pressure, altitude) function
+- [ ] Use standard atmosphere formulas
+- [ ] Validate DA calculations against published tables
+- [ ] Test with extreme conditions (Death Valley, Mt. Everest)
+
+#### ΔDA Delta Calculation
+- [ ] Calculate DA for historical DOPE log: `DA_log = computeDA(envLog)`
+- [ ] Calculate DA for current conditions: `DA_now = computeDA(envCurrent)`
+- [ ] Calculate delta: `ΔDA = DA_now - DA_log`
+- [ ] Store ΔDA with each relevance-scored DOPE entry
+
+#### Solver Integration for Drop per ΔDA
+- [ ] Query solver for drop at DA_log
+- [ ] Query solver for drop at DA_now
+- [ ] Calculate drop delta: `deltaDrop = solverDrop(DA_now) - solverDrop(DA_log)`
+- [ ] Apply delta to historical DOPE: `adjustedElevation = actualElevationMil + deltaDrop`
+
+#### DOPE Adjustment Application
+- [ ] Apply DA adjustment to all matching DOPE entries
+- [ ] Recalculate relevance scores after adjustment
+- [ ] Display original vs DA-adjusted elevations in UI
+- [ ] Add toggle to view adjustments step-by-step
+
+#### Testing
+- [ ] Write unit tests for DA calculations
+- [ ] Test ΔDA adjustments with known ballistic tables
+- [ ] Validate sea-level DOPE adjusting to 5000ft altitude
+- [ ] Test extreme temperature differentials
+
+---
+
+### Wind Scaling Engine
+
+#### Wind Normalization
+- [ ] Calculate wind-per-mph: `windPerMph = actualWindMil / loggedWindSpeedMph`
+- [ ] Handle zero wind cases (no wind in log)
+- [ ] Store normalized wind values for each DOPE entry
+- [ ] Test normalization with crosswinds at various angles
+
+#### Current Condition Scaling
+- [ ] Scale normalized wind to current conditions: `windPerMph * currentWindEstimateMph`
+- [ ] Apply wind direction vector adjustments
+- [ ] Handle gusting wind (use average or max)
+- [ ] Add wind angle conversion (clock-to-value)
+
+#### Solver Blending for Wind
+- [ ] Get solver wind prediction for current conditions
+- [ ] Blend DOPE wind with solver wind: `α * DOPEWind + (1 - α) * solverWind`
+- [ ] Increase α when abundant DOPE wind data exists
+- [ ] Decrease α when wind data is sparse or inconsistent
+
+#### Wind Table Integration
+- [ ] Apply DOPE wind adjustments to full wind table (0-20mph)
+- [ ] Generate adjusted wind table for various angles
+- [ ] Display DOPE-adjusted vs solver-only wind tables
+- [ ] Highlight when DOPE significantly differs from solver
+
+#### Testing
+- [ ] Write unit tests for wind normalization
+- [ ] Test wind scaling with various mph values
+- [ ] Test wind angle conversions
+- [ ] Validate against known wind drift data
+
+---
+
+### Barrel State Modeling
+
+#### Cold-Bore Deviation Detection
+
+##### Data Collection
+- [ ] Add coldBoreShot field to DOPELog schema (boolean)
+- [ ] Add shotNumberInSession field to DOPELog schema (integer)
+- [ ] Prompt user to mark first shot of session as cold bore
+- [ ] Auto-detect cold bore based on time since last shot (> 10 minutes)
+
+##### Cold-Bore Analysis
+- [ ] Query DOPE logs WHERE coldBoreShot = true
+- [ ] Calculate warm bore reference elevation (mean of shots 2-5)
+- [ ] Calculate cold bore bias: `mean(coldBoreElevation - warmBoreElevation)`
+- [ ] Calculate cold bore windage bias: `mean(coldBoreWind - warmBoreWind)`
+- [ ] Store cold bore bias per rifle+ammo combination
+
+##### UI Display
+- [ ] Show cold bore bias banner in range mode: "Expected cold-bore shift: −0.15 MIL elevation"
+- [ ] Add cold bore indicator to ballistic solution
+- [ ] Offer to apply cold bore correction automatically
+- [ ] Track cold bore accuracy over time (did correction help?)
+
+#### Heat Shift Modeling
+
+##### Data Collection
+- [ ] Track shot number in current range session
+- [ ] Track time between shots
+- [ ] Estimate barrel temperature state (cold/warm/hot)
+
+##### Heat Shift Analysis
+- [ ] Query DOPE logs for shots 1-20 in sessions
+- [ ] Perform linear regression: `POI vs shotIndex`
+- [ ] Calculate slope of POI drift
+- [ ] Detect significant heat shift (slope > threshold)
+
+##### Heat Shift Prediction
+- [ ] Predict POI shift based on current shot number
+- [ ] Apply heat shift correction to recommendations
+- [ ] Show warning when heat shift detected: "Barrel heating, +0.2 MIL drift expected"
+
+##### Testing
+- [ ] Write unit tests for cold bore bias calculation
+- [ ] Write unit tests for linear regression heat shift
+- [ ] Simulate 20-shot string with known drift
+- [ ] Test edge cases (insufficient data, no heat shift)
+
+---
+
+### Confidence Weighting System
+
+#### Confidence Score Calculation
+- [ ] Combine factors: # of matching DOPE entries, environmental similarity, recency, group quality, solver agreement
+- [ ] Normalize confidence to 0-1 scale
+- [ ] Convert to 5-star rating (★☆☆☆ to ★★★★★)
+- [ ] Store confidence with each recommendation
+
+#### Confidence Display
+- [ ] Show star rating in range session mode
+- [ ] Show confidence percentage in calculator
+- [ ] Color-code confidence (red < 40%, yellow 40-70%, green > 70%)
+- [ ] Add confidence tooltip explaining factors
+
+#### Low Confidence Handling
+- [ ] Detect confidence < 40%
+- [ ] Show prompt: "Limited historical data. Using solver-heavy prediction."
+- [ ] Suggest practicing at this distance to build DOPE
+- [ ] Reduce α (blend more solver, less DOPE)
+
+#### High Confidence Display
+- [ ] Detect confidence > 80%
+- [ ] Show prompt: "High confidence prediction based on N historical shots"
+- [ ] Display contributing DOPE entries
+- [ ] Show environmental similarity scores
+
+#### Testing
+- [ ] Write unit tests for confidence calculation
+- [ ] Test confidence with varying amounts of DOPE
+- [ ] Test confidence with perfect vs poor environmental matches
+- [ ] Test confidence edge cases (zero DOPE, 100 matching logs)
+
+---
+
+### Range Session Mode Implementation
+
+#### Flow Integration
+- [ ] Integrate DOPE matching into existing range session flow
+- [ ] After user selects rifle + ammo, query DOPE system
+- [ ] After environment capture, calculate ΔDA adjustments
+- [ ] After solver computes prediction, apply DOPE offsets
+- [ ] Display hybrid recommendation to user
+
+#### Hybrid Solution Display
+- [ ] Design recommendation card showing:
+  - Elevation correction (bold, large font)
+  - Windage correction (bold, large font)
+  - Confidence rating (stars)
+  - Notes section (cold bore shift, DA adjustment, DOPE source)
+- [ ] Add expandable details showing:
+  - Raw solver prediction
+  - DOPE offset applied
+  - Environmental adjustments
+  - Contributing DOPE logs (count, distances)
+
+#### Real-Time Recalculation
+- [ ] After each shot logged, update DOPE database
+- [ ] Immediately recalculate recommendation for next shot
+- [ ] Show "Updated based on last shot" indicator
+- [ ] Animate recommendation changes
+
+#### Solver-Only Toggle
+- [ ] Add toggle: "Use DOPE adjustments" (on by default)
+- [ ] When off, show only raw solver predictions
+- [ ] Allow side-by-side comparison (solver vs DOPE-adjusted)
+
+#### Notes Section
+- [ ] Display: "Historically 0.3 MIL flatter at this DA"
+- [ ] Display: "Cold-bore shift ~0.2 MIL low"
+- [ ] Display: "Based on 5 logs from similar conditions"
+- [ ] Display: "No historical data, using solver only"
+
+#### Testing
+- [ ] Test full flow with mock DOPE database
+- [ ] Test with zero DOPE (solver-only fallback)
+- [ ] Test with abundant DOPE (high confidence)
+- [ ] Test real-time updates after shot logging
+
+---
+
+### APIs & Module Interfaces
+
+#### Ballistic Engine API
+- [ ] Define `BallisticSolution` type (elevation, windage, TOF, velocity, energy)
+- [ ] Implement `getLongRangeSolution(profile, ammo, env, distance, angle): BallisticSolution`
+- [ ] Add batch prediction: `getBatchSolutions(profile, ammo, env, distances[]): BallisticSolution[]`
+- [ ] Add ΔDA support: `getSolutionAtDA(profile, ammo, DA, distance, angle): BallisticSolution`
+
+#### DOPE Adjustment API
+- [ ] Define `DOPEAdjustmentRequest` type
+- [ ] Define `AdjustedSolution` type (includes confidence, notes, breakdown)
+- [ ] Implement `getDOPEAdjustedSolution(request): AdjustedSolution`
+- [ ] Add debug mode: `getDOPEAdjustedSolutionDetailed(request): DetailedSolution`
+  - Returns: all matching DOPE, scores, offsets, steps
+
+#### Barrel State API
+- [ ] Define `BiasVector` type (elevationBias, windageBias, confidence)
+- [ ] Implement `getColdBoreBias(rifleId, ammoId): BiasVector`
+- [ ] Define `ShiftModel` type (slope, intercept, r-squared)
+- [ ] Implement `getHeatShiftTrend(rifleId, ammoId): ShiftModel`
+- [ ] Implement `predictHeatShift(rifleId, ammoId, shotNumber): number`
+
+#### Configuration API
+- [ ] Define `DOPEConfig` type (weights, alpha, delta, thresholds)
+- [ ] Implement `getDOPEConfig(): DOPEConfig`
+- [ ] Implement `updateDOPEConfig(config: Partial<DOPEConfig>): void`
+- [ ] Store config in AppSettings table
+- [ ] Provide sensible defaults
+
+#### Testing
+- [ ] Write integration tests for API contracts
+- [ ] Mock ballistic solver for DOPE API tests
+- [ ] Test error handling (null parameters, invalid IDs)
+- [ ] Document all APIs with JSDoc/TSDoc
+
+---
+
+### DOPE System Testing
+
+#### Unit Tests
+- [ ] Test DOPE matching query builder (50+ tests)
+- [ ] Test relevance scoring (100+ tests covering all factors)
+- [ ] Test Gaussian falloff function (10 tests)
+- [ ] Test environmental similarity (30 tests)
+- [ ] Test offset calculations (40 tests)
+- [ ] Test cubic spline interpolation (30 tests)
+- [ ] Test linear interpolation (20 tests)
+- [ ] Test blending algorithm (25 tests)
+- [ ] Test DA calculations (20 tests)
+- [ ] Test wind normalization and scaling (40 tests)
+- [ ] Test cold bore bias calculation (25 tests)
+- [ ] Test heat shift linear regression (30 tests)
+- [ ] Test confidence scoring (35 tests)
+
+#### Integration Tests
+- [ ] Test end-to-end DOPE adjustment flow
+- [ ] Test with zero DOPE (solver-only fallback)
+- [ ] Test with single DOPE entry
+- [ ] Test with 100+ DOPE entries
+- [ ] Test with perfect environmental match
+- [ ] Test with extreme environmental differences
+- [ ] Test cold bore flow
+- [ ] Test multi-shot heat shift flow
+- [ ] Test real-time recalculation after shot logging
+
+#### Validation Tests
+- [ ] Compare DOPE adjustments to real-world shooting data
+- [ ] Validate against published ballistic tables
+- [ ] Test with known rifle/ammo combinations (e.g., .308 168gr @ 100-1000yd)
+- [ ] Verify DA adjustments match atmospheric models
+- [ ] Validate wind scaling against verified data
+
+#### Performance Tests
+- [ ] Measure DOPE query performance with 1000+ logs
+- [ ] Measure relevance scoring performance (should be < 100ms)
+- [ ] Measure interpolation performance
+- [ ] Measure end-to-end recommendation calculation time (target: < 200ms)
+- [ ] Profile and optimize hot paths
+
+#### UI/UX Tests
+- [ ] Test confidence display rendering
+- [ ] Test notes section rendering
+- [ ] Test solver vs DOPE comparison view
+- [ ] Test real-time update animations
+- [ ] Test with mock data in various conditions
+
+---
+
+### DOPE System Configuration & Settings
+
+#### User Settings
+- [ ] Add DOPE settings screen
+- [ ] Add distance delta (Δ) slider (25-100 yards)
+- [ ] Add alpha (α) blending slider (0-1, default 0.7)
+- [ ] Add relevance weight configuration (advanced)
+- [ ] Add toggle: "Enable DOPE adjustments" (default on)
+- [ ] Add toggle: "Enable cold bore detection" (default on)
+- [ ] Add toggle: "Enable heat shift modeling" (default on)
+- [ ] Add confidence threshold slider (minimum confidence to show DOPE)
+
+#### Advanced Configuration
+- [ ] Add weight editor for relevance scoring
+- [ ] Add sigma parameter for Gaussian falloff
+- [ ] Add recency half-life parameter
+- [ ] Add barrel state detection thresholds
+- [ ] Add "Reset to defaults" button
+
+#### Presets
+- [ ] Create "Aggressive" preset (high α, favor DOPE heavily)
+- [ ] Create "Balanced" preset (default, α=0.7)
+- [ ] Create "Conservative" preset (low α, favor solver)
+- [ ] Create "Competition" preset (optimized for match shooting)
+
+---
+
+### Documentation for DOPE System
+
+#### User Documentation
+- [ ] Write user guide: "Understanding DOPE-Assisted Aiming"
+- [ ] Explain confidence ratings
+- [ ] Explain when to trust DOPE vs solver
+- [ ] Explain cold bore and heat shift
+- [ ] Create tutorial video/walkthrough
+
+#### Developer Documentation
+- [ ] Document DOPE matching algorithm in detail
+- [ ] Document relevance scoring formulas
+- [ ] Document interpolation methods
+- [ ] Document environmental adjustment equations
+- [ ] Create architecture diagram for DOPE system
+- [ ] Add inline code documentation (TSDoc)
+
+---
+
 ## Phase 2 Features
 
 ### External Device Integration

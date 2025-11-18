@@ -326,6 +326,248 @@ DOPELog {
 * Target marking
 * CSV/PDF export
 
+## 8. Using Prior DOPE to Assist Aiming New Shots
+
+### 8.1 Overview
+
+This system improves aiming solutions by combining:
+
+* Theoretical ballistic predictions
+* Historical DOPE logs
+* Environmental adjustments
+* Error-correction trends observed over time
+* Interpolated / extrapolated data
+* Barrel state behavior analysis
+
+Engineers should treat this as a hybrid between a ballistics engine and a predictive analytics pipeline.
+
+### 8.2 DOPE Matching Algorithm
+
+When a user requests a firing solution:
+
+#### Step 1: Query Past DOPE
+
+The app searches DOPELog entries filtered by:
+
+```sql
+WHERE rifleId = :rifle
+AND ammoId = :ammo
+AND distance BETWEEN (requested - Δ) AND (requested + Δ)
+```
+
+Default Δ = 50 yards or user-configurable.
+
+#### Step 2: Relevance Scoring
+
+Each DOPE entry receives a score:
+
+```
+score = 
+  w_distance * distanceSimilarity +
+  w_environment * envSimilarity +
+  w_recency * recencyFactor +
+  w_shotQuality * groupConsistency +
+  w_barrelState * barrelStateMatch
+```
+
+Where:
+
+* `distanceSimilarity` uses a Gaussian falloff
+* `envSimilarity` is derived from ΔDA, ΔTemp, ΔPressure
+* `shotQuality` penalizes logs with high extreme spread
+* `barrelStateMatch` boosts cold-bore matches
+
+Top-scoring entries (N = 3–10) feed the adjustment engine.
+
+### 8.3 Correction Offset Generation
+
+The solver provides:
+
+`solverElevationMil`
+`solverWindMil`
+
+Match DOPE entries provide:
+
+`actualElevationMil`
+`actualWindMil`
+
+Elevation Offset Calculation
+
+`offsetElevation = mean(actualElevationMil - solverElevationMil)`
+
+Weighted by the relevance score.
+
+Wind Offset Calculation
+
+`offsetWind = mean(actualWindMil - solverWindMil)`
+
+Offsets are then applied:
+
+`recommendedElevation = solverElevationMil + offsetElevation`
+`recommendedWind = solverWindMil + offsetWind`
+
+This allows the app to "learn" the shooter's actual trajectory.
+
+### 8.4 Interpolation for Missing Distances
+
+If DOPE exists at distances D1 < target < D2:
+
+Use cubic spline or 2-point linear interpolation:
+
+```
+dropInterpolated = interpolate(
+   (D1, DOPE[D1].actualElevationMil),
+   (D2, DOPE[D2].actualElevationMil),
+   targetDistance
+)
+```
+
+Then blend with the solver:
+
+```
+recommendedElevation =
+   α * dropInterpolated + (1 - α) * solverElevationMil
+```
+
+Default α = 0.7 (favor DOPE when available).
+
+### 8.5 Environmental Adjustment Engine (ΔDA Modeling)
+
+When environment differs:
+
+Compute density altitude of historical DOPE:
+
+```
+DA_log = computeDA(envLog)
+DA_now = computeDA(envCurrent)
+ΔDA = DA_now - DA_log
+```
+
+Ballistic solver provides Δ drop per ΔDA:
+
+`deltaDrop = solverDrop(DA_now) - solverDrop(DA_log)`
+
+Adjust DOPE:
+
+`environmentAdjustedElevation = actualElevationMil + deltaDrop`
+
+This allows DOPE from sea level shooting to apply in mountain environments.
+
+### 8.6 Wind Scaling Engine
+
+Historical wind entries are normalized:
+
+`windPerMph = actualWindMil / loggedWindSpeedMph`
+
+Then scaled:
+
+`recommendedWind = windPerMph * currentWindEstimateMph`
+
+If solver produces more accurate wind tables:
+
+* Blend them:
+
+`recommendedWind = α * DOPEWind + (1 - α) * solverWind`
+
+α increases if historical DOPE is abundant.
+
+### 8.7 Barrel State Modeling
+
+Cold-bore deviation detection
+
+Query:
+
+`WHERE coldBoreShotBoolean = true`
+
+Compute:
+
+`coldBoreBiasElevation = mean(actualElevationMil - warmBoreElevationMil)`
+`coldBoreBiasWind = mean(actualWindMil - warmBoreWindMil)`
+
+Shown as a banner in range mode:
+
+"Expected cold-bore shift: −0.15 MIL elevation, +0.08 MIL wind."
+
+Heat Shift Modeling
+
+Track POI relative to shot number in session:
+
+`slope = linearRegression(shotIndex, elevationMil)`
+
+If slope > threshold:
+
+* Show warning
+* Apply optional correction
+
+
+### 8.8 Confidence Weighting System
+
+Final recommendation includes a confidence score:
+
+```
+confidence = combine(
+   # of matching DOPE entries,
+   environmental similarity,
+   recency,
+   group quality,
+   solver agreement
+)
+```
+
+Displayed visually (e.g., ★☆☆☆ to ★★★★★).
+
+Low confidence prompts:
+
+"Limited historical data. Using solver-heavy prediction."
+
+### 8.9 Range Session Mode Implementation Flow
+
+Step-by-step logic:
+
+1. User selects rifle + ammo
+2. App captures current environment (manual or sensor)
+3. Solver computes initial prediction
+4. DOPE matching algorithm runs
+5. Offsets, deltas, and spline interpolations compute adjusted holds
+6. Barrel-state model checks cold/hot conditions
+7. Final recommendation displayed:
+
+```
+Elevation: +4.3 MIL
+Wind: 0.7 MIL R (10 mph FV)
+Confidence: ★★★★☆
+Notes:
+  • Historically 0.3 MIL flatter at this DA
+  • Cold-bore shift ~0.2 MIL low
+```
+
+8. After each shot, user logs POI
+9. DOPE database updates
+10. Immediate recalculation improves next shot's recommendation
+
+### 8.10 APIs & Module Interfaces (Internal)
+
+Ballistic Engine API
+
+```getLongRangeSolution(Profile, Ammo, Env, Distance, Angle): BallisticSolution```
+
+DOPE Adjustment API
+
+```
+getDOPEAdjustedSolution(request: {
+  rifleId,
+  ammoId,
+  envSnapshot,
+  distance,
+  solverSolution
+}): AdjustedSolution
+```
+
+Barrel State API
+
+`getColdBoreBias(rifleId, ammoId): BiasVector`
+`getHeatShiftTrend(rifleId, ammoId): ShiftModel`
+
 ### Phase 2
 
 * Kestrel integration

@@ -1,6 +1,9 @@
 // Jest setup file
 // Extend expect matchers are built-in to @testing-library/react-native v12.4+
 
+// Mock Expo import.meta registry
+global.__ExpoImportMetaRegistry = new Map();
+
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')

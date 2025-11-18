@@ -19,9 +19,16 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: ['**/__tests__/**/*.(test|spec).(ts|tsx|js)'],
-  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
+  testMatch: ['**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)'],
+  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/__tests__/components/'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react',
+        },
+      },
+    ],
   },
 };
