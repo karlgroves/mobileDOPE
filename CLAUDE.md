@@ -159,6 +159,49 @@ The ballistic solver is performance-critical and should be implemented as a nati
 
 Input validation is critical - ensure all ballistic coefficients, velocities, and environmental parameters are within realistic ranges before calculations.
 
+## Development Methodology
+
+**This project uses Test-Driven Development (TDD) for all new code.**
+
+### TDD Workflow
+
+1. **Write the test first** - Before implementing any new feature or function, write the test that defines the expected behavior
+2. **Run the test and watch it fail** - Ensure the test fails for the right reason
+3. **Write minimal code to pass** - Implement just enough code to make the test pass
+4. **Refactor** - Improve the code while keeping tests green
+5. **Repeat** - Continue the cycle for each new piece of functionality
+
+### Testing Guidelines
+
+- **Unit Tests**: Test individual functions, classes, and modules in isolation
+- **Integration Tests**: Test interactions between modules (e.g., database operations, repository methods)
+- **Component Tests**: Test React components with React Native Testing Library
+- **Coverage Target**: Aim for >80% code coverage
+
+### Test Organization
+
+```
+__tests__/
+├── unit/           # Unit tests for utilities, models, calculations
+├── integration/    # Integration tests for repositories, services
+└── components/     # Component tests for React components
+```
+
+### Running Tests
+
+```bash
+npm test                    # Run all tests
+npm test -- --watch        # Run tests in watch mode
+npm test -- --coverage     # Run tests with coverage report
+npm test -- <filename>     # Run specific test file
+```
+
+When implementing new features:
+1. Create the test file first (e.g., `MyComponent.test.tsx` or `myFunction.test.ts`)
+2. Write test cases that define the expected behavior
+3. Implement the code to satisfy the tests
+4. Ensure all tests pass before committing
+
 ## Data Privacy
 
 No personal data collection or analytics. All data stored locally unless user explicitly enables cloud sync. Implement optional biometric/passcode lock for sensitive shooting data.
