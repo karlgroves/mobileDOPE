@@ -106,7 +106,7 @@
 - [ ] Implement velocity decay calculation
 - [ ] Implement energy at target calculation
 - [ ] Implement angle cosine factor for uphill/downhill shooting
-- [ ] Add unit conversion utilities (yards/meters, fps/mps, etc.)
+- [x] Add unit conversion utilities (yards/meters, fps/mps, etc.) - WITH TESTS
 
 ### Advanced Ballistic Features (Phase 2)
 - [ ] Implement spin drift calculation
@@ -136,15 +136,15 @@
 ## UI/UX Foundation
 
 ### Theme & Styling
-- [ ] Create dark theme color palette
-- [ ] Create optional light theme color palette
-- [ ] Define typography scale (large, field-readable fonts)
+- [x] Create dark theme color palette
+- [x] Create optional light theme color palette
+- [x] Define typography scale (large, field-readable fonts)
+- [x] Create night-vision compatible red mode (optional)
 - [ ] Create button component with large touch targets
 - [ ] Create input field component with large touch targets
 - [ ] Create high-contrast form components
 - [ ] Implement theme switching mechanism
 - [ ] Test color contrast ratios for accessibility
-- [ ] Create night-vision compatible red mode (optional)
 
 ### Navigation Structure
 - [ ] Design navigation architecture (tabs, stack, drawer)
@@ -718,3 +718,28 @@
 - [ ] Update dependencies
 - [ ] Fix deprecation warnings
 - [ ] Maintain compatibility with latest 2 OS versions
+## Utilities
+
+### Core Utilities
+- [x] Unit conversion utilities (29 tests passing)
+  - Distance conversions (yards/meters, feet/meters)
+  - Velocity conversions (fps/mps)
+  - Angular conversions (MIL/MOA)
+  - Temperature conversions (F/C)
+  - Pressure conversions (inHg/mbar)
+  - Weight conversions (grains/grams)
+- [x] Validation utilities (57 tests passing)
+  - Distance, velocity, BC, bullet weight validation
+  - Environmental data validation (temp, humidity, pressure, altitude, wind)
+  - Rifle configuration validation (barrel length, zero distance, scope height, click value)
+  - Geo-coordinate validation (latitude, longitude)
+- [x] Formatting utilities (33 tests passing)
+  - Number, distance, velocity, angular formatting
+  - Environmental data formatting (temperature, pressure, humidity, wind)
+  - Date/time formatting
+  - Group size formatting
+
+**Total: 119 unit tests passing with TDD methodology**
+
+---
+
