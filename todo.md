@@ -47,45 +47,45 @@
 ## Data Layer
 
 ### Database Schema Design
-- [ ] Design RifleProfile table schema
-- [ ] Design AmmoProfile table schema with rifleId foreign key
-- [ ] Design EnvironmentSnapshot table schema
-- [ ] Design DOPELog table schema with foreign keys
-- [ ] Design ShotString table for chronograph sessions
-- [ ] Design RangeSession table for session tracking
-- [ ] Design TargetImage table for POI marking
-- [ ] Design AppSettings table for user preferences
-- [ ] Create database migration system
-- [ ] Add indexes for common queries (by rifleId, by timestamp, etc.)
+- [x] Design RifleProfile table schema
+- [x] Design AmmoProfile table schema with rifleId foreign key
+- [x] Design EnvironmentSnapshot table schema
+- [x] Design DOPELog table schema with foreign keys
+- [x] Design ShotString table for chronograph sessions
+- [x] Design RangeSession table for session tracking
+- [x] Design TargetImage table for POI marking
+- [x] Design AppSettings table for user preferences
+- [x] Create database migration system
+- [x] Add indexes for common queries (by rifleId, by timestamp, etc.)
 
 ### Database Implementation
-- [ ] Create database initialization module
-- [ ] Implement database connection manager
-- [ ] Create schema migration runner
-- [ ] Implement RifleProfile CRUD operations
-- [ ] Implement AmmoProfile CRUD operations
-- [ ] Implement EnvironmentSnapshot CRUD operations
-- [ ] Implement DOPELog CRUD operations
-- [ ] Implement ShotString CRUD operations
-- [ ] Implement RangeSession CRUD operations
-- [ ] Implement TargetImage CRUD operations
-- [ ] Implement AppSettings CRUD operations
-- [ ] Add database transaction support
-- [ ] Implement cascading deletes (e.g., delete ammo when rifle deleted)
-- [ ] Create database backup/restore functionality
-- [ ] Add database integrity checks
+- [x] Create database initialization module
+- [x] Implement database connection manager
+- [x] Create schema migration runner
+- [x] Implement RifleProfile CRUD operations
+- [x] Implement AmmoProfile CRUD operations
+- [x] Implement EnvironmentSnapshot CRUD operations
+- [x] Implement DOPELog CRUD operations
+- [ ] Implement ShotString CRUD operations - To be implemented when needed
+- [ ] Implement RangeSession CRUD operations - To be implemented when needed
+- [ ] Implement TargetImage CRUD operations - To be implemented when needed
+- [ ] Implement AppSettings CRUD operations - To be implemented when needed
+- [x] Add database transaction support
+- [x] Implement cascading deletes (e.g., delete ammo when rifle deleted) - Via foreign keys
+- [ ] Create database backup/restore functionality - To be implemented later
+- [x] Add database integrity checks
 
 ### Data Models
-- [ ] Create RifleProfile model class with validation
-- [ ] Create AmmoProfile model class with validation
-- [ ] Create EnvironmentSnapshot model class with validation
-- [ ] Create DOPELog model class with validation
-- [ ] Create ShotString model class with validation
-- [ ] Create RangeSession model class with validation
-- [ ] Create TargetImage model class with validation
-- [ ] Implement model serialization (toJSON/fromJSON)
-- [ ] Create model factories for testing
-- [ ] Add data validation rules (e.g., BC must be 0-1, velocity > 0)
+- [x] Create RifleProfile model class with validation
+- [x] Create AmmoProfile model class with validation
+- [x] Create EnvironmentSnapshot model class with validation
+- [x] Create DOPELog model class with validation
+- [ ] Create ShotString model class with validation - To be implemented when needed
+- [ ] Create RangeSession model class with validation - To be implemented when needed
+- [ ] Create TargetImage model class with validation - To be implemented when needed
+- [x] Implement model serialization (toJSON/fromJSON)
+- [ ] Create model factories for testing - To be implemented with tests
+- [x] Add data validation rules (e.g., BC must be 0-1, velocity > 0)
 
 ---
 
