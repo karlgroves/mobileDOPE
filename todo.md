@@ -263,10 +263,10 @@
 - [ ] Add sensor calibration options - Deferred to Phase 2
 
 ### Environmental Snapshot Management
-- [ ] Auto-save environmental snapshot with each DOPE log
-- [ ] Allow editing of saved environmental data
-- [ ] Display environmental conditions in log history
-- [ ] Compare environmental conditions across sessions
+- [x] Auto-save environmental snapshot with each DOPE log (implemented in DOPELogEntry)
+- [ ] Allow editing of saved environmental data - Deferred to Phase 2
+- [x] Display environmental conditions in log history (shown in detail view)
+- [ ] Compare environmental conditions across sessions - Deferred to Phase 2
 
 ---
 
