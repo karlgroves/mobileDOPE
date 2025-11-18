@@ -14,8 +14,11 @@ import {
 } from '../components';
 import { calculateBallisticSolution } from '../utils/ballistics';
 import { BallisticSolution } from '../types/ballistic.types';
+import type { CalculatorStackScreenProps } from '../navigation/types';
 
-export const BallisticCalculator: React.FC = () => {
+type Props = CalculatorStackScreenProps<'BallisticCalculator'>;
+
+export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
   const { rifles } = useRifleStore();
@@ -363,6 +366,24 @@ export const BallisticCalculator: React.FC = () => {
                 {solution.energy.toFixed(0)} ft-lbs
               </Text>
             </View>
+
+            {/* Wind Table Button */}
+            <View style={styles.windTableButtonContainer}>
+              <Button
+                title="View Wind Table"
+                onPress={() => {
+                  if (selectedRifleId && selectedAmmoId) {
+                    navigation.navigate('WindTable', {
+                      rifleId: selectedRifleId,
+                      ammoId: selectedAmmoId,
+                      distance,
+                    });
+                  }
+                }}
+                variant="secondary"
+                size="medium"
+              />
+            </View>
           </Card>
         )}
       </ScrollView>
@@ -417,5 +438,11 @@ const styles = StyleSheet.create({
   resultValue: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  windTableButtonContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
   },
 });
