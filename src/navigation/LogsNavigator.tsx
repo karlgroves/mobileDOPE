@@ -1,6 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LogsScreen } from '../screens/LogsScreen';
+import { DOPELogList } from '../screens/DOPELogList';
+import { DOPELogDetail } from '../screens/DOPELogDetail';
+import { DOPELogEntry } from '../screens/DOPELogEntry';
 import type { LogsStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<LogsStackParamList>();
@@ -21,8 +23,20 @@ export const LogsNavigator: React.FC = () => {
     >
       <Stack.Screen
         name="DOPELogList"
-        component={LogsScreen}
+        component={DOPELogList}
         options={{ title: 'DOPE Logs' }}
+      />
+      <Stack.Screen
+        name="DOPELogDetail"
+        component={DOPELogDetail}
+        options={{ title: 'DOPE Log Details' }}
+      />
+      <Stack.Screen
+        name="DOPELogEdit"
+        component={DOPELogEntry}
+        options={({ route }) => ({
+          title: route.params?.logId ? 'Edit DOPE Log' : 'New DOPE Log',
+        })}
       />
     </Stack.Navigator>
   );
