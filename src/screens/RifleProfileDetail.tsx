@@ -2,18 +2,13 @@ import React from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ProfilesStackParamList } from '../navigation/types';
 import { Card, Button, EmptyState } from '../components';
 import { useRifleStore } from '../store/useRifleStore';
 import { useTheme } from '../contexts/ThemeContext';
 
-type RootStackParamList = {
-  RifleProfileForm: { rifleId?: number };
-  RifleProfileDetail: { rifleId: number };
-  RifleProfileList: undefined;
-};
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'RifleProfileDetail'>;
-type RoutePropType = RouteProp<RootStackParamList, 'RifleProfileDetail'>;
+type NavigationProp = NativeStackNavigationProp<ProfilesStackParamList, 'RifleProfileDetail'>;
+type RoutePropType = RouteProp<ProfilesStackParamList, 'RifleProfileDetail'>;
 
 interface DetailRowProps {
   label: string;
@@ -96,6 +91,13 @@ export const RifleProfileDetail: React.FC = () => {
 
       <View style={styles.buttonContainer}>
         <Button
+          title="View Ammunition"
+          onPress={() => navigation.navigate('AmmoProfileList', { rifleId: rifle.id! })}
+          variant="secondary"
+          size="large"
+          style={styles.button}
+        />
+        <Button
           title="Edit Profile"
           onPress={handleEdit}
           variant="primary"
@@ -153,9 +155,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 8,
   },
   button: {
-    width: '100%',
+    flex: 1,
   },
 });
