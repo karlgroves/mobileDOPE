@@ -4,35 +4,42 @@
  */
 
 import { create } from 'zustand';
-import type { DOPELog } from '../models/DOPELog';
+import { DOPELog, DOPELogData } from '../models/DOPELog';
+import { dopeLogRepository } from '../services/database/DOPELogRepository';
 
 interface DOPEState {
   // DOPE logs
   dopeLogs: DOPELog[];
   setDopeLogs: (logs: DOPELog[]) => void;
-  addDopeLog: (log: DOPELog) => void;
-  updateDopeLog: (log: DOPELog) => void;
-  removeDopeLog: (id: number) => void;
+  addDopeLogToStore: (log: DOPELog) => void;
+  updateDopeLogInStore: (log: DOPELog) => void;
+  removeDopeLogFromStore: (id: number) => void;
   getDopeById: (id: number) => DOPELog | undefined;
   getDopeByRifleAndAmmo: (rifleId: number, ammoId: number) => DOPELog[];
 
+  // Database operations
+  loadDopeLogs: (rifleId?: number, ammoId?: number) => Promise<void>;
+  createDopeLog: (data: DOPELogData) => Promise<DOPELog>;
+  updateDopeLog: (id: number, data: Partial<DOPELogData>) => Promise<DOPELog>;
+  deleteDopeLog: (id: number) => Promise<void>;
+
   // Loading state
-  isLoading: boolean;
+  loading: boolean;
   setLoading: (value: boolean) => void;
 }
 
 export const useDOPEStore = create<DOPEState>((set, get) => ({
   dopeLogs: [],
   setDopeLogs: (logs) => set({ dopeLogs: logs }),
-  addDopeLog: (log) =>
+  addDopeLogToStore: (log) =>
     set((state) => ({
       dopeLogs: [...state.dopeLogs, log],
     })),
-  updateDopeLog: (log) =>
+  updateDopeLogInStore: (log) =>
     set((state) => ({
       dopeLogs: state.dopeLogs.map((d) => (d.id === log.id ? log : d)),
     })),
-  removeDopeLog: (id) =>
+  removeDopeLogFromStore: (id) =>
     set((state) => ({
       dopeLogs: state.dopeLogs.filter((d) => d.id !== id),
     })),
@@ -40,6 +47,45 @@ export const useDOPEStore = create<DOPEState>((set, get) => ({
   getDopeByRifleAndAmmo: (rifleId, ammoId) =>
     get().dopeLogs.filter((d) => d.rifleId === rifleId && d.ammoId === ammoId),
 
-  isLoading: false,
-  setLoading: (value) => set({ isLoading: value }),
+  // Database operations
+  loadDopeLogs: async (rifleId?: number, ammoId?: number) => {
+    set({ loading: true });
+    try {
+      let logs: DOPELog[];
+      if (rifleId && ammoId) {
+        logs = await dopeLogRepository.getByRifleAndAmmo(rifleId, ammoId);
+      } else if (rifleId) {
+        logs = await dopeLogRepository.getByRifleId(rifleId);
+      } else {
+        logs = await dopeLogRepository.getAll();
+      }
+      set({ dopeLogs: logs, loading: false });
+    } catch (error) {
+      set({ loading: false });
+      throw error;
+    }
+  },
+
+  createDopeLog: async (data: DOPELogData) => {
+    const log = await dopeLogRepository.create(data);
+    get().addDopeLogToStore(log);
+    return log;
+  },
+
+  updateDopeLog: async (id: number, data: Partial<DOPELogData>) => {
+    const log = await dopeLogRepository.update(id, data);
+    if (!log) {
+      throw new Error(`DOPE log with id ${id} not found`);
+    }
+    get().updateDopeLogInStore(log);
+    return log;
+  },
+
+  deleteDopeLog: async (id: number) => {
+    await dopeLogRepository.delete(id);
+    get().removeDopeLogFromStore(id);
+  },
+
+  loading: false,
+  setLoading: (value) => set({ loading: value }),
 }));
