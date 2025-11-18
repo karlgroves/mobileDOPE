@@ -203,22 +203,22 @@
 ## Feature: Ammunition Profiles
 
 ### Ammo Profile Management
-- [ ] Design Ammo Profile list screen (grouped by rifle)
-- [ ] Implement Ammo Profile list screen
-- [ ] Design Ammo Profile detail/edit screen
-- [ ] Implement Ammo Profile creation form
-- [ ] Add manufacturer picker
-- [ ] Add bullet weight input with validation
-- [ ] Add bullet type picker (HPBT, ELD-X, SPCE, etc.)
-- [ ] Add ballistic coefficient inputs (G1 and G7)
-- [ ] Add muzzle velocity input
-- [ ] Add powder type/load details fields
-- [ ] Add lot tracking field
-- [ ] Implement Ammo Profile edit functionality
-- [ ] Implement Ammo Profile delete with confirmation
-- [ ] Link ammo profiles to rifle profiles
-- [ ] Add validation for BC range (0-1 typically)
-- [ ] Add validation for realistic velocity ranges
+- [x] Design Ammo Profile list screen (grouped by rifle)
+- [x] Implement Ammo Profile list screen
+- [x] Design Ammo Profile detail/edit screen
+- [x] Implement Ammo Profile creation form
+- [x] Add manufacturer picker (TextInput for MVP, picker to be enhanced)
+- [x] Add bullet weight input with validation
+- [x] Add bullet type picker (HPBT, ELD-X, SPCE, etc.) (TextInput for MVP)
+- [x] Add ballistic coefficient inputs (G1 and G7)
+- [x] Add muzzle velocity input
+- [x] Add powder type/load details fields
+- [x] Add lot tracking field
+- [x] Implement Ammo Profile edit functionality
+- [x] Implement Ammo Profile delete with confirmation
+- [x] Link ammo profiles to rifle profiles
+- [x] Add validation for BC range (0-1 typically)
+- [x] Add validation for realistic velocity ranges
 
 ### Ammo Data
 - [ ] Create ammunition manufacturer database
