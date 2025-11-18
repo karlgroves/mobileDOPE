@@ -29,12 +29,12 @@ export type MainTabParamList = {
  * Profiles Stack Navigator
  */
 export type ProfilesStackParamList = {
-  ProfilesList: undefined;
-  RifleProfileDetail: { rifleId?: number };
-  RifleProfileEdit: { rifleId?: number };
+  RifleProfileList: undefined;
+  RifleProfileForm: { rifleId?: number };
+  RifleProfileDetail: { rifleId: number };
   AmmoProfileList: { rifleId: number };
   AmmoProfileDetail: { ammoId?: number; rifleId: number };
-  AmmoProfileEdit: { ammoId?: number; rifleId: number };
+  AmmoProfileForm: { ammoId?: number; rifleId: number };
 };
 
 /**

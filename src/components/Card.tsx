@@ -1,16 +1,37 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { theme } from '../constants/theme';
+import { View, Text, Pressable, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
-interface CardProps {
-  children: React.ReactNode;
+export interface CardProps {
+  children?: React.ReactNode;
+  title?: string;
+  subtitle?: string;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   testID?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, onPress, testID }) => {
-  const containerStyle = [styles.card, style];
+export const Card: React.FC<CardProps> = ({ children, title, subtitle, style, onPress, testID }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
+
+  const containerStyle = [
+    styles.card,
+    { backgroundColor: colors.surface },
+    style,
+  ];
+
+  const content = (
+    <>
+      {title && (
+        <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
+      )}
+      {subtitle && (
+        <Text style={[styles.subtitle, { color: colors.text.secondary }]}>{subtitle}</Text>
+      )}
+      {children}
+    </>
+  );
 
   if (onPress) {
     return (
@@ -23,23 +44,22 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, testID }) 
         testID={testID}
         accessible={true}
       >
-        {children}
+        {content}
       </Pressable>
     );
   }
 
   return (
     <View style={containerStyle} testID={testID}>
-      {children}
+      {content}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+    borderRadius: 8,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -48,6 +68,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginBottom: 8,
   },
   pressed: {
     opacity: 0.7,

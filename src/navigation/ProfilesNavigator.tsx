@@ -1,6 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ProfilesListScreen } from '../screens/ProfilesListScreen';
+import { RifleProfileList } from '../screens/RifleProfileList';
+import { RifleProfileForm } from '../screens/RifleProfileForm';
+import { RifleProfileDetail } from '../screens/RifleProfileDetail';
 import type { ProfilesStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<ProfilesStackParamList>();
@@ -20,9 +22,21 @@ export const ProfilesNavigator: React.FC = () => {
       }}
     >
       <Stack.Screen
-        name="ProfilesList"
-        component={ProfilesListScreen}
+        name="RifleProfileList"
+        component={RifleProfileList}
         options={{ title: 'Rifle Profiles' }}
+      />
+      <Stack.Screen
+        name="RifleProfileForm"
+        component={RifleProfileForm}
+        options={({ route }) => ({
+          title: route.params?.rifleId ? 'Edit Rifle Profile' : 'New Rifle Profile',
+        })}
+      />
+      <Stack.Screen
+        name="RifleProfileDetail"
+        component={RifleProfileDetail}
+        options={{ title: 'Rifle Profile' }}
       />
     </Stack.Navigator>
   );
