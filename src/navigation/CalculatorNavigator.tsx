@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CalculatorScreen } from '../screens/CalculatorScreen';
+import { BallisticCalculator } from '../screens/BallisticCalculator';
 import type { CalculatorStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<CalculatorStackParamList>();
@@ -21,8 +21,8 @@ export const CalculatorNavigator: React.FC = () => {
     >
       <Stack.Screen
         name="BallisticCalculator"
-        component={CalculatorScreen}
-        options={{ title: 'Calculator' }}
+        component={BallisticCalculator}
+        options={{ title: 'Ballistic Calculator' }}
       />
     </Stack.Navigator>
   );
