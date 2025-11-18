@@ -116,19 +116,20 @@
 - [ ] Implement moving target lead calculation
 
 ### Wind Table Generation
-- [ ] Create wind table generator (0-20 mph at various angles)
-- [ ] Implement crosswind component calculation
-- [ ] Implement headwind/tailwind effects
-- [ ] Create wind rose visualization data structure
-- [ ] Add gusting wind averaging
+- [x] Create wind table generator (0-20 mph at various angles - WITH TDD: 12 tests)
+- [x] Implement crosswind component calculation (WITH TDD)
+- [x] Implement headwind/tailwind effects (WITH TDD)
+- [ ] Create wind rose visualization data structure - DEFERRED (UI component, Phase 2)
+- [ ] Add gusting wind averaging - DEFERRED (Phase 2)
 
 ### Ballistic Engine Testing
-- [ ] Unit test atmospheric calculations against known values
-- [ ] Unit test trajectory calculations against published ballistic tables
-- [ ] Validate G1/G7 drag models with manufacturer data
-- [ ] Test edge cases (extreme temperatures, altitudes, angles)
-- [ ] Performance test for real-time calculation speed
-- [ ] Create benchmark suite comparing to known ballistic solvers
+- [x] Unit test atmospheric calculations against known values (20 tests passing)
+- [x] Unit test trajectory calculations against published ballistic tables (12 tests passing)
+- [x] Validate G1/G7 drag models with manufacturer data (11 tests each, 77-point tables)
+- [x] Unit test wind table generation (12 tests passing)
+- [ ] Test edge cases (extreme temperatures, altitudes, angles) - Basic coverage done, could expand
+- [ ] Performance test for real-time calculation speed - DEFERRED (optimization phase)
+- [ ] Create benchmark suite comparing to known ballistic solvers - DEFERRED (Phase 2)
 
 ---
 
