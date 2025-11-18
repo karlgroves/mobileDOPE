@@ -44,6 +44,7 @@ export type RangeStackParamList = {
   RangeSessionStart: undefined;
   RangeSessionActive: { sessionId: number };
   RangeSessionSummary: { sessionId: number };
+  EnvironmentInput: undefined;
 };
 
 /**
