@@ -348,8 +348,8 @@
 
 - [x] Design DOPE log list screen
 - [x] Implement DOPE log table view (card-based list)
-- [ ] Add filtering by rifle, ammo, date, distance - Deferred to Phase 2
-- [ ] Add sorting options - Deferred to Phase 2
+- [x] Add filtering by rifle, ammo, date, distance
+- [x] Add sorting options (date, distance, rifle)
 - [x] Implement DOPE log detail view
 - [x] Allow editing of saved DOPE logs
 - [x] Allow deletion of DOPE logs
