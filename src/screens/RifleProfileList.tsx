@@ -11,6 +11,7 @@ import {
   ConfirmationDialog,
 } from '../components';
 import { useRifleStore } from '../store/useRifleStore';
+import { useAmmoStore } from '../store/useAmmoStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { RifleProfile } from '../models/RifleProfile';
 
@@ -28,6 +29,7 @@ export const RifleProfileList: React.FC = () => {
   const { colors } = theme;
 
   const { rifles, loading, deleteRifle } = useRifleStore();
+  const { ammoProfiles } = useAmmoStore();
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [rifleToDelete, setRifleToDelete] = useState<RifleProfile | null>(null);
@@ -68,31 +70,48 @@ export const RifleProfileList: React.FC = () => {
     setRifleToDelete(null);
   };
 
-  const renderRifleItem = ({ item }: { item: RifleProfile }) => (
-    <Card
-      style={styles.card}
-      onPress={() => handleView(item)}
-      title={item.name}
-      subtitle={`${item.caliber} • ${item.barrelLength}" barrel • ${item.zeroDistance}yd zero`}
-    >
-      <View style={styles.cardActions}>
-        <IconButton
-          icon="✏️"
-          onPress={() => handleEdit(item)}
-          variant="ghost"
-          size="medium"
-          accessibilityLabel="Edit rifle profile"
-        />
-        <IconButton
-          icon="🗑️"
-          onPress={() => handleDeletePress(item)}
-          variant="ghost"
-          size="medium"
-          accessibilityLabel="Delete rifle profile"
-        />
-      </View>
-    </Card>
-  );
+  const renderRifleItem = ({ item }: { item: RifleProfile }) => {
+    const rifleAmmoCount = ammoProfiles.filter((a) => a.rifleId === item.id).length;
+
+    return (
+      <Card
+        style={styles.card}
+        onPress={() => handleView(item)}
+        title={item.name}
+        subtitle={`${item.caliber} • ${item.barrelLength}" barrel • ${item.zeroDistance}yd zero`}
+      >
+        <View style={styles.ammoSection}>
+          <Text style={[styles.ammoCount, { color: colors.text.secondary }]}>
+            {rifleAmmoCount} {rifleAmmoCount === 1 ? 'ammo profile' : 'ammo profiles'}
+          </Text>
+          <Button
+            title={rifleAmmoCount === 0 ? 'Add Ammunition' : 'View Ammunition'}
+            onPress={() =>
+              navigation.navigate('RifleProfileDetail', { rifleId: item.id! })
+            }
+            variant="secondary"
+            size="small"
+          />
+        </View>
+        <View style={styles.cardActions}>
+          <IconButton
+            icon="✏️"
+            onPress={() => handleEdit(item)}
+            variant="ghost"
+            size="medium"
+            accessibilityLabel="Edit rifle profile"
+          />
+          <IconButton
+            icon="🗑️"
+            onPress={() => handleDeletePress(item)}
+            variant="ghost"
+            size="medium"
+            accessibilityLabel="Delete rifle profile"
+          />
+        </View>
+      </Card>
+    );
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -151,6 +170,19 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
+  },
+  ammoSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  ammoCount: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   cardActions: {
     flexDirection: 'row',
