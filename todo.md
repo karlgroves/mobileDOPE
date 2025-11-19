@@ -203,8 +203,8 @@
 - [x] Add profile clone functionality
 - [ ] Implement profile image upload (optional rifle photo)
 - [x] Add validation for all required fields
-- [ ] Add search/filter for rifle list (deferred)
-- [ ] Implement sort by name, caliber, last used (basic sort by name implemented)
+- [x] Add search/filter for rifle list (search by name, caliber, optic)
+- [x] Implement sort by name, caliber, last used (all three implemented)
 
 ### Rifle Profile Data
 
