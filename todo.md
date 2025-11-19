@@ -437,25 +437,25 @@
 
 ### DOPE Card Design
 
-- [ ] Create printable DOPE card template (wallet-sized)
-- [ ] Design mobile view DOPE card
-- [ ] Add customization for distance range
-- [ ] Add customization for distance increments
-- [ ] Add customization for wind speed columns
-- [ ] Add toggle for MIL/MOA units
-- [ ] Add toggle for yards/meters
-- [ ] Implement dark/light print optimization
-- [ ] Add rifle/ammo/date header
-- [ ] Include QR code with profile data (optional)
+- [x] Create printable DOPE card template (wallet-sized)
+- [x] Design mobile view DOPE card
+- [x] Add customization for distance range
+- [x] Add customization for distance increments
+- [x] Add customization for wind speed columns
+- [x] Add toggle for MIL/MOA units
+- [x] Add toggle for yards/meters
+- [x] Implement dark/light print optimization
+- [x] Add rifle/ammo/date header
+- [ ] Include QR code with profile data (optional) - Deferred to Phase 2
 
 ### DOPE Card Export
 
-- [ ] Generate PDF from DOPE card
-- [ ] Implement PDF page sizing (wallet card dimensions)
-- [ ] Add "Save to Files" functionality
-- [ ] Add "Share" functionality (email, AirDrop, etc.)
-- [ ] Implement print functionality
-- [ ] Add preview before export
+- [x] Generate PDF from DOPE card
+- [x] Implement PDF page sizing (wallet card dimensions)
+- [x] Add "Save to Files" functionality
+- [x] Add "Share" functionality (email, AirDrop, etc.)
+- [x] Implement print functionality
+- [x] Add preview before export
 
 ### DOPE Card Formats
 
