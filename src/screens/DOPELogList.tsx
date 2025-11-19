@@ -3,7 +3,7 @@
  * Displays all DOPE logs with filtering and sorting
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,13 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { SegmentedControl } from '../components/SegmentedControl';
 import type { LogsStackScreenProps } from '../navigation/types';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -34,6 +36,48 @@ export function DOPELogList({ navigation }: Props) {
   const { getAmmoById } = useAmmoStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'distance' | 'rifle'>('date');
+
+  // Filter and sort DOPE logs
+  const filteredAndSortedLogs = useMemo(() => {
+    let filtered = dopeLogs;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = dopeLogs.filter((log) => {
+        const rifle = getRifleById(log.rifleId);
+        const ammo = getAmmoById(log.ammoId);
+        return (
+          rifle?.name.toLowerCase().includes(query) ||
+          rifle?.caliber.toLowerCase().includes(query) ||
+          ammo?.name.toLowerCase().includes(query) ||
+          log.distance.toString().includes(query) ||
+          log.notes?.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // Apply sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'date':
+          // Most recent first
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        case 'distance':
+          return a.distance - b.distance;
+        case 'rifle':
+          const rifleA = getRifleById(a.rifleId)?.name || '';
+          const rifleB = getRifleById(b.rifleId)?.name || '';
+          return rifleA.localeCompare(rifleB);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [dopeLogs, searchQuery, sortBy, getRifleById, getAmmoById]);
 
   useEffect(() => {
     loadData();
@@ -187,13 +231,51 @@ export function DOPELogList({ navigation }: Props) {
         />
       ) : (
         <>
+          {/* Search and Sort Controls */}
+          <View style={[styles.controls, { backgroundColor: colors.surface }]}>
+            <TextInput
+              style={[
+                styles.searchInput,
+                {
+                  backgroundColor: colors.background,
+                  color: colors.text.primary,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="Search logs..."
+              placeholderTextColor={colors.text.secondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+            />
+            <View style={styles.sortContainer}>
+              <Text style={[styles.sortLabel, { color: colors.text.secondary }]}>Sort by:</Text>
+              <SegmentedControl
+                options={[
+                  { label: 'Date', value: 'date' },
+                  { label: 'Distance', value: 'distance' },
+                  { label: 'Rifle', value: 'rifle' },
+                ]}
+                selectedValue={sortBy}
+                onValueChange={(value) => setSortBy(value as 'date' | 'distance' | 'rifle')}
+              />
+            </View>
+          </View>
+
           <FlatList
-            data={dopeLogs}
+            data={filteredAndSortedLogs}
             renderItem={renderLogItem}
             keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
             contentContainerStyle={styles.listContent}
             refreshing={refreshing}
             onRefresh={handleRefresh}
+            ListEmptyComponent={
+              <View style={styles.emptySearch}>
+                <Text style={[styles.emptySearchText, { color: colors.text.secondary }]}>
+                  No logs match your search
+                </Text>
+              </View>
+            }
           />
 
           <View style={styles.fabContainer}>
@@ -213,6 +295,36 @@ export function DOPELogList({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  controls: {
+    padding: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  searchInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  sortContainer: {
+    marginBottom: 8,
+  },
+  sortLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  emptySearch: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptySearchText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
