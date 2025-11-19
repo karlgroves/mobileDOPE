@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, FlatList, StyleSheet, TouchableOpacity, Text, TextInput } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfilesStackParamList } from '../navigation/types';
@@ -12,6 +12,7 @@ import {
   EmptyState,
   IconButton,
   ConfirmationDialog,
+  SegmentedControl,
 } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -33,9 +34,46 @@ export const AmmoProfileList: React.FC = () => {
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [ammoToDelete, setAmmoToDelete] = useState<AmmoProfile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'weight' | 'recent'>('name');
 
   const rifle = rifles.find((r) => r.id === rifleId);
   const rifleAmmo = ammoProfiles.filter((a) => a.rifleId === rifleId);
+
+  // Filter and sort ammo
+  const filteredAndSortedAmmo = useMemo(() => {
+    let filtered = rifleAmmo;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = rifleAmmo.filter(
+        (ammo) =>
+          ammo.name.toLowerCase().includes(query) ||
+          ammo.manufacturer.toLowerCase().includes(query) ||
+          ammo.bulletType.toLowerCase().includes(query) ||
+          ammo.bulletWeight.toString().includes(query)
+      );
+    }
+
+    // Apply sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'weight':
+          return a.bulletWeight - b.bulletWeight;
+        case 'recent':
+          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [rifleAmmo, searchQuery, sortBy]);
 
   useEffect(() => {
     loadAmmoProfiles(rifleId);
@@ -108,11 +146,49 @@ export const AmmoProfileList: React.FC = () => {
         />
       ) : (
         <>
+          {/* Search and Sort Controls */}
+          <View style={[styles.controls, { backgroundColor: colors.surface }]}>
+            <TextInput
+              style={[
+                styles.searchInput,
+                {
+                  backgroundColor: colors.background,
+                  color: colors.text.primary,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="Search ammo..."
+              placeholderTextColor={colors.text.secondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+            />
+            <View style={styles.sortContainer}>
+              <Text style={[styles.sortLabel, { color: colors.text.secondary }]}>Sort by:</Text>
+              <SegmentedControl
+                options={[
+                  { label: 'Name', value: 'name' },
+                  { label: 'Weight', value: 'weight' },
+                  { label: 'Recent', value: 'recent' },
+                ]}
+                selectedValue={sortBy}
+                onValueChange={(value) => setSortBy(value as 'name' | 'weight' | 'recent')}
+              />
+            </View>
+          </View>
+
           <FlatList
-            data={rifleAmmo}
+            data={filteredAndSortedAmmo}
             renderItem={renderAmmoItem}
             keyExtractor={(item) => item.id!.toString()}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={styles.emptySearch}>
+                <Text style={[styles.emptySearchText, { color: colors.text.secondary }]}>
+                  No ammo matches your search
+                </Text>
+              </View>
+            }
           />
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.primary }]}
@@ -145,6 +221,36 @@ export const AmmoProfileList: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  controls: {
+    padding: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  searchInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  sortContainer: {
+    marginBottom: 8,
+  },
+  sortLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  emptySearch: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptySearchText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   listContent: {
     padding: 16,

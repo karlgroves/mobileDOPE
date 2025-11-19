@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -9,6 +9,7 @@ import {
   LoadingSpinner,
   IconButton,
   ConfirmationDialog,
+  SegmentedControl,
 } from '../components';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -33,6 +34,44 @@ export const RifleProfileList: React.FC = () => {
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [rifleToDelete, setRifleToDelete] = useState<RifleProfile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'caliber' | 'recent'>('name');
+
+  // Filter and sort rifles
+  const filteredAndSortedRifles = useMemo(() => {
+    let filtered = rifles;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = rifles.filter(
+        (rifle) =>
+          rifle.name.toLowerCase().includes(query) ||
+          rifle.caliber.toLowerCase().includes(query) ||
+          rifle.opticManufacturer.toLowerCase().includes(query) ||
+          rifle.opticModel.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'caliber':
+          return a.caliber.localeCompare(b.caliber);
+        case 'recent':
+          // Sort by updatedAt or createdAt, most recent first
+          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [rifles, searchQuery, sortBy]);
 
   const handleCreate = () => {
     navigation.navigate('RifleProfileForm', {});
@@ -162,11 +201,49 @@ export const RifleProfileList: React.FC = () => {
         />
       ) : (
         <>
+          {/* Search and Sort Controls */}
+          <View style={[styles.controls, { backgroundColor: colors.surface }]}>
+            <TextInput
+              style={[
+                styles.searchInput,
+                {
+                  backgroundColor: colors.background,
+                  color: colors.text.primary,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="Search rifles..."
+              placeholderTextColor={colors.text.secondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+            />
+            <View style={styles.sortContainer}>
+              <Text style={[styles.sortLabel, { color: colors.text.secondary }]}>Sort by:</Text>
+              <SegmentedControl
+                options={[
+                  { label: 'Name', value: 'name' },
+                  { label: 'Caliber', value: 'caliber' },
+                  { label: 'Recent', value: 'recent' },
+                ]}
+                selectedValue={sortBy}
+                onValueChange={(value) => setSortBy(value as 'name' | 'caliber' | 'recent')}
+              />
+            </View>
+          </View>
+
           <FlatList
-            data={rifles}
+            data={filteredAndSortedRifles}
             renderItem={renderRifleItem}
             keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
             contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.emptySearch}>
+                <Text style={[styles.emptySearchText, { color: colors.text.secondary }]}>
+                  No rifles match your search
+                </Text>
+              </View>
+            }
           />
           <View style={styles.fabContainer}>
             <Button
@@ -198,9 +275,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  controls: {
+    padding: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  searchInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  sortContainer: {
+    marginBottom: 8,
+  },
+  sortLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
   list: {
     padding: 16,
     paddingBottom: 100, // Make room for FAB
+  },
+  emptySearch: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptySearchText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   card: {
     marginBottom: 12,
