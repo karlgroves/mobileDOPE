@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, TextInputProps } from './TextInput';
 import { useTheme } from '../contexts/ThemeContext';
@@ -29,6 +29,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const [inputText, setInputText] = useState<string>('');
 
   const formatValue = (num: number | undefined): string => {
     if (num === undefined || num === null || isNaN(num)) {
@@ -72,18 +73,28 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   };
 
   const handleTextChange = (text: string) => {
+    setInputText(text);
     const parsed = parseValue(text);
-    const validated = validateValue(parsed);
+    // Don't validate during typing - just parse
+    onChangeValue(parsed);
+  };
+
+  const handleBlur = () => {
+    // Validate and format on blur
+    const validated = validateValue(value);
     onChangeValue(validated);
+    setInputText(''); // Clear internal state to use prop value
   };
 
   const handleIncrement = () => {
+    setInputText(''); // Clear to show formatted value
     const newValue = (value ?? 0) + step;
     const validated = validateValue(newValue);
     onChangeValue(validated);
   };
 
   const handleDecrement = () => {
+    setInputText(''); // Clear to show formatted value
     const newValue = (value ?? 0) - step;
     const validated = validateValue(newValue);
     onChangeValue(validated);
@@ -109,9 +120,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({
       <View style={styles.inputContainer}>
         <TextInput
           {...rest}
-          value={formatValue(value)}
+          value={inputText || formatValue(value)}
           onChangeText={handleTextChange}
-          keyboardType="numeric"
+          onBlur={handleBlur}
+          keyboardType="decimal-pad"
           disabled={disabled}
           error={getErrorMessage()}
           style={styles.input}
