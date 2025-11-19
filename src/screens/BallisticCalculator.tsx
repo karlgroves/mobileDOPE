@@ -44,9 +44,6 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
   const [angularUnit, setAngularUnit] = useState<'MIL' | 'MOA'>('MIL');
   const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>('yards');
 
-  // Results
-  const [solution, setSolution] = useState<BallisticSolution | null>(null);
-
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
   const selectedAmmo = ammoProfiles.find((a) => a.id === selectedAmmoId);
   const availableAmmo = selectedRifleId
@@ -118,7 +115,14 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
         false
       );
 
-      setSolution(result);
+      // Navigate to results screen
+      navigation.navigate('BallisticSolutionResults', {
+        solution: result,
+        rifleId: selectedRifleId!,
+        ammoId: selectedAmmoId!,
+        distance,
+        angularUnit,
+      });
     } catch (error: any) {
       Alert.alert('Calculation Error', error.message || 'Failed to calculate ballistic solution');
     }
@@ -292,100 +296,6 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
           size="large"
           disabled={!selectedRifle || !selectedAmmo}
         />
-
-        {/* Results Display */}
-        {solution && (
-          <Card style={[styles.card, styles.resultsCard]}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-              Ballistic Solution
-            </Text>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Elevation Correction
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.elevationMIL.toFixed(2)} MIL`
-                  : `${solution.elevationMOA.toFixed(2)} MOA`}
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Windage Correction
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.windageMIL.toFixed(2)} MIL`
-                  : `${solution.windageMOA.toFixed(2)} MOA`}
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Drop
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                {solution.drop.toFixed(1)} inches
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Windage
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                {solution.windage.toFixed(1)} inches
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Time of Flight
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                {solution.timeOfFlight.toFixed(2)} sec
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Velocity at Target
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                {solution.velocity.toFixed(0)} fps
-              </Text>
-            </View>
-
-            <View style={styles.resultRow}>
-              <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-                Energy at Target
-              </Text>
-              <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                {solution.energy.toFixed(0)} ft-lbs
-              </Text>
-            </View>
-
-            {/* Wind Table Button */}
-            <View style={styles.windTableButtonContainer}>
-              <Button
-                title="View Wind Table"
-                onPress={() => {
-                  if (selectedRifleId && selectedAmmoId) {
-                    navigation.navigate('WindTable', {
-                      rifleId: selectedRifleId,
-                      ammoId: selectedAmmoId,
-                      distance,
-                    });
-                  }
-                }}
-                variant="secondary"
-                size="medium"
-              />
-            </View>
-          </Card>
-        )}
       </ScrollView>
     </View>
   );

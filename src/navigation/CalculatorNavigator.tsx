@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BallisticCalculator } from '../screens/BallisticCalculator';
+import { BallisticSolutionResults } from '../screens/BallisticSolutionResults';
 import { WindTable } from '../screens/WindTable';
 import type { CalculatorStackParamList } from './types';
 
@@ -24,6 +25,11 @@ export const CalculatorNavigator: React.FC = () => {
         name="BallisticCalculator"
         component={BallisticCalculator}
         options={{ title: 'Ballistic Calculator' }}
+      />
+      <Stack.Screen
+        name="BallisticSolutionResults"
+        component={BallisticSolutionResults}
+        options={{ title: 'Ballistic Solution' }}
       />
       <Stack.Screen
         name="WindTable"

@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
  */
 export type RootStackParamList = {
   MainTabs: undefined;
+  Settings: undefined;
 };
 
 /**
@@ -52,6 +53,13 @@ export type RangeStackParamList = {
  */
 export type CalculatorStackParamList = {
   BallisticCalculator: undefined;
+  BallisticSolutionResults: {
+    solution: any; // BallisticSolution type
+    rifleId: number;
+    ammoId: number;
+    distance: number;
+    angularUnit: 'MIL' | 'MOA';
+  };
   WindTable: { rifleId: number; ammoId: number; distance: number };
 };
 

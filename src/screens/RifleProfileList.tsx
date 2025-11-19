@@ -50,6 +50,29 @@ export const RifleProfileList: React.FC = () => {
     }
   };
 
+  const handleClone = async (rifle: RifleProfile) => {
+    try {
+      // Create a copy with modified name
+      const clonedData = {
+        ...rifle,
+        id: undefined, // Clear ID so it creates a new record
+        name: `${rifle.name} (Copy)`,
+        createdAt: undefined,
+        updatedAt: undefined,
+      };
+
+      const clonedRifle = new RifleProfile(clonedData);
+      await useRifleStore.getState().createRifle(clonedRifle);
+
+      Alert.alert('Success', 'Rifle profile cloned successfully');
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to clone rifle profile'
+      );
+    }
+  };
+
   const handleDeletePress = (rifle: RifleProfile) => {
     setRifleToDelete(rifle);
     setDeleteConfirmVisible(true);
@@ -98,6 +121,13 @@ export const RifleProfileList: React.FC = () => {
           />
         </View>
         <View style={styles.cardActions}>
+          <IconButton
+            icon="📋"
+            onPress={() => handleClone(item)}
+            variant="ghost"
+            size="medium"
+            accessibilityLabel="Clone rifle profile"
+          />
           <IconButton
             icon="✏️"
             onPress={() => handleEdit(item)}
