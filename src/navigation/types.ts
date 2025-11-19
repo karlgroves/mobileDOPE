@@ -36,6 +36,7 @@ export type ProfilesStackParamList = {
   AmmoProfileList: { rifleId: number };
   AmmoProfileDetail: { ammoId?: number; rifleId: number };
   AmmoProfileForm: { ammoId?: number; rifleId: number };
+  DOPECardGenerator: { rifleId: number; ammoId: number };
 };
 
 /**

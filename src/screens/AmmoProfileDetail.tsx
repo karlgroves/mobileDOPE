@@ -57,6 +57,12 @@ export const AmmoProfileDetail: React.FC = () => {
     navigation.navigate('AmmoProfileForm', { rifleId, ammoId });
   };
 
+  const handleGenerateDOPECard = () => {
+    if (ammo.id) {
+      navigation.navigate('DOPECardGenerator', { rifleId, ammoId: ammo.id });
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
@@ -110,7 +116,14 @@ export const AmmoProfileDetail: React.FC = () => {
           </Card>
         )}
 
-        <Button title="Edit Profile" onPress={handleEdit} variant="primary" />
+        <View style={styles.actions}>
+          <Button
+            title="Generate DOPE Card"
+            onPress={handleGenerateDOPECard}
+            variant="primary"
+          />
+          <Button title="Edit Profile" onPress={handleEdit} variant="secondary" />
+        </View>
       </ScrollView>
     </View>
   );
@@ -174,5 +187,8 @@ const styles = StyleSheet.create({
   notes: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  actions: {
+    gap: 12,
   },
 });

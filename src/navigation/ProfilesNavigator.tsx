@@ -6,6 +6,7 @@ import { RifleProfileDetail } from '../screens/RifleProfileDetail';
 import { AmmoProfileList } from '../screens/AmmoProfileList';
 import { AmmoProfileForm } from '../screens/AmmoProfileForm';
 import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
+import { DOPECardGenerator } from '../screens/DOPECardGenerator';
 import type { ProfilesStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<ProfilesStackParamList>();
@@ -57,6 +58,11 @@ export const ProfilesNavigator: React.FC = () => {
         name="AmmoProfileDetail"
         component={AmmoProfileDetail}
         options={{ title: 'Ammo Profile' }}
+      />
+      <Stack.Screen
+        name="DOPECardGenerator"
+        component={DOPECardGenerator}
+        options={{ title: 'DOPE Card Generator' }}
       />
     </Stack.Navigator>
   );
