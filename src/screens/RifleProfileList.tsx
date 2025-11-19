@@ -86,9 +86,13 @@ export const RifleProfileList: React.FC = () => {
           </Text>
           <Button
             title={rifleAmmoCount === 0 ? 'Add Ammunition' : 'View Ammunition'}
-            onPress={() =>
-              navigation.navigate('RifleProfileDetail', { rifleId: item.id! })
-            }
+            onPress={() => {
+              if (rifleAmmoCount === 0) {
+                navigation.navigate('AmmoProfileForm', { rifleId: item.id! });
+              } else {
+                navigation.navigate('AmmoProfileList', { rifleId: item.id! });
+              }
+            }}
             variant="secondary"
             size="small"
           />
