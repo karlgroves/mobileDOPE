@@ -20,7 +20,7 @@ import type { ProfilesStackScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { calculateBallisticSolution } from '../services/ballistics/BallisticCalculator';
+import { calculateBallisticSolution } from '../utils/ballistics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -269,12 +269,9 @@ export function DOPECardGenerator({ route, navigation }: Props) {
             No environmental data available
           </Text>
           <Text style={[styles.errorSubtext, { color: colors.text.secondary }]}>
-            Please set environmental conditions first
+            Please set environmental conditions in the Range tab first
           </Text>
-          <Button
-            title="Set Environment"
-            onPress={() => navigation.navigate('EnvironmentInput')}
-          />
+          <Button title="Go Back" onPress={() => navigation.goBack()} />
         </View>
       </View>
     );
@@ -367,11 +364,6 @@ export function DOPECardGenerator({ route, navigation }: Props) {
             onPress={handleGeneratePDF}
             disabled={generating}
             variant="primary"
-            icon={
-              generating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : undefined
-            }
           />
           <Button
             title="Print"

@@ -10,7 +10,8 @@ import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useDOPELogStore } from '../store/useDOPELogStore';
+import { useDOPEStore } from '../store/useDOPEStore';
+import { useAppStore } from '../store/useAppStore';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -21,13 +22,14 @@ import {
 type Props = RootStackScreenProps<'Settings'>;
 
 export const SettingsScreen: React.FC<Props> = () => {
-  const { theme, currentTheme, setTheme } = useTheme();
+  const { theme, setThemeMode } = useTheme();
+  const { settings } = useAppStore();
   const { colors } = theme;
   const [exporting, setExporting] = useState(false);
 
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
-  const { dopeLogs } = useDOPELogStore();
+  const { dopeLogs } = useDOPEStore();
 
   const handleClearData = () => {
     Alert.alert(
@@ -129,7 +131,7 @@ export const SettingsScreen: React.FC<Props> = () => {
   const themeOptions = [
     { label: 'Dark', value: 'dark' },
     { label: 'Light', value: 'light' },
-    { label: 'Night Vision', value: 'night' },
+    { label: 'Night Vision', value: 'nightVision' },
   ];
 
   return (
@@ -142,8 +144,8 @@ export const SettingsScreen: React.FC<Props> = () => {
             <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Theme</Text>
             <SegmentedControl
               options={themeOptions}
-              selectedValue={currentTheme}
-              onValueChange={(value) => setTheme(value as 'dark' | 'light' | 'night')}
+              selectedValue={settings.themeMode}
+              onValueChange={(value) => setThemeMode(value as 'dark' | 'light' | 'nightVision')}
             />
           </View>
         </Card>

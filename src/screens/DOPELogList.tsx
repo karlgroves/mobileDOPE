@@ -65,7 +65,9 @@ export function DOPELogList({ navigation }: Props) {
       switch (sortBy) {
         case 'date':
           // Most recent first
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return dateB - dateA;
         case 'distance':
           return a.distance - b.distance;
         case 'rifle':
