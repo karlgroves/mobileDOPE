@@ -470,15 +470,16 @@
 
 ### Export Functionality
 
-- [ ] Design export options screen
-- [ ] Implement full profile export (JSON)
-- [ ] Implement DOPE logs export (CSV)
-- [ ] Implement DOPE logs export (PDF report)
-- [ ] Implement range session summary export (Markdown)
-- [ ] Implement range session summary export (PDF)
-- [ ] Export marked target images
-- [ ] Implement QR code generation for profile sharing
-- [ ] Add batch export (all profiles at once)
+- [x] Design export options screen (integrated into Settings)
+- [x] Implement full profile export (JSON) - Individual and batch
+- [x] Implement DOPE logs export (CSV)
+- [x] Implement DOPE logs export (JSON)
+- [ ] Implement DOPE logs export (PDF report) - Deferred to Phase 2
+- [ ] Implement range session summary export (Markdown) - Deferred to Phase 2
+- [ ] Implement range session summary export (PDF) - Deferred to Phase 2
+- [ ] Export marked target images - Deferred to Phase 2
+- [ ] Implement QR code generation for profile sharing - Deferred to Phase 2
+- [x] Add batch export (all profiles at once) - Full backup feature
 
 ### Import Functionality
 
