@@ -3,7 +3,7 @@
  * Handles data export in various formats (JSON, CSV, PDF)
  */
 
-import { documentDirectory, writeAsStringAsync } from 'expo-file-system';
+import { Paths, File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import type { RifleProfile } from '../models/RifleProfile';
 import type { AmmoProfile } from '../models/AmmoProfile';
@@ -21,7 +21,7 @@ export interface ExportResult {
 export async function exportRifleProfileJSON(rifle: RifleProfile): Promise<ExportResult> {
   try {
     const filename = `rifle_${rifle.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -30,18 +30,18 @@ export async function exportRifleProfileJSON(rifle: RifleProfile): Promise<Expor
       data: rifle.toJSON(),
     };
 
-    await writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await file.write(JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
         dialogTitle: 'Export Rifle Profile',
         UTI: 'public.json',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting rifle profile:', error);
     return {
@@ -57,7 +57,7 @@ export async function exportRifleProfileJSON(rifle: RifleProfile): Promise<Expor
 export async function exportAmmoProfileJSON(ammo: AmmoProfile): Promise<ExportResult> {
   try {
     const filename = `ammo_${ammo.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -66,7 +66,7 @@ export async function exportAmmoProfileJSON(ammo: AmmoProfile): Promise<ExportRe
       data: ammo.toJSON(),
     };
 
-    await writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
@@ -95,7 +95,7 @@ export async function exportAllRifleProfilesJSON(
 ): Promise<ExportResult> {
   try {
     const filename = `all_rifles_${Date.now()}.json`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -105,7 +105,7 @@ export async function exportAllRifleProfilesJSON(
       data: rifles.map((r) => r.toJSON()),
     };
 
-    await writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
@@ -173,16 +173,16 @@ function dopeLogsToCSV(
       log.distance,
       log.elevationCorrection,
       log.windageCorrection,
-      log.angularUnit,
-      log.hit ? 'Yes' : 'No',
+      log.correctionUnit,
+      log.hitCount || log.shotCount ? 'Yes' : 'No',
       log.targetType || '',
       log.groupSize || '',
-      log.temperature || '',
-      log.humidity || '',
-      log.pressure || '',
-      log.windSpeed || '',
-      log.windDirection || '',
-      log.altitude || '',
+      '', // temperature - would need environment lookup
+      '', // humidity - would need environment lookup
+      '', // pressure - would need environment lookup
+      '', // windSpeed - would need environment lookup
+      '', // windDirection - would need environment lookup
+      '', // altitude - would need environment lookup
       log.notes ? `"${log.notes.replace(/"/g, '""')}"` : '',
     ];
   });
@@ -202,10 +202,10 @@ export async function exportDOPELogsCSV(
 ): Promise<ExportResult> {
   try {
     const filename = `dope_logs_${Date.now()}.csv`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
     const csvContent = dopeLogsToCSV(logs, rifles, ammos);
-    await writeAsStringAsync(fileUri, csvContent);
+    await FileSystem.writeAsStringAsync(fileUri, csvContent);
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
@@ -232,7 +232,7 @@ export async function exportDOPELogsCSV(
 export async function exportDOPELogsJSON(logs: DOPELog[]): Promise<ExportResult> {
   try {
     const filename = `dope_logs_${Date.now()}.json`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -242,7 +242,7 @@ export async function exportDOPELogsJSON(logs: DOPELog[]): Promise<ExportResult>
       data: logs.map((log) => log.toJSON()),
     };
 
-    await writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
@@ -273,7 +273,7 @@ export async function exportFullBackup(
 ): Promise<ExportResult> {
   try {
     const filename = `mobiledope_backup_${Date.now()}.json`;
-    const fileUri = `${documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -291,7 +291,7 @@ export async function exportFullBackup(
       },
     };
 
-    await writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {

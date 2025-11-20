@@ -51,37 +51,76 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     if (!rifle || !ammo || !environment) return [];
 
     const data: any[] = [];
+
+    const rifleConfig = {
+      zeroDistance: rifle.zeroDistance,
+      sightHeight: rifle.scopeHeight,
+      clickValueType: rifle.clickValueType as 'MIL' | 'MOA',
+      clickValue: rifle.clickValue,
+      twistRate: rifle.twistRate,
+      barrelLength: rifle.barrelLength,
+    };
+
+    const ammoConfig = {
+      bulletWeight: ammo.bulletWeight,
+      ballisticCoefficient: ammo.ballisticCoefficientG1,
+      muzzleVelocity: ammo.muzzleVelocity,
+      dragModel: 'G1' as const,
+    };
+
+    const atmosphere = {
+      temperature: environment.temperature || 59,
+      pressure: environment.pressure || 29.92,
+      humidity: environment.humidity || 50,
+      altitude: environment.altitude || 0,
+    };
+
     for (let distance = minDistance; distance <= maxDistance; distance += increment) {
-      const solution = calculateBallisticSolution({
-        rifle,
-        ammo,
-        environment,
-        targetDistance: distance,
-        angularUnit,
-      });
+      const targetParams = {
+        distance,
+        angle: 0,
+        windSpeed: environment.windSpeed || 0,
+        windDirection: environment.windDirection || 0,
+      };
+
+      const solution = calculateBallisticSolution(
+        rifleConfig,
+        ammoConfig,
+        targetParams,
+        atmosphere,
+        false
+      );
 
       const windData: { [key: number]: { elevation: number; windage: number } } = {};
       windSpeeds.forEach((windSpeed) => {
-        const windSolution = calculateBallisticSolution({
-          rifle,
-          ammo,
-          environment: { ...environment, windSpeed, windDirection: 90 }, // 90° = full value wind
-          targetDistance: distance,
-          angularUnit,
-        });
+        const windTargetParams = {
+          distance,
+          angle: 0,
+          windSpeed,
+          windDirection: 90, // 90° = full value wind
+        };
+
+        const windSolution = calculateBallisticSolution(
+          rifleConfig,
+          ammoConfig,
+          windTargetParams,
+          atmosphere,
+          false
+        );
+
         windData[windSpeed] = {
-          elevation: windSolution.elevationCorrection,
-          windage: windSolution.windageCorrection,
+          elevation: angularUnit === 'MIL' ? windSolution.elevationMIL : windSolution.elevationMOA,
+          windage: angularUnit === 'MIL' ? windSolution.windageMIL : windSolution.windageMOA,
         };
       });
 
       data.push({
         distance,
-        elevation: solution.elevationCorrection,
+        elevation: angularUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA,
         windData,
-        velocity: solution.velocityAtTarget,
-        energy: solution.energyAtTarget,
-        drop: solution.dropAtTarget,
+        velocity: solution.velocity,
+        energy: solution.energy,
+        drop: solution.drop,
         tof: solution.timeOfFlight,
       });
     }
