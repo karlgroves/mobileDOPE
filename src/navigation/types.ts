@@ -91,11 +91,10 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScre
 >;
 
 // Profiles Stack
-export type ProfilesStackScreenProps<T extends keyof ProfilesStackParamList> =
-  CompositeScreenProps<
-    NativeStackScreenProps<ProfilesStackParamList, T>,
-    MainTabScreenProps<keyof MainTabParamList>
-  >;
+export type ProfilesStackScreenProps<T extends keyof ProfilesStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<ProfilesStackParamList, T>,
+  MainTabScreenProps<keyof MainTabParamList>
+>;
 
 // Range Stack
 export type RangeStackScreenProps<T extends keyof RangeStackParamList> = CompositeScreenProps<

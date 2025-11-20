@@ -81,12 +81,7 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
 
   return (
     <View
-      style={[
-        styles.container,
-        { borderColor: colors.border },
-        disabled && styles.disabled,
-        style,
-      ]}
+      style={[styles.container, { borderColor: colors.border }, disabled && styles.disabled, style]}
     >
       {toggleOptions.map((option) => {
         const isSelected = option.value === value;
@@ -114,9 +109,7 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
               style={[
                 styles.optionText,
                 { fontSize: currentSize.fontSize },
-                isSelected
-                  ? { color: colors.text.inverse }
-                  : { color: colors.text.primary },
+                isSelected ? { color: colors.text.inverse } : { color: colors.text.primary },
               ]}
             >
               {option.label}

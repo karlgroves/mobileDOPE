@@ -151,11 +151,7 @@ export const convertDistance = (
 /**
  * Convert angular measurement based on unit preference
  */
-export const convertAngular = (
-  value: number,
-  from: 'MIL' | 'MOA',
-  to: 'MIL' | 'MOA'
-): number => {
+export const convertAngular = (value: number, from: 'MIL' | 'MOA', to: 'MIL' | 'MOA'): number => {
   if (from === to) return value;
   return from === 'MIL' ? milToMoa(value) : moaToMil(value);
 };
@@ -174,17 +170,17 @@ export const formatDistance = (
 /**
  * Format angular measurement with unit label
  */
-export const formatAngular = (
-  value: number,
-  unit: 'MIL' | 'MOA',
-  decimals: number = 2
-): string => {
+export const formatAngular = (value: number, unit: 'MIL' | 'MOA', decimals: number = 2): string => {
   return `${value.toFixed(decimals)} ${unit}`;
 };
 
 /**
  * Format velocity with unit label
  */
-export const formatVelocity = (value: number, unit: 'fps' | 'mps', decimals: number = 0): string => {
+export const formatVelocity = (
+  value: number,
+  unit: 'fps' | 'mps',
+  decimals: number = 0
+): string => {
   return `${value.toFixed(decimals)} ${unit}`;
 };

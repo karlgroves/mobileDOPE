@@ -320,7 +320,10 @@ export function DOPELogList({ navigation }: Props) {
 
           <View style={styles.fabContainer}>
             <TouchableOpacity
-              style={[styles.exportFab, { backgroundColor: colors.surface, borderColor: colors.primary }]}
+              style={[
+                styles.exportFab,
+                { backgroundColor: colors.surface, borderColor: colors.primary },
+              ]}
               onPress={handleExport}
             >
               <Text style={[styles.exportFabText, { color: colors.primary }]}>↗</Text>

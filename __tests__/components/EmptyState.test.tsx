@@ -41,25 +41,19 @@ describe('EmptyState', () => {
 
   it('should not render action button when actionLabel is not provided', () => {
     const onActionMock = jest.fn();
-    const { queryByRole } = render(
-      <EmptyState title="No Data" onAction={onActionMock} />
-    );
+    const { queryByRole } = render(<EmptyState title="No Data" onAction={onActionMock} />);
     // Button should not be rendered
     expect(queryByRole('button')).toBeNull();
   });
 
   it('should not render action button when onAction is not provided', () => {
-    const { queryByRole } = render(
-      <EmptyState title="No Data" actionLabel="Add Item" />
-    );
+    const { queryByRole } = render(<EmptyState title="No Data" actionLabel="Add Item" />);
     // Button should not be rendered
     expect(queryByRole('button')).toBeNull();
   });
 
   it('should render icon when provided', () => {
-    const { getByTestId } = render(
-      <EmptyState title="No Data" icon="📦" testID="empty-state" />
-    );
+    const { getByTestId } = render(<EmptyState title="No Data" icon="📦" testID="empty-state" />);
     expect(getByTestId('empty-state-icon')).toBeTruthy();
   });
 });

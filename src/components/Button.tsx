@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ViewStyle,
-  TextStyle,
   ActivityIndicator,
   StyleProp,
 } from 'react-native';
@@ -56,10 +55,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        ...buttonStyle,
-        pressed && !isDisabled && styles.pressed,
-      ]}
+      style={({ pressed }) => [...buttonStyle, pressed && !isDisabled && styles.pressed]}
       onPress={handlePress}
       disabled={isDisabled}
       testID={testID}

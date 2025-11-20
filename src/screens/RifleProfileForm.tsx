@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,13 +30,9 @@ export const RifleProfileForm: React.FC = () => {
   // Form state
   const [name, setName] = useState(existingRifle?.name || '');
   const [caliber, setCaliber] = useState(existingRifle?.caliber || '');
-  const [barrelLength, setBarrelLength] = useState<number | undefined>(
-    existingRifle?.barrelLength
-  );
+  const [barrelLength, setBarrelLength] = useState<number | undefined>(existingRifle?.barrelLength);
   const [twistRate, setTwistRate] = useState(existingRifle?.twistRate || '');
-  const [zeroDistance, setZeroDistance] = useState<number | undefined>(
-    existingRifle?.zeroDistance
-  );
+  const [zeroDistance, setZeroDistance] = useState<number | undefined>(existingRifle?.zeroDistance);
   const [opticManufacturer, setOpticManufacturer] = useState(
     existingRifle?.opticManufacturer || ''
   );

@@ -30,7 +30,9 @@ export function DOPELogDetail({ route, navigation }: Props) {
 
   useEffect(() => {
     if (!log) {
-      Alert.alert('Error', 'DOPE log not found', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      Alert.alert('Error', 'DOPE log not found', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     }
   }, [log]);
 
@@ -118,7 +120,9 @@ export function DOPELogDetail({ route, navigation }: Props) {
         </Card>
 
         {/* Performance */}
-        {(log.hitCount !== undefined || log.shotCount !== undefined || log.groupSize !== undefined) && (
+        {(log.hitCount !== undefined ||
+          log.shotCount !== undefined ||
+          log.groupSize !== undefined) && (
           <Card style={styles.card}>
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Performance</Text>
             {log.hitCount !== undefined && log.shotCount !== undefined && (

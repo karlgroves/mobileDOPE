@@ -47,9 +47,7 @@ export const AmmoProfileDetail: React.FC = () => {
   if (!ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>
-          Ammo profile not found
-        </Text>
+        <Text style={[styles.errorText, { color: colors.error }]}>Ammo profile not found</Text>
       </View>
     );
   }
@@ -108,9 +106,7 @@ export const AmmoProfileDetail: React.FC = () => {
 
         {(ammo.powderType || ammo.powderWeight || ammo.lotNumber) && (
           <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-              Load Details
-            </Text>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Load Details</Text>
             {ammo.powderType && <DetailRow label="Powder Type" value={ammo.powderType} />}
             {ammo.powderWeight && (
               <DetailRow label="Powder Weight" value={`${ammo.powderWeight} grains`} />
@@ -127,11 +123,7 @@ export const AmmoProfileDetail: React.FC = () => {
         )}
 
         <View style={styles.actions}>
-          <Button
-            title="Generate DOPE Card"
-            onPress={handleGenerateDOPECard}
-            variant="primary"
-          />
+          <Button title="Generate DOPE Card" onPress={handleGenerateDOPECard} variant="primary" />
           <Button title="Export Profile" onPress={handleExport} variant="secondary" />
           <Button title="Edit Profile" onPress={handleEdit} variant="secondary" />
         </View>

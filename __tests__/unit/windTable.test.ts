@@ -105,7 +105,7 @@ describe('Wind Table Generation', () => {
       );
     });
 
-    it('should handle angled winds (1-2 o\'clock)', () => {
+    it("should handle angled winds (1-2 o'clock)", () => {
       const table = generateWindTable(rifle, ammo, 500, standardAtmosphere, {
         windSpeeds: [10],
         windDirection: 45, // 1:30 position

@@ -255,8 +255,7 @@ export const DB_INDEXES = {
   DOPE_BY_AMMO: 'CREATE INDEX IF NOT EXISTS idx_dope_ammo ON dope_logs(ammo_id);',
   DOPE_BY_TIMESTAMP: 'CREATE INDEX IF NOT EXISTS idx_dope_timestamp ON dope_logs(timestamp);',
   SESSION_BY_RIFLE: 'CREATE INDEX IF NOT EXISTS idx_session_rifle ON range_sessions(rifle_id);',
-  SHOT_STRING_BY_AMMO:
-    'CREATE INDEX IF NOT EXISTS idx_shot_string_ammo ON shot_strings(ammo_id);',
+  SHOT_STRING_BY_AMMO: 'CREATE INDEX IF NOT EXISTS idx_shot_string_ammo ON shot_strings(ammo_id);',
   TARGET_BY_DOPE: 'CREATE INDEX IF NOT EXISTS idx_target_dope ON target_images(dope_log_id);',
   TARGET_BY_SESSION:
     'CREATE INDEX IF NOT EXISTS idx_target_session ON target_images(range_session_id);',

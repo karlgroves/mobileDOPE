@@ -30,12 +30,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Text style={styles.title}>{title}</Text>
       {message && <Text style={styles.message}>{message}</Text>}
       {actionLabel && onAction && (
-        <Button
-          title={actionLabel}
-          onPress={onAction}
-          variant="primary"
-          style={styles.button}
-        />
+        <Button title={actionLabel} onPress={onAction} variant="primary" style={styles.button} />
       )}
     </View>
   );

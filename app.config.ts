@@ -19,20 +19,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier:
-        env === 'production'
-          ? 'com.mobiledope.app'
-          : `com.mobiledope.app.${env}`,
+      bundleIdentifier: env === 'production' ? 'com.mobiledope.app' : `com.mobiledope.app.${env}`,
     },
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#1a1a1a',
       },
-      package:
-        env === 'production'
-          ? 'com.mobiledope.app'
-          : `com.mobiledope.app.${env}`,
+      package: env === 'production' ? 'com.mobiledope.app' : `com.mobiledope.app.${env}`,
     },
     web: {
       favicon: './assets/favicon.png',

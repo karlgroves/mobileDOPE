@@ -42,10 +42,9 @@ export class AmmoProfileRepository {
   async getById(id: number): Promise<AmmoProfile | null> {
     const db = databaseService.getDatabase();
 
-    const row = await db.getFirstAsync<AmmoProfileRow>(
-      'SELECT * FROM ammo_profiles WHERE id = ?',
-      [id]
-    );
+    const row = await db.getFirstAsync<AmmoProfileRow>('SELECT * FROM ammo_profiles WHERE id = ?', [
+      id,
+    ]);
 
     return row ? AmmoProfile.fromRow(row) : null;
   }

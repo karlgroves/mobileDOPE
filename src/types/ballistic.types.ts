@@ -91,11 +91,7 @@ export type CorrectionUnit = 'MIL' | 'MOA';
  * @param unit - 'MIL' or 'MOA'
  * @returns Correction in specified unit
  */
-export function inchesToCorrection(
-  inches: number,
-  distance: number,
-  unit: CorrectionUnit
-): number {
+export function inchesToCorrection(inches: number, distance: number, unit: CorrectionUnit): number {
   // Convert yards to inches
   const distanceInches = distance * 36;
 

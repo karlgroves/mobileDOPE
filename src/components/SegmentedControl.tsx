@@ -68,9 +68,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             <Text
               style={[
                 styles.label,
-                isSelected
-                  ? { color: colors.text.inverse }
-                  : { color: colors.text.primary },
+                isSelected ? { color: colors.text.inverse } : { color: colors.text.primary },
               ]}
             >
               {option.label}

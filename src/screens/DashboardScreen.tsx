@@ -115,10 +115,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             {recentLogs.map((log) => (
-              <View
-                key={log.id}
-                style={[styles.logItem, { borderBottomColor: colors.border }]}
-              >
+              <View key={log.id} style={[styles.logItem, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.logDistance, { color: colors.text.primary }]}>
                   {log.distance} {log.distanceUnit}
                 </Text>
@@ -136,10 +133,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.actionGrid}>
             <Button
               title="New DOPE Log"
-              onPress={() => (navigation as any).navigate('Logs', {
-                screen: 'DOPELogEdit',
-                params: {},
-              })}
+              onPress={() =>
+                (navigation as any).navigate('Logs', {
+                  screen: 'DOPELogEdit',
+                  params: {},
+                })
+              }
               variant="primary"
             />
             <Button
@@ -149,9 +148,11 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             />
             <Button
               title="Environment"
-              onPress={() => (navigation as any).navigate('Range', {
-                screen: 'EnvironmentInput',
-              })}
+              onPress={() =>
+                (navigation as any).navigate('Range', {
+                  screen: 'EnvironmentInput',
+                })
+              }
               variant="secondary"
             />
             <Button
@@ -170,9 +171,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         {/* Getting Started */}
         {rifles.length === 0 && (
           <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.cardTitle, { color: colors.text.primary }]}>
-              Getting Started
-            </Text>
+            <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Getting Started</Text>
             <Text style={[styles.gettingStartedText, { color: colors.text.secondary }]}>
               Welcome to Mobile DOPE! Start by creating a rifle profile, then add ammunition
               profiles for your loads. You can then use the ballistic calculator and log your
@@ -181,10 +180,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.gettingStartedButton}>
               <Button
                 title="Create Rifle Profile"
-                onPress={() => (navigation as any).navigate('Profiles', {
-                  screen: 'RifleProfileForm',
-                  params: {},
-                })}
+                onPress={() =>
+                  (navigation as any).navigate('Profiles', {
+                    screen: 'RifleProfileForm',
+                    params: {},
+                  })
+                }
                 variant="primary"
               />
             </View>

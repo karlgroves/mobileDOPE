@@ -31,11 +31,7 @@ export const CalculatorNavigator: React.FC = () => {
         component={BallisticSolutionResults}
         options={{ title: 'Ballistic Solution' }}
       />
-      <Stack.Screen
-        name="WindTable"
-        component={WindTable}
-        options={{ title: 'Wind Table' }}
-      />
+      <Stack.Screen name="WindTable" component={WindTable} options={{ title: 'Wind Table' }} />
     </Stack.Navigator>
   );
 };

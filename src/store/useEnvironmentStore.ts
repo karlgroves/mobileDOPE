@@ -20,7 +20,10 @@ interface EnvironmentState {
   // Database operations
   loadSnapshots: (limit?: number) => Promise<void>;
   createSnapshot: (data: EnvironmentSnapshotData) => Promise<EnvironmentSnapshot>;
-  updateSnapshot: (id: number, data: Partial<EnvironmentSnapshotData>) => Promise<EnvironmentSnapshot>;
+  updateSnapshot: (
+    id: number,
+    data: Partial<EnvironmentSnapshotData>
+  ) => Promise<EnvironmentSnapshot>;
   deleteSnapshot: (id: number) => Promise<void>;
   loadCurrent: () => Promise<void>;
   saveCurrent: () => Promise<EnvironmentSnapshot>;

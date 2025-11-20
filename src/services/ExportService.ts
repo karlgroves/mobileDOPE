@@ -90,9 +90,7 @@ export async function exportAmmoProfileJSON(ammo: AmmoProfile): Promise<ExportRe
 /**
  * Export multiple rifle profiles to JSON
  */
-export async function exportAllRifleProfilesJSON(
-  rifles: RifleProfile[]
-): Promise<ExportResult> {
+export async function exportAllRifleProfilesJSON(rifles: RifleProfile[]): Promise<ExportResult> {
   try {
     const filename = `all_rifles_${Date.now()}.json`;
     const file = new File(Paths.document, filename);
@@ -129,11 +127,7 @@ export async function exportAllRifleProfilesJSON(
 /**
  * Convert DOPE logs to CSV format
  */
-function dopeLogsToCSV(
-  logs: DOPELog[],
-  rifles: RifleProfile[],
-  ammos: AmmoProfile[]
-): string {
+function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfile[]): string {
   const getRifleName = (rifleId?: number) => {
     const rifle = rifles.find((r) => r.id === rifleId);
     return rifle ? rifle.name : 'Unknown';

@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -366,15 +359,9 @@ export function DOPECardGenerator({ route, navigation }: Props) {
             </View>
             <View style={styles.previewTable}>
               <View style={styles.previewTableHeader}>
-                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>
-                  Dist
-                </Text>
-                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>
-                  Elev
-                </Text>
-                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>
-                  Wind
-                </Text>
+                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>Dist</Text>
+                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>Elev</Text>
+                <Text style={[styles.previewHeaderCell, { color: colors.text.primary }]}>Wind</Text>
               </View>
               {dopeData.slice(0, 5).map((row) => (
                 <View key={row.distance} style={styles.previewTableRow}>
@@ -404,12 +391,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
             disabled={generating}
             variant="primary"
           />
-          <Button
-            title="Print"
-            onPress={handlePrint}
-            disabled={generating}
-            variant="secondary"
-          />
+          <Button title="Print" onPress={handlePrint} disabled={generating} variant="secondary" />
         </View>
       </ScrollView>
     </View>

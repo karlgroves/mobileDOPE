@@ -18,18 +18,14 @@ describe('Button', () => {
 
   it('should not call onPress when disabled', () => {
     const onPressMock = jest.fn();
-    const { getByText } = render(
-      <Button title="Press Me" onPress={onPressMock} disabled={true} />
-    );
+    const { getByText } = render(<Button title="Press Me" onPress={onPressMock} disabled={true} />);
 
     fireEvent.press(getByText('Press Me'));
     expect(onPressMock).not.toHaveBeenCalled();
   });
 
   it('should apply primary variant styles by default', () => {
-    const { getByTestId } = render(
-      <Button title="Press Me" onPress={() => {}} testID="button" />
-    );
+    const { getByTestId } = render(<Button title="Press Me" onPress={() => {}} testID="button" />);
 
     const button = getByTestId('button');
     expect(button).toBeTruthy();
@@ -103,9 +99,7 @@ describe('Button', () => {
   });
 
   it('should be accessible', () => {
-    const { getByTestId } = render(
-      <Button title="Press Me" onPress={() => {}} testID="button" />
-    );
+    const { getByTestId } = render(<Button title="Press Me" onPress={() => {}} testID="button" />);
 
     const button = getByTestId('button');
     expect(button.props.accessible).toBe(true);

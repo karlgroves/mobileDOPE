@@ -51,9 +51,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.icon}>⚠️</Text>
             <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.message}>
-              An unexpected error occurred. Please try again.
-            </Text>
+            <Text style={styles.message}>An unexpected error occurred. Please try again.</Text>
             {this.state.error && (
               <View style={styles.errorDetails}>
                 <Text style={styles.errorText}>{this.state.error.message}</Text>

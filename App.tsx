@@ -8,7 +8,8 @@ import { databaseService, migrationRunner } from './src/services/database';
 import { theme } from './src/constants/theme';
 
 function AppContent() {
-  const { isInitialized, setInitialized, setDatabaseReady, error, setError, settings } = useAppStore();
+  const { isInitialized, setInitialized, setDatabaseReady, error, setError, settings } =
+    useAppStore();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -47,7 +48,9 @@ function AppContent() {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.primary }]}>Initializing...</Text>
+        <Text style={[styles.loadingText, { color: theme.colors.text.primary }]}>
+          Initializing...
+        </Text>
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </View>
     );

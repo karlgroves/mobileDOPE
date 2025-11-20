@@ -21,11 +21,7 @@ export const LogsNavigator: React.FC = () => {
         },
       }}
     >
-      <Stack.Screen
-        name="DOPELogList"
-        component={DOPELogList}
-        options={{ title: 'DOPE Logs' }}
-      />
+      <Stack.Screen name="DOPELogList" component={DOPELogList} options={{ title: 'DOPE Logs' }} />
       <Stack.Screen
         name="DOPELogDetail"
         component={DOPELogDetail}

@@ -64,7 +64,7 @@ describe('Ballistic Calculations', () => {
       // E (ft-lbs) = (bullet weight in grains / 7000) * velocity^2 / (2 * 32.174)
       const point = trajectory[trajectory.length - 1];
       const expectedEnergy =
-        (ammo.bulletWeight / 7000) * (point.velocity * point.velocity) / (2 * 32.174);
+        ((ammo.bulletWeight / 7000) * (point.velocity * point.velocity)) / (2 * 32.174);
 
       expect(point.energy).toBeCloseTo(expectedEnergy, -1); // Within 10 ft-lbs
     });

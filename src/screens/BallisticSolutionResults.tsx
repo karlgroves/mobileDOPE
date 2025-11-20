@@ -29,9 +29,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Profile Info */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Configuration
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Configuration</Text>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Rifle:</Text>
             <Text style={[styles.infoValue, { color: colors.text.primary }]}>
@@ -46,9 +44,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Distance:</Text>
-            <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-              {distance} yards
-            </Text>
+            <Text style={[styles.infoValue, { color: colors.text.primary }]}>{distance} yards</Text>
           </View>
         </Card>
 
@@ -59,9 +55,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </Text>
           <View style={styles.primaryResult}>
             <View style={styles.primaryColumn}>
-              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>
-                ELEVATION
-              </Text>
+              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
               <Text style={[styles.primaryValue, { color: colors.primary }]}>
                 {angularUnit === 'MIL'
                   ? `${solution.elevationMIL.toFixed(2)}`
@@ -73,9 +67,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
-              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>
-                WINDAGE
-              </Text>
+              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
               <Text style={[styles.primaryValue, { color: colors.primary }]}>
                 {angularUnit === 'MIL'
                   ? `${solution.windageMIL.toFixed(2)}`
@@ -95,9 +87,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </Text>
 
           <View style={styles.resultRow}>
-            <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
-              Drop
-            </Text>
+            <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Drop</Text>
             <Text style={[styles.resultValue, { color: colors.text.primary }]}>
               {solution.drop.toFixed(1)} in
             </Text>

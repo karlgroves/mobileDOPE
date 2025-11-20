@@ -134,7 +134,8 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                         },
                       ]}
                     >
-                      {item}{unit ? ` ${unit}` : ''}
+                      {item}
+                      {unit ? ` ${unit}` : ''}
                     </Text>
                     {isSelected && (
                       <Text style={[styles.checkmark, { color: colors.primary }]}>✓</Text>

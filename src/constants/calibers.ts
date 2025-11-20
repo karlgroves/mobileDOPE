@@ -85,8 +85,7 @@ export function searchCalibers(query: string): CaliberInfo[] {
   const lowerQuery = query.toLowerCase();
   return COMMON_CALIBERS.filter(
     (c) =>
-      c.name.toLowerCase().includes(lowerQuery) ||
-      c.description?.toLowerCase().includes(lowerQuery)
+      c.name.toLowerCase().includes(lowerQuery) || c.description?.toLowerCase().includes(lowerQuery)
   );
 }
 

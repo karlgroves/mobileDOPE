@@ -20,7 +20,12 @@ describe('TextInput Component', () => {
 
   it('should render with placeholder', () => {
     const { getByPlaceholderText } = render(
-      <TextInput label="Rifle Name" placeholder="Enter rifle name" value="" onChangeText={() => {}} />,
+      <TextInput
+        label="Rifle Name"
+        placeholder="Enter rifle name"
+        value=""
+        onChangeText={() => {}}
+      />,
       { wrapper: Wrapper }
     );
 
@@ -30,7 +35,12 @@ describe('TextInput Component', () => {
   it('should call onChangeText when text changes', () => {
     const onChangeText = jest.fn();
     const { getByPlaceholderText } = render(
-      <TextInput label="Rifle Name" placeholder="Enter name" value="" onChangeText={onChangeText} />,
+      <TextInput
+        label="Rifle Name"
+        placeholder="Enter name"
+        value=""
+        onChangeText={onChangeText}
+      />,
       { wrapper: Wrapper }
     );
 

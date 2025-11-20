@@ -3,8 +3,8 @@
  * User preferences and app configuration
  */
 
-import React, { useState } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -25,7 +25,6 @@ export const SettingsScreen: React.FC<Props> = () => {
   const { theme, setThemeMode } = useTheme();
   const { settings } = useAppStore();
   const { colors } = theme;
-  const [exporting, setExporting] = useState(false);
 
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
@@ -57,11 +56,12 @@ export const SettingsScreen: React.FC<Props> = () => {
         {
           text: 'Full Backup (All Data)',
           onPress: async () => {
-            setExporting(true);
             const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs);
-            setExporting(false);
             if (result.success) {
-              Alert.alert('Success', `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, and ${dopeLogs.length} DOPE logs.`);
+              Alert.alert(
+                'Success',
+                `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, and ${dopeLogs.length} DOPE logs.`
+              );
             } else {
               Alert.alert('Error', result.error || 'Export failed');
             }
@@ -74,9 +74,7 @@ export const SettingsScreen: React.FC<Props> = () => {
               Alert.alert('No Data', 'You have no rifle profiles to export.');
               return;
             }
-            setExporting(true);
             const result = await exportAllRifleProfilesJSON(rifles);
-            setExporting(false);
             if (result.success) {
               Alert.alert('Success', `Exported ${rifles.length} rifle profiles.`);
             } else {
@@ -91,9 +89,7 @@ export const SettingsScreen: React.FC<Props> = () => {
               Alert.alert('No Data', 'You have no DOPE logs to export.');
               return;
             }
-            setExporting(true);
             const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles);
-            setExporting(false);
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
@@ -108,9 +104,7 @@ export const SettingsScreen: React.FC<Props> = () => {
               Alert.alert('No Data', 'You have no DOPE logs to export.');
               return;
             }
-            setExporting(true);
             const result = await exportDOPELogsJSON(dopeLogs);
-            setExporting(false);
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
@@ -152,13 +146,9 @@ export const SettingsScreen: React.FC<Props> = () => {
 
         {/* Default Units */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Default Units
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Default Units</Text>
           <View style={styles.settingRow}>
-            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
-              Angular Unit
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Angular Unit</Text>
             <SegmentedControl
               options={[
                 { label: 'MIL', value: 'MIL' },
@@ -171,9 +161,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             />
           </View>
           <View style={styles.settingRow}>
-            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
-              Distance Unit
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Distance Unit</Text>
             <SegmentedControl
               options={[
                 { label: 'Yards', value: 'yards' },
@@ -189,9 +177,7 @@ export const SettingsScreen: React.FC<Props> = () => {
 
         {/* Data Management */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Data Management
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>
           <Button
             title="Export All Data"
             onPress={handleExportData}
@@ -223,20 +209,14 @@ export const SettingsScreen: React.FC<Props> = () => {
             <Text style={[styles.infoValue, { color: colors.text.primary }]}>1.0.0</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
-              Build:
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-              Development
-            </Text>
+            <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Build:</Text>
+            <Text style={[styles.infoValue, { color: colors.text.primary }]}>Development</Text>
           </View>
         </Card>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.text.secondary }]}>
-            Mobile DOPE App
-          </Text>
+          <Text style={[styles.footerText, { color: colors.text.secondary }]}>Mobile DOPE App</Text>
           <Text style={[styles.footerText, { color: colors.text.secondary }]}>
             For precision shooting data management
           </Text>

@@ -61,12 +61,7 @@ describe('Modal', () => {
   it('should not close on backdrop press when closeOnBackdropPress is false', () => {
     const onCloseMock = jest.fn();
     const { getByTestId } = render(
-      <Modal
-        visible={true}
-        onClose={onCloseMock}
-        closeOnBackdropPress={false}
-        testID="modal"
-      >
+      <Modal visible={true} onClose={onCloseMock} closeOnBackdropPress={false} testID="modal">
         <Text>Content</Text>
       </Modal>
     );

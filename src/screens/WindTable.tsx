@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { UnitToggle } from '../components/UnitToggle';
 import { NumberPicker } from '../components/NumberPicker';
@@ -115,7 +108,10 @@ export function WindTable({ route }: Props) {
 
       setWindTable(table);
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to generate wind table');
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to generate wind table'
+      );
     } finally {
       setLoading(false);
     }
@@ -253,7 +249,10 @@ export function WindTable({ route }: Props) {
                           <Text
                             style={[
                               styles.cellText,
-                              { color: entry.windSpeed === 0 ? colors.text.disabled : colors.primary },
+                              {
+                                color:
+                                  entry.windSpeed === 0 ? colors.text.disabled : colors.primary,
+                              },
                             ]}
                           >
                             {formatCorrection(entry)}

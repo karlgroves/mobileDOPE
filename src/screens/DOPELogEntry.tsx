@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
@@ -46,9 +39,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
   const existingLog = logId ? getDopeById(logId) : undefined;
 
   // Profile selection
-  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(
-    existingLog?.rifleId
-  );
+  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(existingLog?.rifleId);
   const [selectedAmmoId, setSelectedAmmoId] = useState<number | undefined>(existingLog?.ammoId);
 
   // Target parameters

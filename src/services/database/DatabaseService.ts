@@ -103,9 +103,7 @@ class DatabaseService {
     if (!this.db) return 0;
 
     try {
-      const result = await this.db.getFirstAsync<{ user_version: number }>(
-        'PRAGMA user_version;'
-      );
+      const result = await this.db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;');
       return result?.user_version || 0;
     } catch (error) {
       console.error('Failed to get database version:', error);

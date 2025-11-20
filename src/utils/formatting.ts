@@ -36,11 +36,7 @@ export const formatVelocity = (
 /**
  * Format angular measurement with unit label
  */
-export const formatAngular = (
-  value: number,
-  unit: 'MIL' | 'MOA',
-  decimals: number = 2
-): string => {
+export const formatAngular = (value: number, unit: 'MIL' | 'MOA', decimals: number = 2): string => {
   return `${value.toFixed(decimals)} ${unit}`;
 };
 
@@ -68,11 +64,7 @@ export const formatHumidity = (value: number, decimals: number = 0): string => {
 /**
  * Format wind speed and direction
  */
-export const formatWind = (
-  speed: number,
-  direction: number,
-  speedDecimals: number = 0
-): string => {
+export const formatWind = (speed: number, direction: number, speedDecimals: number = 0): string => {
   const formattedSpeed = speed.toFixed(speedDecimals);
   const formattedDirection = Math.round(direction);
   return `${formattedSpeed} mph @ ${formattedDirection}°`;

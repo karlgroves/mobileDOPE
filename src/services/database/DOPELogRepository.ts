@@ -43,9 +43,7 @@ export class DOPELogRepository {
   async getById(id: number): Promise<DOPELog | null> {
     const db = databaseService.getDatabase();
 
-    const row = await db.getFirstAsync<DOPELogRow>('SELECT * FROM dope_logs WHERE id = ?', [
-      id,
-    ]);
+    const row = await db.getFirstAsync<DOPELogRow>('SELECT * FROM dope_logs WHERE id = ?', [id]);
 
     return row ? DOPELog.fromRow(row) : null;
   }
@@ -215,13 +213,16 @@ export class DOPELogRepository {
   /**
    * Get DOPE logs grouped by distance for ballistic curve generation
    */
-  async getDOPECurve(rifleId: number, ammoId: number): Promise<
-    Array<{
+  async getDOPECurve(
+    rifleId: number,
+    ammoId: number
+  ): Promise<
+    {
       distance: number;
       avgElevation: number;
       avgWindage: number;
       count: number;
-    }>
+    }[]
   > {
     const db = databaseService.getDatabase();
 

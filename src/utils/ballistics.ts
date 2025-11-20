@@ -209,7 +209,7 @@ export function calculateTrajectory(
     const distanceYards = state.x / 3;
     if (distanceYards >= nextPoint) {
       const velocity = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
-      const energy = (bulletWeight / 7000) * (velocity * velocity) / (2 * GRAVITY);
+      const energy = ((bulletWeight / 7000) * (velocity * velocity)) / (2 * GRAVITY);
       const drop = state.y * 12; // Convert to inches
 
       trajectory.push({
@@ -240,7 +240,7 @@ export function calculateTrajectory(
 
   // Ensure we have the exact target distance
   const velocity = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
-  const energy = (bulletWeight / 7000) * (velocity * velocity) / (2 * GRAVITY);
+  const energy = ((bulletWeight / 7000) * (velocity * velocity)) / (2 * GRAVITY);
 
   trajectory.push({
     distance: targetDistance,
@@ -302,7 +302,11 @@ export function calculateBallisticSolution(
   if (includeTrajectory) {
     for (const point of trajectory) {
       point.elevation = inchesToCorrection(-point.drop, point.distance, 'MIL');
-      point.windageCorrection = inchesToCorrection(-windage * (point.distance / shot.distance), point.distance, 'MIL');
+      point.windageCorrection = inchesToCorrection(
+        -windage * (point.distance / shot.distance),
+        point.distance,
+        'MIL'
+      );
       point.windage = windage * (point.distance / shot.distance);
     }
   }

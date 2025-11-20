@@ -5,7 +5,6 @@
 import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
 import type { AtmosphericConditions } from './atmospheric';
 import { calculateBallisticSolution } from './ballistics';
-import { inchesToCorrection } from '../types/ballistic.types';
 
 /**
  * Wind table entry representing drift at a specific wind speed and direction

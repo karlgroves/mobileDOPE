@@ -52,12 +52,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
         <Text style={[styles.message, { color: colors.text.primary }]}>{message}</Text>
 
         <View style={styles.buttonContainer}>
-          <Button
-            title={cancelText}
-            onPress={onClose}
-            variant="secondary"
-            style={styles.button}
-          />
+          <Button title={cancelText} onPress={onClose} variant="secondary" style={styles.button} />
           <Button
             title={confirmText}
             onPress={handleConfirm}

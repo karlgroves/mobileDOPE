@@ -278,7 +278,9 @@ export function EnvironmentInput() {
 
         {/* Atmospheric Conditions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Atmospheric Conditions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Atmospheric Conditions
+          </Text>
 
           <NumberInput
             label="Temperature"

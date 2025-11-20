@@ -77,8 +77,8 @@ export class EnvironmentSnapshot {
    */
   private calculateDensityAltitude(data: EnvironmentSnapshotData): number {
     const standardPressure = 29.92; // inHg at sea level
-    const pressureAltitude = data.altitude + (1000 * (standardPressure - data.pressure));
-    const standardTemp = 59 - (0.00356 * data.altitude); // ISA temp at altitude
+    const pressureAltitude = data.altitude + 1000 * (standardPressure - data.pressure);
+    const standardTemp = 59 - 0.00356 * data.altitude; // ISA temp at altitude
     const tempDifference = data.temperature - standardTemp;
     const densityAltitude = pressureAltitude + 120 * tempDifference;
     return Math.round(densityAltitude);

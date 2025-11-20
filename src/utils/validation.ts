@@ -157,7 +157,7 @@ export const validate = (
  * Validate multiple fields and return all errors
  */
 export const validateAll = (
-  validations: Array<{ value: number; validator: (v: number) => boolean; fieldName: string }>
+  validations: { value: number; validator: (v: number) => boolean; fieldName: string }[]
 ): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 

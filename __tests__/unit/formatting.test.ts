@@ -118,7 +118,7 @@ describe('Environmental Formatting', () => {
   describe('formatPressure', () => {
     it('should format pressure with inHg', () => {
       expect(formatPressure(29.92)).toBe('29.92 inHg');
-      expect(formatPressure(30.00)).toBe('30.00 inHg');
+      expect(formatPressure(30.0)).toBe('30.00 inHg');
     });
 
     it('should default to 2 decimal places', () => {

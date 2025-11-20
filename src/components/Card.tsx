@@ -11,21 +11,22 @@ export interface CardProps {
   testID?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, title, subtitle, style, onPress, testID }) => {
+export const Card: React.FC<CardProps> = ({
+  children,
+  title,
+  subtitle,
+  style,
+  onPress,
+  testID,
+}) => {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const containerStyle = [
-    styles.card,
-    { backgroundColor: colors.surface },
-    style,
-  ];
+  const containerStyle = [styles.card, { backgroundColor: colors.surface }, style];
 
   const content = (
     <>
-      {title && (
-        <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
-      )}
+      {title && <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>}
       {subtitle && (
         <Text style={[styles.subtitle, { color: colors.text.secondary }]}>{subtitle}</Text>
       )}
@@ -36,10 +37,7 @@ export const Card: React.FC<CardProps> = ({ children, title, subtitle, style, on
   if (onPress) {
     return (
       <Pressable
-        style={({ pressed }) => [
-          ...containerStyle,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [...containerStyle, pressed && styles.pressed]}
         onPress={onPress}
         testID={testID}
         accessible={true}

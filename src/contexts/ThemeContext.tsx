@@ -29,9 +29,5 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     updateSettings({ themeMode: mode });
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, setThemeMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, setThemeMode }}>{children}</ThemeContext.Provider>;
 };

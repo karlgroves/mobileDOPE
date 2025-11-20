@@ -104,8 +104,8 @@ class MigrationRunner {
     pendingCount: number;
   }> {
     const currentVersion = await databaseService.getDatabaseVersion();
-    const latestVersion = this.migrations.length > 0 ?
-      Math.max(...this.migrations.map((m) => m.version)) : 0;
+    const latestVersion =
+      this.migrations.length > 0 ? Math.max(...this.migrations.map((m) => m.version)) : 0;
     const pendingCount = this.migrations.filter((m) => m.version > currentVersion).length;
 
     return {

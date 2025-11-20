@@ -9,42 +9,32 @@ describe('ListItem', () => {
   });
 
   it('should render subtitle when provided', () => {
-    const { getByText } = render(
-      <ListItem title="Test Item" subtitle="Subtitle text" />
-    );
+    const { getByText } = render(<ListItem title="Test Item" subtitle="Subtitle text" />);
     expect(getByText('Subtitle text')).toBeTruthy();
   });
 
   it('should render right text when provided', () => {
-    const { getByText } = render(
-      <ListItem title="Test Item" rightText="100" />
-    );
+    const { getByText } = render(<ListItem title="Test Item" rightText="100" />);
     expect(getByText('100')).toBeTruthy();
   });
 
   it('should call onPress when pressed', () => {
     const onPressMock = jest.fn();
-    const { getByText } = render(
-      <ListItem title="Test Item" onPress={onPressMock} />
-    );
+    const { getByText } = render(<ListItem title="Test Item" onPress={onPressMock} />);
 
     fireEvent.press(getByText('Test Item'));
     expect(onPressMock).toHaveBeenCalledTimes(1);
   });
 
   it('should not be pressable when onPress is not provided', () => {
-    const { getByTestId } = render(
-      <ListItem title="Test Item" testID="list-item" />
-    );
+    const { getByTestId } = render(<ListItem title="Test Item" testID="list-item" />);
 
     const listItem = getByTestId('list-item');
     expect(listItem.type).toBe('View');
   });
 
   it('should show chevron when onPress is provided', () => {
-    const { getByText } = render(
-      <ListItem title="Test Item" onPress={() => {}} />
-    );
+    const { getByText } = render(<ListItem title="Test Item" onPress={() => {}} />);
     expect(getByText('›')).toBeTruthy();
   });
 
@@ -54,9 +44,7 @@ describe('ListItem', () => {
   });
 
   it('should show separator by default', () => {
-    const { getByTestId } = render(
-      <ListItem title="Test Item" testID="list-item" />
-    );
+    const { getByTestId } = render(<ListItem title="Test Item" testID="list-item" />);
     const separator = getByTestId('list-item-separator');
     expect(separator).toBeTruthy();
   });

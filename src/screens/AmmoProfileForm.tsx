@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,9 +37,7 @@ export const AmmoProfileForm: React.FC = () => {
     existingAmmo?.muzzleVelocity
   );
   const [powderType, setPowderType] = useState(existingAmmo?.powderType || '');
-  const [powderWeight, setPowderWeight] = useState<number | undefined>(
-    existingAmmo?.powderWeight
-  );
+  const [powderWeight, setPowderWeight] = useState<number | undefined>(existingAmmo?.powderWeight);
   const [lotNumber, setLotNumber] = useState(existingAmmo?.lotNumber || '');
   const [notes, setNotes] = useState(existingAmmo?.notes || '');
 

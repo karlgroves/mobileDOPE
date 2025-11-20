@@ -240,9 +240,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
 
         {/* Wind Conditions */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Wind Conditions
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Wind Conditions</Text>
           <NumberInput
             label="Wind Speed"
             value={windSpeed}
