@@ -24,6 +24,7 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import type { DOPELog } from '../models/DOPELog';
+import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
 
 type Props = LogsStackScreenProps<'DOPELogList'>;
 
@@ -125,6 +126,43 @@ export function DOPELogList({ navigation }: Props) {
           }
         },
       },
+    ]);
+  };
+
+  const handleExport = () => {
+    if (dopeLogs.length === 0) {
+      Alert.alert('No Data', 'You have no DOPE logs to export.');
+      return;
+    }
+
+    Alert.alert('Export DOPE Logs', 'Choose export format:', [
+      {
+        text: 'CSV (Spreadsheet)',
+        onPress: async () => {
+          const result = await exportDOPELogsCSV(
+            dopeLogs,
+            useRifleStore.getState().rifles,
+            useAmmoStore.getState().ammoProfiles
+          );
+          if (result.success) {
+            Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs to CSV.`);
+          } else {
+            Alert.alert('Error', result.error || 'Export failed');
+          }
+        },
+      },
+      {
+        text: 'JSON (Data)',
+        onPress: async () => {
+          const result = await exportDOPELogsJSON(dopeLogs);
+          if (result.success) {
+            Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs to JSON.`);
+          } else {
+            Alert.alert('Error', result.error || 'Export failed');
+          }
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
@@ -280,6 +318,12 @@ export function DOPELogList({ navigation }: Props) {
 
           <View style={styles.fabContainer}>
             <TouchableOpacity
+              style={[styles.exportFab, { backgroundColor: colors.surface, borderColor: colors.primary }]}
+              onPress={handleExport}
+            >
+              <Text style={[styles.exportFabText, { color: colors.primary }]}>↗</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.fab, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('DOPELogEdit', {})}
             >
@@ -408,6 +452,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 16,
+    flexDirection: 'row',
+    gap: 12,
   },
   fab: {
     width: 56,
@@ -425,5 +471,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '300',
+  },
+  exportFab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  exportFabText: {
+    fontSize: 24,
+    fontWeight: '600',
   },
 });

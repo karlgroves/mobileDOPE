@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfilesStackParamList } from '../navigation/types';
 import { Card, Button, EmptyState } from '../components';
 import { useRifleStore } from '../store/useRifleStore';
 import { useTheme } from '../contexts/ThemeContext';
+import { exportRifleProfileJSON } from '../services/ExportService';
 
 type NavigationProp = NativeStackNavigationProp<ProfilesStackParamList, 'RifleProfileDetail'>;
 type RoutePropType = RouteProp<ProfilesStackParamList, 'RifleProfileDetail'>;
@@ -51,6 +52,15 @@ export const RifleProfileDetail: React.FC = () => {
     navigation.navigate('RifleProfileForm', { rifleId: rifle.id });
   };
 
+  const handleExport = async () => {
+    const result = await exportRifleProfileJSON(rifle);
+    if (result.success) {
+      Alert.alert('Success', `Rifle profile "${rifle.name}" exported successfully.`);
+    } else {
+      Alert.alert('Error', result.error || 'Export failed');
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -93,6 +103,13 @@ export const RifleProfileDetail: React.FC = () => {
         <Button
           title="View Ammunition"
           onPress={() => navigation.navigate('AmmoProfileList', { rifleId: rifle.id! })}
+          variant="secondary"
+          size="large"
+          style={styles.button}
+        />
+        <Button
+          title="Export Profile"
+          onPress={handleExport}
           variant="secondary"
           size="large"
           style={styles.button}

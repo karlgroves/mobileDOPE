@@ -3,17 +3,31 @@
  * User preferences and app configuration
  */
 
-import React from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
+import { useRifleStore } from '../store/useRifleStore';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useDOPELogStore } from '../store/useDOPELogStore';
+import {
+  exportFullBackup,
+  exportAllRifleProfilesJSON,
+  exportDOPELogsCSV,
+  exportDOPELogsJSON,
+} from '../services/ExportService';
 
 type Props = RootStackScreenProps<'Settings'>;
 
 export const SettingsScreen: React.FC<Props> = () => {
   const { theme, currentTheme, setTheme } = useTheme();
   const { colors } = theme;
+  const [exporting, setExporting] = useState(false);
+
+  const { rifles } = useRifleStore();
+  const { ammoProfiles } = useAmmoStore();
+  const { dopeLogs } = useDOPELogStore();
 
   const handleClearData = () => {
     Alert.alert(
@@ -34,11 +48,82 @@ export const SettingsScreen: React.FC<Props> = () => {
   };
 
   const handleExportData = () => {
-    Alert.alert('Not Implemented', 'Data export functionality coming soon.');
+    Alert.alert(
+      'Export Data',
+      'Choose what to export:',
+      [
+        {
+          text: 'Full Backup (All Data)',
+          onPress: async () => {
+            setExporting(true);
+            const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs);
+            setExporting(false);
+            if (result.success) {
+              Alert.alert('Success', `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, and ${dopeLogs.length} DOPE logs.`);
+            } else {
+              Alert.alert('Error', result.error || 'Export failed');
+            }
+          },
+        },
+        {
+          text: 'Rifle Profiles (JSON)',
+          onPress: async () => {
+            if (rifles.length === 0) {
+              Alert.alert('No Data', 'You have no rifle profiles to export.');
+              return;
+            }
+            setExporting(true);
+            const result = await exportAllRifleProfilesJSON(rifles);
+            setExporting(false);
+            if (result.success) {
+              Alert.alert('Success', `Exported ${rifles.length} rifle profiles.`);
+            } else {
+              Alert.alert('Error', result.error || 'Export failed');
+            }
+          },
+        },
+        {
+          text: 'DOPE Logs (CSV)',
+          onPress: async () => {
+            if (dopeLogs.length === 0) {
+              Alert.alert('No Data', 'You have no DOPE logs to export.');
+              return;
+            }
+            setExporting(true);
+            const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles);
+            setExporting(false);
+            if (result.success) {
+              Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
+            } else {
+              Alert.alert('Error', result.error || 'Export failed');
+            }
+          },
+        },
+        {
+          text: 'DOPE Logs (JSON)',
+          onPress: async () => {
+            if (dopeLogs.length === 0) {
+              Alert.alert('No Data', 'You have no DOPE logs to export.');
+              return;
+            }
+            setExporting(true);
+            const result = await exportDOPELogsJSON(dopeLogs);
+            setExporting(false);
+            if (result.success) {
+              Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
+            } else {
+              Alert.alert('Error', result.error || 'Export failed');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleImportData = () => {
-    Alert.alert('Not Implemented', 'Data import functionality coming soon.');
+    Alert.alert('Not Implemented', 'Data import functionality coming in Phase 2.');
   };
 
   const themeOptions = [

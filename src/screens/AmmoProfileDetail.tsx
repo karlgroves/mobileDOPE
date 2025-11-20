@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfilesStackParamList } from '../navigation/types';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { Card, Button } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
+import { exportAmmoProfileJSON } from '../services/ExportService';
 
 type AmmoProfileDetailNavigationProp = NativeStackNavigationProp<
   ProfilesStackParamList,
@@ -60,6 +61,15 @@ export const AmmoProfileDetail: React.FC = () => {
   const handleGenerateDOPECard = () => {
     if (ammo.id) {
       navigation.navigate('DOPECardGenerator', { rifleId, ammoId: ammo.id });
+    }
+  };
+
+  const handleExport = async () => {
+    const result = await exportAmmoProfileJSON(ammo);
+    if (result.success) {
+      Alert.alert('Success', `Ammo profile "${ammo.name}" exported successfully.`);
+    } else {
+      Alert.alert('Error', result.error || 'Export failed');
     }
   };
 
@@ -122,6 +132,7 @@ export const AmmoProfileDetail: React.FC = () => {
             onPress={handleGenerateDOPECard}
             variant="primary"
           />
+          <Button title="Export Profile" onPress={handleExport} variant="secondary" />
           <Button title="Edit Profile" onPress={handleEdit} variant="secondary" />
         </View>
       </ScrollView>
