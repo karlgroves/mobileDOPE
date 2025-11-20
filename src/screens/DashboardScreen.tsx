@@ -136,7 +136,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.actionGrid}>
             <Button
               title="New DOPE Log"
-              onPress={() => navigation.navigate('Logs', {
+              onPress={() => (navigation as any).navigate('Logs', {
                 screen: 'DOPELogEdit',
                 params: {},
               })}
@@ -149,7 +149,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             />
             <Button
               title="Environment"
-              onPress={() => navigation.navigate('Range', {
+              onPress={() => (navigation as any).navigate('Range', {
                 screen: 'EnvironmentInput',
               })}
               variant="secondary"
@@ -181,7 +181,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.gettingStartedButton}>
               <Button
                 title="Create Rifle Profile"
-                onPress={() => navigation.navigate('Profiles', {
+                onPress={() => (navigation as any).navigate('Profiles', {
                   screen: 'RifleProfileForm',
                   params: {},
                 })}

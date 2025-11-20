@@ -57,7 +57,7 @@ export async function exportRifleProfileJSON(rifle: RifleProfile): Promise<Expor
 export async function exportAmmoProfileJSON(ammo: AmmoProfile): Promise<ExportResult> {
   try {
     const filename = `ammo_${ammo.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -66,18 +66,18 @@ export async function exportAmmoProfileJSON(ammo: AmmoProfile): Promise<ExportRe
       data: ammo.toJSON(),
     };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await file.write(JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
         dialogTitle: 'Export Ammo Profile',
         UTI: 'public.json',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting ammo profile:', error);
     return {
@@ -95,7 +95,7 @@ export async function exportAllRifleProfilesJSON(
 ): Promise<ExportResult> {
   try {
     const filename = `all_rifles_${Date.now()}.json`;
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -105,18 +105,18 @@ export async function exportAllRifleProfilesJSON(
       data: rifles.map((r) => r.toJSON()),
     };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await file.write(JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
         dialogTitle: 'Export All Rifle Profiles',
         UTI: 'public.json',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting all rifle profiles:', error);
     return {
@@ -202,21 +202,21 @@ export async function exportDOPELogsCSV(
 ): Promise<ExportResult> {
   try {
     const filename = `dope_logs_${Date.now()}.csv`;
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const csvContent = dopeLogsToCSV(logs, rifles, ammos);
-    await FileSystem.writeAsStringAsync(fileUri, csvContent);
+    await file.write(csvContent);
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/csv',
         dialogTitle: 'Export DOPE Logs',
         UTI: 'public.comma-separated-values-text',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting DOPE logs:', error);
     return {
@@ -232,7 +232,7 @@ export async function exportDOPELogsCSV(
 export async function exportDOPELogsJSON(logs: DOPELog[]): Promise<ExportResult> {
   try {
     const filename = `dope_logs_${Date.now()}.json`;
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -242,18 +242,18 @@ export async function exportDOPELogsJSON(logs: DOPELog[]): Promise<ExportResult>
       data: logs.map((log) => log.toJSON()),
     };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await file.write(JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
         dialogTitle: 'Export DOPE Logs',
         UTI: 'public.json',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting DOPE logs:', error);
     return {
@@ -273,7 +273,7 @@ export async function exportFullBackup(
 ): Promise<ExportResult> {
   try {
     const filename = `mobiledope_backup_${Date.now()}.json`;
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
@@ -291,18 +291,18 @@ export async function exportFullBackup(
       },
     };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+    await file.write(JSON.stringify(data, null, 2));
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
         dialogTitle: 'Export Full Backup',
         UTI: 'public.json',
       });
     }
 
-    return { success: true, uri: fileUri };
+    return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting full backup:', error);
     return {

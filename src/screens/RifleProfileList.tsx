@@ -150,9 +150,9 @@ export const RifleProfileList: React.FC = () => {
             title={rifleAmmoCount === 0 ? 'Add Ammunition' : 'View Ammunition'}
             onPress={() => {
               if (rifleAmmoCount === 0) {
-                navigation.navigate('AmmoProfileForm', { rifleId: item.id! });
+                (navigation as any).navigate('AmmoProfileForm', { rifleId: item.id! });
               } else {
-                navigation.navigate('AmmoProfileList', { rifleId: item.id! });
+                (navigation as any).navigate('AmmoProfileList', { rifleId: item.id! });
               }
             }}
             variant="secondary"
