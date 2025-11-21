@@ -9,6 +9,7 @@ Mobile DOPE App is a mobile application for precision shooters to record DOPE (D
 **Target Platforms:** iOS (latest 2 versions) and Android 10+
 
 **Technology Stack (Planned):**
+
 - React Native or Flutter for cross-platform mobile development
 - SQLite for local data storage
 - Rust or C++ module for high-performance ballistic engine
@@ -60,6 +61,7 @@ The app centers around four main entities:
 ### Key Features to Implement
 
 **MVP Priority:**
+
 - Rifle and ammunition profile management
 - Environmental data entry (manual and sensor-based)
 - Ballistic solver core (elevation/windage corrections)
@@ -69,6 +71,7 @@ The app centers around four main entities:
 - Offline-first architecture
 
 **Phase 2:**
+
 - External device integration (Kestrel weather meter, chronograph Bluetooth)
 - Advanced ballistics (spin drift, Coriolis effect)
 - Cloud sync (iCloud, Google Drive, Dropbox)
@@ -120,30 +123,36 @@ APP_ENV=production eas build --profile production
 ### Installed Dependencies
 
 **Core:**
+
 - React Native with Expo
 - TypeScript with strict mode
 - React Navigation (stack and tab navigators)
 - Zustand (state management)
 
 **Database & Storage:**
+
 - expo-sqlite (local database)
 - @react-native-async-storage/async-storage (settings storage)
 
 **Data & Utilities:**
+
 - date-fns (date/time utilities)
 - victory-native (charting for ballistic curves)
 
 **File Operations:**
+
 - expo-print (PDF generation)
 - expo-file-system (file operations)
 - expo-sharing (share files)
 
 **Device Features:**
+
 - expo-image-picker (camera and photo library)
 - expo-location (GPS, altitude)
 - expo-sensors (accelerometer, barometer, etc.)
 
 **Development:**
+
 - ESLint + Prettier (code quality)
 - TypeScript (type safety)
 - GitHub Actions (CI/CD)
@@ -151,6 +160,7 @@ APP_ENV=production eas build --profile production
 ## Ballistic Engine Notes
 
 The ballistic solver is performance-critical and should be implemented as a native module. It must calculate:
+
 - Elevation/windage corrections in MIL or MOA
 - Time of flight, velocity decay, energy at target
 - Wind tables for variable conditions
@@ -197,6 +207,7 @@ npm test -- <filename>     # Run specific test file
 ```
 
 When implementing new features:
+
 1. Create the test file first (e.g., `MyComponent.test.tsx` or `myFunction.test.ts`)
 2. Write test cases that define the expected behavior
 3. Implement the code to satisfy the tests

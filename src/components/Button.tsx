@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Pressable,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  ActivityIndicator,
-  StyleProp,
-} from 'react-native';
+import { Pressable, Text, StyleSheet, ViewStyle, ActivityIndicator, StyleProp } from 'react-native';
 import { theme } from '../constants/theme';
 
 interface ButtonProps {

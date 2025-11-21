@@ -14,6 +14,7 @@ This directory contains data models and their validation logic.
 - `AppSettings.ts` - Application settings model
 
 Each model includes:
+
 - TypeScript interface/class definition
 - Validation rules
 - Serialization methods (toJSON/fromJSON)

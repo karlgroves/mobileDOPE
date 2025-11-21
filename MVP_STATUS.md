@@ -11,6 +11,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 ## ✅ Completed Core Features
 
 ### 1. Rifle Profile Management
+
 - ✅ Create, read, update, delete rifle profiles
 - ✅ Comprehensive caliber database (50+ calibers organized by category)
 - ✅ Optic configuration (27 manufacturers, 40+ reticles)
@@ -22,6 +23,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Individual profile export (JSON)
 
 ### 2. Ammunition Profile Management
+
 - ✅ Create, read, update, delete ammo profiles
 - ✅ Linked to rifle profiles (many-to-one relationship)
 - ✅ Manufacturer database (23 manufacturers)
@@ -35,6 +37,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ DOPE card generation from ammo detail view
 
 ### 3. Environmental Data Capture
+
 - ✅ Manual entry for all parameters
 - ✅ Temperature, humidity, barometric pressure
 - ✅ Altitude and GPS integration
@@ -44,6 +47,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Current conditions storage
 
 ### 4. Ballistic Calculator
+
 - ✅ Full trajectory calculation (Runge-Kutta 4th order)
 - ✅ G1 and G7 drag models (77-point reference tables)
 - ✅ Elevation and windage corrections (MIL/MOA)
@@ -56,6 +60,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Comprehensive test coverage (65+ unit tests)
 
 ### 5. DOPE Logging System
+
 - ✅ Quick-entry DOPE log creation
 - ✅ Rifle and ammo auto-selection (last used)
 - ✅ Distance quick-select buttons (100-1000 yard presets)
@@ -74,6 +79,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Export logs (CSV and JSON)
 
 ### 6. DOPE Card Generator
+
 - ✅ Wallet-sized printable cards (3.5" x 2")
 - ✅ Customizable angular units (MIL/MOA)
 - ✅ Customizable distance units (yards/meters)
@@ -89,6 +95,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Live preview of card data
 
 ### 7. Data Export & Backup
+
 - ✅ Export individual rifle profiles (JSON)
 - ✅ Export individual ammo profiles (JSON)
 - ✅ Export all rifle profiles in batch (JSON)
@@ -101,6 +108,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Export FAB on DOPE log list
 
 ### 8. User Interface & Experience
+
 - ✅ Dark theme (default, optimized for field use)
 - ✅ Light theme (optional)
 - ✅ Night vision theme (red on black)
@@ -116,6 +124,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Empty states with helpful guidance
 
 ### 9. Dashboard & Quick Actions
+
 - ✅ Recent activity overview
 - ✅ Quick stats (rifle count, ammo count, log count)
 - ✅ Last shooting session summary
@@ -129,6 +138,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 - ✅ Direct navigation to nested screens
 
 ### 10. Technical Foundation
+
 - ✅ TypeScript with strict mode (zero compilation errors)
 - ✅ React Native with Expo SDK 54
 - ✅ SQLite local database with migrations
@@ -158,6 +168,7 @@ The Mobile DOPE App MVP is **feature-complete** and ready for testing. All core 
 ## 🚀 Ready for Testing
 
 The MVP is ready for:
+
 1. Device testing (iOS/Android)
 2. Field testing with real shooting scenarios
 3. User acceptance testing
@@ -166,6 +177,7 @@ The MVP is ready for:
 ## 📝 Deferred to Phase 2
 
 The following features are planned for Phase 2:
+
 - Range session mode (session tracking)
 - Chronograph integration (shot string logging, ES/SD)
 - DOPE visualization (ballistic curve graphs)
@@ -193,7 +205,7 @@ npm start
 # Run on iOS
 npm run ios
 
-# Run on Android  
+# Run on Android
 npm run android
 
 # Type checking
