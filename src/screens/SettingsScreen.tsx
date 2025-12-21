@@ -155,8 +155,8 @@ export const SettingsScreen: React.FC<Props> = () => {
                 { label: 'MOA', value: 'MOA' },
               ]}
               selectedValue={settings.defaultCorrectionUnit}
-              onValueChange={(value) => {
-                updateSettings({ defaultCorrectionUnit: value as 'MIL' | 'MOA' });
+              onValueChange={async (value) => {
+                await updateSettings({ defaultCorrectionUnit: value as 'MIL' | 'MOA' });
               }}
             />
           </View>
@@ -168,8 +168,8 @@ export const SettingsScreen: React.FC<Props> = () => {
                 { label: 'Meters', value: 'meters' },
               ]}
               selectedValue={settings.defaultDistanceUnit}
-              onValueChange={(value) => {
-                updateSettings({ defaultDistanceUnit: value as 'yards' | 'meters' });
+              onValueChange={async (value) => {
+                await updateSettings({ defaultDistanceUnit: value as 'yards' | 'meters' });
               }}
             />
           </View>

@@ -8,12 +8,16 @@ import { databaseService, migrationRunner } from './src/services/database';
 import { theme } from './src/constants/theme';
 
 function AppContent() {
-  const { isInitialized, setInitialized, setDatabaseReady, error, setError, settings } =
+  const { isInitialized, setInitialized, setDatabaseReady, error, setError, settings, loadSettings } =
     useAppStore();
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Load settings from AsyncStorage
+        await loadSettings();
+        console.log('Settings loaded');
+
         // Initialize database
         await databaseService.initialize();
         console.log('Database initialized');

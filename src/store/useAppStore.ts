@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ThemeMode } from '../constants/colors';
 
 interface AppSettings {
@@ -17,7 +18,9 @@ interface AppSettings {
 interface AppState {
   // Settings
   settings: AppSettings;
-  updateSettings: (settings: Partial<AppSettings>) => void;
+  updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
+  loadSettings: () => Promise<void>;
+  resetSettings: () => Promise<void>;
 
   // Initialization
   isInitialized: boolean;
@@ -43,13 +46,64 @@ const defaultSettings: AppSettings = {
   themeMode: 'dark',
 };
 
-export const useAppStore = create<AppState>((set) => ({
+const SETTINGS_STORAGE_KEY = '@mobileDOPE:settings';
+
+/**
+ * Save settings to AsyncStorage
+ */
+async function saveSettingsToStorage(settings: AppSettings): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (error) {
+    console.error('Failed to save settings to storage:', error);
+    throw error;
+  }
+}
+
+/**
+ * Load settings from AsyncStorage
+ */
+async function loadSettingsFromStorage(): Promise<AppSettings> {
+  try {
+    const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (stored) {
+      return { ...defaultSettings, ...JSON.parse(stored) };
+    }
+    return defaultSettings;
+  } catch (error) {
+    console.error('Failed to load settings from storage:', error);
+    return defaultSettings;
+  }
+}
+
+/**
+ * Clear settings from AsyncStorage
+ */
+async function clearSettingsFromStorage(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear settings from storage:', error);
+    throw error;
+  }
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
   // Settings
   settings: defaultSettings,
-  updateSettings: (newSettings) =>
-    set((state) => ({
-      settings: { ...state.settings, ...newSettings },
-    })),
+  updateSettings: async (newSettings) => {
+    const updatedSettings = { ...get().settings, ...newSettings };
+    set({ settings: updatedSettings });
+    await saveSettingsToStorage(updatedSettings);
+  },
+  loadSettings: async () => {
+    const settings = await loadSettingsFromStorage();
+    set({ settings });
+  },
+  resetSettings: async () => {
+    set({ settings: defaultSettings });
+    await clearSettingsFromStorage();
+  },
 
   // Initialization
   isInitialized: false,
