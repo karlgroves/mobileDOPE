@@ -22,9 +22,9 @@ export interface RifleProfileRow {
 
 export interface AmmoProfileRow {
   id: number;
-  rifle_id: number; // foreign key to RifleProfileRow
   name: string;
   manufacturer: string;
+  caliber: string; // e.g., .308 Win, 6.5 Creedmoor
   bullet_weight: number; // grains
   bullet_type: string; // HPBT, ELD-X, etc.
   ballistic_coefficient_g1: number;
@@ -138,9 +138,9 @@ export const DB_SCHEMA = {
   AMMO_PROFILE: `
     CREATE TABLE IF NOT EXISTS ammo_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      rifle_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       manufacturer TEXT NOT NULL,
+      caliber TEXT NOT NULL,
       bullet_weight REAL NOT NULL,
       bullet_type TEXT NOT NULL,
       ballistic_coefficient_g1 REAL NOT NULL,
@@ -151,8 +151,7 @@ export const DB_SCHEMA = {
       lot_number TEXT,
       notes TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (rifle_id) REFERENCES rifle_profiles(id) ON DELETE CASCADE
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `,
   ENVIRONMENT_SNAPSHOT: `
@@ -250,7 +249,7 @@ export const DB_SCHEMA = {
 
 // Index definitions for performance
 export const DB_INDEXES = {
-  AMMO_BY_RIFLE: 'CREATE INDEX IF NOT EXISTS idx_ammo_rifle ON ammo_profiles(rifle_id);',
+  AMMO_BY_CALIBER: 'CREATE INDEX IF NOT EXISTS idx_ammo_caliber ON ammo_profiles(caliber);',
   DOPE_BY_RIFLE: 'CREATE INDEX IF NOT EXISTS idx_dope_rifle ON dope_logs(rifle_id);',
   DOPE_BY_AMMO: 'CREATE INDEX IF NOT EXISTS idx_dope_ammo ON dope_logs(ammo_id);',
   DOPE_BY_TIMESTAMP: 'CREATE INDEX IF NOT EXISTS idx_dope_timestamp ON dope_logs(timestamp);',

@@ -133,7 +133,7 @@ export const RifleProfileList: React.FC = () => {
   };
 
   const renderRifleItem = ({ item }: { item: RifleProfile }) => {
-    const rifleAmmoCount = ammoProfiles.filter((a) => a.rifleId === item.id).length;
+    const rifleAmmoCount = ammoProfiles.filter((a) => a.caliber === item.caliber).length;
 
     return (
       <Card
@@ -150,7 +150,7 @@ export const RifleProfileList: React.FC = () => {
             title={rifleAmmoCount === 0 ? 'Add Ammunition' : 'View Ammunition'}
             onPress={() => {
               if (rifleAmmoCount === 0) {
-                (navigation as any).navigate('AmmoProfileForm', { rifleId: item.id! });
+                (navigation as any).navigate('AmmoProfileForm', {});
               } else {
                 (navigation as any).navigate('AmmoProfileList', { rifleId: item.id! });
               }

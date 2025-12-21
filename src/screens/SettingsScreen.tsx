@@ -23,7 +23,7 @@ type Props = RootStackScreenProps<'Settings'>;
 
 export const SettingsScreen: React.FC<Props> = () => {
   const { theme, setThemeMode } = useTheme();
-  const { settings } = useAppStore();
+  const { settings, updateSettings } = useAppStore();
   const { colors } = theme;
 
   const { rifles } = useRifleStore();
@@ -154,9 +154,9 @@ export const SettingsScreen: React.FC<Props> = () => {
                 { label: 'MIL', value: 'MIL' },
                 { label: 'MOA', value: 'MOA' },
               ]}
-              selectedValue="MIL"
-              onValueChange={() => {
-                Alert.alert('Not Implemented', 'Unit preferences coming soon.');
+              selectedValue={settings.defaultCorrectionUnit}
+              onValueChange={(value) => {
+                updateSettings({ defaultCorrectionUnit: value as 'MIL' | 'MOA' });
               }}
             />
           </View>
@@ -167,9 +167,9 @@ export const SettingsScreen: React.FC<Props> = () => {
                 { label: 'Yards', value: 'yards' },
                 { label: 'Meters', value: 'meters' },
               ]}
-              selectedValue="yards"
-              onValueChange={() => {
-                Alert.alert('Not Implemented', 'Unit preferences coming soon.');
+              selectedValue={settings.defaultDistanceUnit}
+              onValueChange={(value) => {
+                updateSettings({ defaultDistanceUnit: value as 'yards' | 'meters' });
               }}
             />
           </View>

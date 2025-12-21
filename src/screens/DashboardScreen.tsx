@@ -5,6 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -40,7 +41,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const recentLogs = dopeLogs.slice(0, 3);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Welcome Header */}
         <View style={styles.header}>
@@ -110,7 +111,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={[styles.cardTitle, { color: colors.text.primary }]}>
                 Recent DOPE Logs
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Logs')}>
+              <TouchableOpacity onPress={() => navigation.navigate('History')}>
                 <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
               </TouchableOpacity>
             </View>
@@ -134,7 +135,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Button
               title="New DOPE Log"
               onPress={() =>
-                (navigation as any).navigate('Logs', {
+                (navigation as any).navigate('History', {
                   screen: 'DOPELogEdit',
                   params: {},
                 })
@@ -149,7 +150,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Button
               title="Environment"
               onPress={() =>
-                (navigation as any).navigate('Range', {
+                (navigation as any).navigate('Session', {
                   screen: 'EnvironmentInput',
                 })
               }
@@ -157,7 +158,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             />
             <Button
               title="Profiles"
-              onPress={() => navigation.navigate('Profiles')}
+              onPress={() => navigation.navigate('Rifles')}
               variant="secondary"
             />
             <Button
@@ -181,7 +182,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               <Button
                 title="Create Rifle Profile"
                 onPress={() =>
-                  (navigation as any).navigate('Profiles', {
+                  (navigation as any).navigate('Rifles', {
                     screen: 'RifleProfileForm',
                     params: {},
                   })
@@ -192,7 +193,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -208,6 +209,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   header: {
+    marginTop: 24,
     marginBottom: 24,
     alignItems: 'center',
   },

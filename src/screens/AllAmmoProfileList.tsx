@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Text, TextInput } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ProfilesStackParamList } from '../navigation/types';
+import { AmmoStackParamList } from '../navigation/types';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useRifleStore } from '../store/useRifleStore';
 import { AmmoProfile } from '../models/AmmoProfile';
 import {
   Card,
@@ -16,43 +15,54 @@ import {
 } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 
-type AmmoProfileListNavigationProp = NativeStackNavigationProp<
-  ProfilesStackParamList,
-  'AmmoProfileList'
+type AllAmmoProfileListNavigationProp = NativeStackNavigationProp<
+  AmmoStackParamList,
+  'AllAmmoProfileList'
 >;
-type AmmoProfileListRouteProp = RouteProp<ProfilesStackParamList, 'AmmoProfileList'>;
 
-export const AmmoProfileList: React.FC = () => {
-  const navigation = useNavigation<AmmoProfileListNavigationProp>();
-  const route = useRoute<AmmoProfileListRouteProp>();
+interface AmmoWithCaliber {
+  ammo: AmmoProfile;
+  caliber: string;
+}
+
+export const AllAmmoProfileList: React.FC = () => {
+  const navigation = useNavigation<AllAmmoProfileListNavigationProp>();
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { rifleId } = route.params;
-  const { ammoProfiles, loading, loadAmmoProfiles, deleteAmmoProfile } = useAmmoStore();
-  const { rifles } = useRifleStore();
+  const { ammoProfiles, loading: ammoLoading, loadAmmoProfiles, deleteAmmoProfile } = useAmmoStore();
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [ammoToDelete, setAmmoToDelete] = useState<AmmoProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'weight' | 'recent'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'weight' | 'caliber' | 'recent'>('name');
 
-  const rifle = rifles.find((r) => r.id === rifleId);
-  const rifleAmmo = rifle ? ammoProfiles.filter((a) => a.caliber === rifle.caliber) : [];
+  const loading = ammoLoading;
+
+  // Enhance ammo profiles with caliber
+  const ammoWithCaliber: AmmoWithCaliber[] = useMemo(() => {
+    return ammoProfiles.map((ammo) => {
+      return {
+        ammo,
+        caliber: ammo.caliber,
+      };
+    });
+  }, [ammoProfiles]);
 
   // Filter and sort ammo
   const filteredAndSortedAmmo = useMemo(() => {
-    let filtered = rifleAmmo;
+    let filtered = ammoWithCaliber;
 
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = rifleAmmo.filter(
-        (ammo) =>
-          ammo.name.toLowerCase().includes(query) ||
-          ammo.manufacturer.toLowerCase().includes(query) ||
-          ammo.bulletType.toLowerCase().includes(query) ||
-          ammo.bulletWeight.toString().includes(query)
+      filtered = ammoWithCaliber.filter(
+        (item) =>
+          item.ammo.name.toLowerCase().includes(query) ||
+          item.ammo.manufacturer.toLowerCase().includes(query) ||
+          item.ammo.bulletType.toLowerCase().includes(query) ||
+          item.ammo.bulletWeight.toString().includes(query) ||
+          item.caliber.toLowerCase().includes(query)
       );
     }
 
@@ -60,12 +70,14 @@ export const AmmoProfileList: React.FC = () => {
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.ammo.name.localeCompare(b.ammo.name);
         case 'weight':
-          return a.bulletWeight - b.bulletWeight;
+          return a.ammo.bulletWeight - b.ammo.bulletWeight;
+        case 'caliber':
+          return a.caliber.localeCompare(b.caliber);
         case 'recent':
-          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          const dateA = new Date(a.ammo.updatedAt || a.ammo.createdAt || 0).getTime();
+          const dateB = new Date(b.ammo.updatedAt || b.ammo.createdAt || 0).getTime();
           return dateB - dateA;
         default:
           return 0;
@@ -73,24 +85,24 @@ export const AmmoProfileList: React.FC = () => {
     });
 
     return sorted;
-  }, [rifleAmmo, searchQuery, sortBy]);
+  }, [ammoWithCaliber, searchQuery, sortBy]);
 
   useEffect(() => {
-    if (rifle) {
-      loadAmmoProfiles(rifle.caliber);
-    }
-  }, [rifleId, rifle]);
+    // Load all ammo profiles (no rifleId parameter)
+    loadAmmoProfiles();
+  }, []);
 
   const handleCreate = () => {
+    // Ammunition is no longer tied to specific rifles
     navigation.navigate('AmmoProfileForm', {});
   };
 
-  const handleView = (ammo: AmmoProfile) => {
-    navigation.navigate('AmmoProfileDetail', { ammoId: ammo.id!, rifleId });
+  const handleView = (item: AmmoWithCaliber) => {
+    navigation.navigate('AmmoProfileDetail', { ammoId: item.ammo.id! });
   };
 
-  const handleEdit = (ammo: AmmoProfile) => {
-    navigation.navigate('AmmoProfileForm', { ammoId: ammo.id });
+  const handleEdit = (item: AmmoWithCaliber) => {
+    navigation.navigate('AmmoProfileForm', { ammoId: item.ammo.id });
   };
 
   const handleDeletePress = (ammo: AmmoProfile) => {
@@ -109,12 +121,12 @@ export const AmmoProfileList: React.FC = () => {
     setAmmoToDelete(null);
   };
 
-  const renderAmmoItem = ({ item }: { item: AmmoProfile }) => (
+  const renderAmmoItem = ({ item }: { item: AmmoWithCaliber }) => (
     <Card
       style={styles.card}
       onPress={() => handleView(item)}
-      title={item.name}
-      subtitle={`${item.manufacturer} • ${item.bulletWeight}gr ${item.bulletType} • ${item.muzzleVelocity} fps`}
+      title={item.ammo.name}
+      subtitle={`${item.caliber} • ${item.ammo.manufacturer} • ${item.ammo.bulletWeight}gr ${item.ammo.bulletType} • ${item.ammo.muzzleVelocity} fps`}
     >
       <View style={styles.cardActions}>
         <IconButton
@@ -125,7 +137,7 @@ export const AmmoProfileList: React.FC = () => {
         />
         <IconButton
           icon="🗑️"
-          onPress={() => handleDeletePress(item)}
+          onPress={() => handleDeletePress(item.ammo)}
           variant="ghost"
           accessibilityLabel="Delete ammo profile"
         />
@@ -139,10 +151,10 @@ export const AmmoProfileList: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {rifleAmmo.length === 0 ? (
+      {ammoProfiles.length === 0 ? (
         <EmptyState
           title="No Ammunition Profiles"
-          message={`No ammunition profiles found for ${rifle?.name || 'this rifle'}. Create one to get started.`}
+          message="No ammunition profiles found. Create a rifle profile and then add ammunition to get started."
           actionLabel="Create Ammo Profile"
           onAction={handleCreate}
         />
@@ -171,10 +183,13 @@ export const AmmoProfileList: React.FC = () => {
                 options={[
                   { label: 'Name', value: 'name' },
                   { label: 'Weight', value: 'weight' },
+                  { label: 'Caliber', value: 'caliber' },
                   { label: 'Recent', value: 'recent' },
                 ]}
                 selectedValue={sortBy}
-                onValueChange={(value) => setSortBy(value as 'name' | 'weight' | 'recent')}
+                onValueChange={(value) =>
+                  setSortBy(value as 'name' | 'weight' | 'caliber' | 'recent')
+                }
               />
             </View>
           </View>
@@ -182,7 +197,7 @@ export const AmmoProfileList: React.FC = () => {
           <FlatList
             data={filteredAndSortedAmmo}
             renderItem={renderAmmoItem}
-            keyExtractor={(item) => item.id!.toString()}
+            keyExtractor={(item) => item.ammo.id!.toString()}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <View style={styles.emptySearch}>

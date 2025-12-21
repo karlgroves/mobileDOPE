@@ -53,7 +53,7 @@ export const AmmoProfileDetail: React.FC = () => {
   }
 
   const handleEdit = () => {
-    navigation.navigate('AmmoProfileForm', { rifleId, ammoId });
+    navigation.navigate('AmmoProfileForm', { ammoId });
   };
 
   const handleGenerateDOPECard = () => {

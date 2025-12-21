@@ -15,10 +15,10 @@ interface AmmoState {
   updateAmmoProfileInStore: (profile: AmmoProfile) => void;
   removeAmmoProfileFromStore: (id: number) => void;
   getAmmoById: (id: number) => AmmoProfile | undefined;
-  getAmmoByRifleId: (rifleId: number) => AmmoProfile[];
+  getAmmoByCaliber: (caliber: string) => AmmoProfile[];
 
   // Database operations
-  loadAmmoProfiles: (rifleId?: number) => Promise<void>;
+  loadAmmoProfiles: (caliber?: string) => Promise<void>;
   createAmmoProfile: (data: AmmoProfileData) => Promise<AmmoProfile>;
   updateAmmoProfile: (id: number, data: AmmoProfileData) => Promise<AmmoProfile>;
   deleteAmmoProfile: (id: number) => Promise<void>;
@@ -48,14 +48,14 @@ export const useAmmoStore = create<AmmoState>((set, get) => ({
       ammoProfiles: state.ammoProfiles.filter((a) => a.id !== id),
     })),
   getAmmoById: (id) => get().ammoProfiles.find((a) => a.id === id),
-  getAmmoByRifleId: (rifleId) => get().ammoProfiles.filter((a) => a.rifleId === rifleId),
+  getAmmoByCaliber: (caliber) => get().ammoProfiles.filter((a) => a.caliber === caliber),
 
   // Database operations
-  loadAmmoProfiles: async (rifleId?: number) => {
+  loadAmmoProfiles: async (caliber?: string) => {
     set({ loading: true });
     try {
-      const profiles = rifleId
-        ? await ammoProfileRepository.getByRifleId(rifleId)
+      const profiles = caliber
+        ? await ammoProfileRepository.getByCaliber(caliber)
         : await ammoProfileRepository.getAll();
       set({ ammoProfiles: profiles, loading: false });
     } catch (error) {

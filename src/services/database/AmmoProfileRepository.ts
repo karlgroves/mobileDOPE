@@ -12,14 +12,14 @@ export class AmmoProfileRepository {
 
     const result = await db.runAsync(
       `INSERT INTO ammo_profiles (
-        rifle_id, name, manufacturer, bullet_weight, bullet_type,
+        name, manufacturer, caliber, bullet_weight, bullet_type,
         ballistic_coefficient_g1, ballistic_coefficient_g7, muzzle_velocity,
         powder_type, powder_weight, lot_number, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        profile.rifleId,
         profile.name,
         profile.manufacturer,
+        profile.caliber,
         profile.bulletWeight,
         profile.bulletType,
         profile.ballisticCoefficientG1,
@@ -50,14 +50,14 @@ export class AmmoProfileRepository {
   }
 
   /**
-   * Get all ammo profiles for a specific rifle
+   * Get all ammo profiles for a specific caliber
    */
-  async getByRifleId(rifleId: number): Promise<AmmoProfile[]> {
+  async getByCaliber(caliber: string): Promise<AmmoProfile[]> {
     const db = databaseService.getDatabase();
 
     const rows = await db.getAllAsync<AmmoProfileRow>(
-      'SELECT * FROM ammo_profiles WHERE rifle_id = ? ORDER BY name ASC',
-      [rifleId]
+      'SELECT * FROM ammo_profiles WHERE caliber = ? ORDER BY name ASC',
+      [caliber]
     );
 
     return rows.map((row) => AmmoProfile.fromRow(row));
@@ -70,7 +70,7 @@ export class AmmoProfileRepository {
     const db = databaseService.getDatabase();
 
     const rows = await db.getAllAsync<AmmoProfileRow>(
-      'SELECT * FROM ammo_profiles ORDER BY rifle_id, name ASC'
+      'SELECT * FROM ammo_profiles ORDER BY caliber, name ASC'
     );
 
     return rows.map((row) => AmmoProfile.fromRow(row));
@@ -90,15 +90,15 @@ export class AmmoProfileRepository {
 
     await db.runAsync(
       `UPDATE ammo_profiles SET
-        rifle_id = ?, name = ?, manufacturer = ?, bullet_weight = ?,
+        name = ?, manufacturer = ?, caliber = ?, bullet_weight = ?,
         bullet_type = ?, ballistic_coefficient_g1 = ?, ballistic_coefficient_g7 = ?,
         muzzle_velocity = ?, powder_type = ?, powder_weight = ?,
         lot_number = ?, notes = ?, updated_at = datetime('now')
       WHERE id = ?`,
       [
-        updated.rifleId,
         updated.name,
         updated.manufacturer,
+        updated.caliber,
         updated.bulletWeight,
         updated.bulletType,
         updated.ballisticCoefficientG1,
@@ -127,21 +127,15 @@ export class AmmoProfileRepository {
   }
 
   /**
-   * Search ammo profiles by name or manufacturer
+   * Search ammo profiles by name, manufacturer, or caliber
    */
-  async search(query: string, rifleId?: number): Promise<AmmoProfile[]> {
+  async search(query: string): Promise<AmmoProfile[]> {
     const db = databaseService.getDatabase();
 
-    let sql = `SELECT * FROM ammo_profiles
-               WHERE (name LIKE ? OR manufacturer LIKE ?)`;
-    const params: (string | number)[] = [`%${query}%`, `%${query}%`];
-
-    if (rifleId) {
-      sql += ' AND rifle_id = ?';
-      params.push(rifleId);
-    }
-
-    sql += ' ORDER BY name ASC';
+    const sql = `SELECT * FROM ammo_profiles
+               WHERE (name LIKE ? OR manufacturer LIKE ? OR caliber LIKE ?)
+               ORDER BY caliber, name ASC`;
+    const params: string[] = [`%${query}%`, `%${query}%`, `%${query}%`];
 
     const rows = await db.getAllAsync<AmmoProfileRow>(sql, params);
 
@@ -151,18 +145,12 @@ export class AmmoProfileRepository {
   /**
    * Get count of ammo profiles
    */
-  async count(rifleId?: number): Promise<number> {
+  async count(): Promise<number> {
     const db = databaseService.getDatabase();
 
-    let sql = 'SELECT COUNT(*) as count FROM ammo_profiles';
-    const params: number[] = [];
+    const sql = 'SELECT COUNT(*) as count FROM ammo_profiles';
 
-    if (rifleId) {
-      sql += ' WHERE rifle_id = ?';
-      params.push(rifleId);
-    }
-
-    const result = await db.getFirstAsync<{ count: number }>(sql, params);
+    const result = await db.getFirstAsync<{ count: number }>(sql);
 
     return result?.count || 0;
   }

@@ -21,7 +21,7 @@ export const AmmoProfileForm: React.FC = () => {
   const { colors } = theme;
 
   const { ammoProfiles, createAmmoProfile, updateAmmoProfile } = useAmmoStore();
-  const { rifleId, ammoId } = route.params;
+  const { ammoId } = route.params || {};
   const isEditing = ammoId !== undefined;
 
   const existingAmmo = isEditing ? ammoProfiles.find((a) => a.id === ammoId) : undefined;
@@ -29,6 +29,7 @@ export const AmmoProfileForm: React.FC = () => {
   // Form state
   const [name, setName] = useState(existingAmmo?.name || '');
   const [manufacturer, setManufacturer] = useState(existingAmmo?.manufacturer || '');
+  const [caliber, setCaliber] = useState(existingAmmo?.caliber || '');
   const [bulletWeight, setBulletWeight] = useState<number | undefined>(existingAmmo?.bulletWeight);
   const [bulletType, setBulletType] = useState(existingAmmo?.bulletType || '');
   const [bcG1, setBcG1] = useState<number | undefined>(existingAmmo?.ballisticCoefficientG1);
@@ -48,6 +49,7 @@ export const AmmoProfileForm: React.FC = () => {
 
     if (!name.trim()) newErrors.name = 'Ammo name is required';
     if (!manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
+    if (!caliber.trim()) newErrors.caliber = 'Caliber is required';
     if (!bulletWeight) newErrors.bulletWeight = 'Bullet weight is required';
     if (!bulletType.trim()) newErrors.bulletType = 'Bullet type is required';
     if (bcG1 === undefined) newErrors.ballisticCoefficientG1 = 'G1 BC is required';
@@ -82,9 +84,9 @@ export const AmmoProfileForm: React.FC = () => {
     }
 
     const ammoData: AmmoProfileData = {
-      rifleId,
       name,
       manufacturer,
+      caliber,
       bulletWeight: bulletWeight!,
       bulletType,
       ballisticCoefficientG1: bcG1!,
@@ -127,6 +129,16 @@ export const AmmoProfileForm: React.FC = () => {
           placeholder="e.g., Hornady, Federal, Winchester"
           required
           error={errors.manufacturer}
+        />
+
+        <TextInput
+          label="Caliber"
+          value={caliber}
+          onChangeText={setCaliber}
+          placeholder="e.g., .308 Win, 6.5 Creedmoor, .223 Rem"
+          required
+          error={errors.caliber}
+          helperText="Caliber designation of the ammunition"
         />
 
         <NumberInput

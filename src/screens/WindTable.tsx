@@ -18,11 +18,11 @@ import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
 
 type Props = CalculatorStackScreenProps<'WindTable'>;
 
-// Wind direction presets
+// Wind direction presets (sorted by degrees)
 const WIND_DIRECTIONS = [
-  { label: '→ 3:00 (Full R-L)', value: 90 },
-  { label: '↗ 2:00', value: 60 },
   { label: '↑ 1:00', value: 30 },
+  { label: '↗ 2:00', value: 60 },
+  { label: '→ 3:00 (Full R-L)', value: 90 },
   { label: '← 9:00 (Full L-R)', value: 270 },
   { label: '↙ 10:00', value: 300 },
   { label: '↓ 11:00', value: 330 },

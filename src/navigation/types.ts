@@ -20,33 +20,53 @@ export type RootStackParamList = {
  */
 export type MainTabParamList = {
   Dashboard: undefined;
-  Profiles: undefined;
-  Range: undefined;
+  Session: undefined;
   Calculator: undefined;
-  Logs: undefined;
+  Rifles: undefined;
+  Ammo: undefined;
+  History: undefined;
 };
 
 /**
- * Profiles Stack Navigator
+ * Rifles Stack Navigator (formerly Profiles)
  */
-export type ProfilesStackParamList = {
+export type RiflesStackParamList = {
   RifleProfileList: undefined;
   RifleProfileForm: { rifleId?: number };
   RifleProfileDetail: { rifleId: number };
   AmmoProfileList: { rifleId: number };
-  AmmoProfileDetail: { ammoId?: number; rifleId: number };
-  AmmoProfileForm: { ammoId?: number; rifleId: number };
+  AmmoProfileDetail: { ammoId?: number; rifleId?: number };
+  AmmoProfileForm: { ammoId?: number };
   DOPECardGenerator: { rifleId: number; ammoId: number };
 };
 
 /**
- * Range Stack Navigator
+ * Ammo Stack Navigator
  */
-export type RangeStackParamList = {
+export type AmmoStackParamList = {
+  AllAmmoProfileList: undefined;
+  AmmoProfileDetail: { ammoId?: number; rifleId?: number };
+  AmmoProfileForm: { ammoId?: number };
+};
+
+/**
+ * Session Stack Navigator (formerly Range)
+ */
+export type SessionStackParamList = {
   RangeSessionStart: undefined;
   RangeSessionActive: { sessionId: number };
   RangeSessionSummary: { sessionId: number };
   EnvironmentInput: undefined;
+};
+
+/**
+ * History Stack Navigator (formerly Logs)
+ */
+export type HistoryStackParamList = {
+  DOPELogList: undefined;
+  DOPELogDetail: { logId: number };
+  DOPELogEdit: { logId?: number };
+  DOPECurve: { rifleId: number; ammoId: number };
 };
 
 /**
@@ -65,16 +85,6 @@ export type CalculatorStackParamList = {
 };
 
 /**
- * Logs Stack Navigator
- */
-export type LogsStackParamList = {
-  DOPELogList: undefined;
-  DOPELogDetail: { logId: number };
-  DOPELogEdit: { logId?: number };
-  DOPECurve: { rifleId: number; ammoId: number };
-};
-
-/**
  * Screen props types for type-safe navigation
  */
 
@@ -90,15 +100,21 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScre
   RootStackScreenProps<keyof RootStackParamList>
 >;
 
-// Profiles Stack
-export type ProfilesStackScreenProps<T extends keyof ProfilesStackParamList> = CompositeScreenProps<
-  NativeStackScreenProps<ProfilesStackParamList, T>,
+// Rifles Stack (formerly Profiles)
+export type RiflesStackScreenProps<T extends keyof RiflesStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<RiflesStackParamList, T>,
   MainTabScreenProps<keyof MainTabParamList>
 >;
 
-// Range Stack
-export type RangeStackScreenProps<T extends keyof RangeStackParamList> = CompositeScreenProps<
-  NativeStackScreenProps<RangeStackParamList, T>,
+// Ammo Stack
+export type AmmoStackScreenProps<T extends keyof AmmoStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<AmmoStackParamList, T>,
+  MainTabScreenProps<keyof MainTabParamList>
+>;
+
+// Session Stack (formerly Range)
+export type SessionStackScreenProps<T extends keyof SessionStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<SessionStackParamList, T>,
   MainTabScreenProps<keyof MainTabParamList>
 >;
 
@@ -109,11 +125,20 @@ export type CalculatorStackScreenProps<T extends keyof CalculatorStackParamList>
     MainTabScreenProps<keyof MainTabParamList>
   >;
 
-// Logs Stack
-export type LogsStackScreenProps<T extends keyof LogsStackParamList> = CompositeScreenProps<
-  NativeStackScreenProps<LogsStackParamList, T>,
+// History Stack (formerly Logs)
+export type HistoryStackScreenProps<T extends keyof HistoryStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<HistoryStackParamList, T>,
   MainTabScreenProps<keyof MainTabParamList>
 >;
+
+// Legacy type aliases for backward compatibility
+export type ProfilesStackParamList = RiflesStackParamList;
+export type ProfilesStackScreenProps<T extends keyof ProfilesStackParamList> =
+  RiflesStackScreenProps<T>;
+export type RangeStackParamList = SessionStackParamList;
+export type RangeStackScreenProps<T extends keyof RangeStackParamList> = SessionStackScreenProps<T>;
+export type LogsStackParamList = HistoryStackParamList;
+export type LogsStackScreenProps<T extends keyof LogsStackParamList> = HistoryStackScreenProps<T>;
 
 // Declare global navigation types for type-safe navigation
 declare global {

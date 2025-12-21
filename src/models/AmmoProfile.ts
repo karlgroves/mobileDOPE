@@ -2,9 +2,9 @@ import { AmmoProfileRow } from '../types/database.types';
 
 export interface AmmoProfileData {
   id?: number;
-  rifleId: number;
   name: string;
   manufacturer: string;
+  caliber: string;
   bulletWeight: number;
   bulletType: string;
   ballisticCoefficientG1: number;
@@ -20,9 +20,9 @@ export interface AmmoProfileData {
 
 export class AmmoProfile {
   id?: number;
-  rifleId: number;
   name: string;
   manufacturer: string;
+  caliber: string;
   bulletWeight: number;
   bulletType: string;
   ballisticCoefficientG1: number;
@@ -39,9 +39,9 @@ export class AmmoProfile {
     this.validate(data);
 
     this.id = data.id;
-    this.rifleId = data.rifleId;
     this.name = data.name;
     this.manufacturer = data.manufacturer;
+    this.caliber = data.caliber;
     this.bulletWeight = data.bulletWeight;
     this.bulletType = data.bulletType;
     this.ballisticCoefficientG1 = data.ballisticCoefficientG1;
@@ -56,14 +56,14 @@ export class AmmoProfile {
   }
 
   private validate(data: AmmoProfileData): void {
-    if (!data.rifleId || data.rifleId <= 0) {
-      throw new Error('Valid rifle ID is required');
-    }
     if (!data.name || data.name.trim().length === 0) {
       throw new Error('Ammo name is required');
     }
     if (!data.manufacturer || data.manufacturer.trim().length === 0) {
       throw new Error('Manufacturer is required');
+    }
+    if (!data.caliber || data.caliber.trim().length === 0) {
+      throw new Error('Caliber is required');
     }
     if (data.bulletWeight <= 0 || data.bulletWeight > 1000) {
       throw new Error('Bullet weight must be between 0 and 1000 grains');
@@ -90,9 +90,9 @@ export class AmmoProfile {
    */
   toRow(): Omit<AmmoProfileRow, 'id' | 'created_at' | 'updated_at'> {
     return {
-      rifle_id: this.rifleId,
       name: this.name,
       manufacturer: this.manufacturer,
+      caliber: this.caliber,
       bullet_weight: this.bulletWeight,
       bullet_type: this.bulletType,
       ballistic_coefficient_g1: this.ballisticCoefficientG1,
@@ -111,9 +111,9 @@ export class AmmoProfile {
   static fromRow(row: AmmoProfileRow): AmmoProfile {
     return new AmmoProfile({
       id: row.id,
-      rifleId: row.rifle_id,
       name: row.name,
       manufacturer: row.manufacturer,
+      caliber: row.caliber,
       bulletWeight: row.bullet_weight,
       bulletType: row.bullet_type,
       ballisticCoefficientG1: row.ballistic_coefficient_g1,
@@ -134,9 +134,9 @@ export class AmmoProfile {
   toJSON(): AmmoProfileData {
     return {
       id: this.id,
-      rifleId: this.rifleId,
       name: this.name,
       manufacturer: this.manufacturer,
+      caliber: this.caliber,
       bulletWeight: this.bulletWeight,
       bulletType: this.bulletType,
       ballisticCoefficientG1: this.ballisticCoefficientG1,

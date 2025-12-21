@@ -138,8 +138,7 @@ function rk4Step(
 function calculateWindDrift(
   timeOfFlight: number,
   windSpeed: number,
-  windDirection: number,
-  averageVelocity: number
+  windDirection: number
 ): number {
   // Convert wind direction to crosswind component
   // 0° = headwind, 90° = right-to-left, 270° = left-to-right
@@ -154,6 +153,64 @@ function calculateWindDrift(
   const drift = crosswindFps * timeOfFlight;
 
   return drift * 12; // Convert to inches
+}
+
+/**
+ * Find the launch angle that zeros the rifle at the specified distance
+ * Uses iterative method to account for ballistic drop
+ */
+function findZeroAngle(
+  zeroDistanceFeet: number,
+  sightHeightFeet: number,
+  muzzleVelocity: number,
+  bc: number,
+  dragModel: 'G1' | 'G7',
+  speedOfSound: number
+): number {
+  // Start with a reasonable initial guess based on geometry
+  let launchAngle = Math.atan(sightHeightFeet / zeroDistanceFeet) + 0.01;
+
+  // Iteratively adjust the launch angle to hit zero at the zero distance
+  const maxIterations = 50;
+  const tolerance = 0.01; // Within 0.01 inches is good enough
+
+  for (let i = 0; i < maxIterations; i++) {
+    // Simulate trajectory with current launch angle
+    let state: State = {
+      x: 0,
+      y: -sightHeightFeet,
+      vx: muzzleVelocity * Math.cos(launchAngle),
+      vy: muzzleVelocity * Math.sin(launchAngle),
+    };
+
+    const dt = 0.001;
+
+    // Simulate until we reach the zero distance
+    while (state.x < zeroDistanceFeet) {
+      state = rk4Step(state, dt, bc, dragModel, speedOfSound, GRAVITY);
+
+      if (!isFinite(state.x)) {
+        break;
+      }
+    }
+
+    // Check how far off we are from the line of sight at zero distance
+    const errorInches = state.y * 12;
+
+    // If we're close enough, we're done
+    if (Math.abs(errorInches) < tolerance) {
+      return launchAngle;
+    }
+
+    // Adjust the launch angle based on the error
+    // Positive error means we're above the line of sight, so decrease angle
+    // Negative error means we're below the line of sight, so increase angle
+    const adjustmentFactor = 0.5; // Damping factor for stability
+    const adjustment = Math.atan(errorInches / (zeroDistanceFeet * 12)) * adjustmentFactor;
+    launchAngle -= adjustment;
+  }
+
+  return launchAngle;
 }
 
 /**
@@ -174,18 +231,31 @@ export function calculateTrajectory(
   const bc = adjustedBC(ballisticCoefficient, airDensity);
 
   // Calculate launch angle to achieve zero at zero distance
-  // This is a simplified calculation; real zeroing is iterative
   const zeroDistanceFeet = zeroDistance * 3;
   const sightHeightFeet = sightHeight / 12;
 
-  // Approximate zero angle (radians)
-  const zeroAngle = Math.atan(sightHeightFeet / zeroDistanceFeet);
+  // Find the proper zero angle using iterative method
+  const zeroAngle = findZeroAngle(
+    zeroDistanceFeet,
+    sightHeightFeet,
+    muzzleVelocity,
+    bc,
+    dragModel,
+    speedOfSound
+  );
 
-  // Account for shot angle
+  // For angled shots, the launch angle stays the same (based on rifle zero)
+  // but we need to account for:
+  // 1. Horizontal distance (slant range * cos(angle))
+  // 2. Gravity component affected by angle
   const shotAngleRad = (angle * Math.PI) / 180;
-  const launchAngle = zeroAngle + shotAngleRad;
+  const launchAngle = zeroAngle; // Launch angle is NOT modified by shot angle
 
-  // Initial velocity components
+  // Calculate effective horizontal distance and adjusted gravity
+  const cosAngle = Math.cos(shotAngleRad);
+  const effectiveGravity = GRAVITY * cosAngle; // Gravity component perpendicular to trajectory
+
+  // Initial velocity components (in bore coordinate system)
   const v0 = muzzleVelocity;
   let state: State = {
     x: 0,
@@ -226,8 +296,8 @@ export function calculateTrajectory(
       nextPoint += pointInterval;
     }
 
-    // Integrate
-    state = rk4Step(state, dt, bc, dragModel, speedOfSound, GRAVITY);
+    // Integrate (use effective gravity for angled shots)
+    state = rk4Step(state, dt, bc, dragModel, speedOfSound, effectiveGravity);
 
     // Check for NaN
     if (!isFinite(state.x) || !isFinite(state.vx)) {
@@ -273,8 +343,7 @@ export function calculateBallisticSolution(
   const windage = calculateWindDrift(
     targetPoint.time,
     shot.windSpeed,
-    shot.windDirection,
-    targetPoint.velocity
+    shot.windDirection
   );
 
   // Calculate corrections
@@ -283,10 +352,20 @@ export function calculateBallisticSolution(
   const windageMIL = inchesToCorrection(-windage, shot.distance, 'MIL');
   const windageMOA = inchesToCorrection(-windage, shot.distance, 'MOA');
 
-  // Calculate zero angle
+  // Calculate zero angle using proper iterative method
+  const speedOfSound = calculateSpeedOfSound(atmosphere.temperature);
+  const airDensity = calculateAirDensity(atmosphere.temperature, atmosphere.pressure);
+  const bc = adjustedBC(ammo.ballisticCoefficient, airDensity);
   const zeroDistanceFeet = rifle.zeroDistance * 3;
   const sightHeightFeet = rifle.sightHeight / 12;
-  const zeroAngle = Math.atan(sightHeightFeet / zeroDistanceFeet);
+  const zeroAngle = findZeroAngle(
+    zeroDistanceFeet,
+    sightHeightFeet,
+    ammo.muzzleVelocity,
+    bc,
+    ammo.dragModel,
+    speedOfSound
+  );
 
   // Find max ordinate
   let maxOrdinate = -Infinity;

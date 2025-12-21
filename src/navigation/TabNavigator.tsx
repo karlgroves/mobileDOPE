@@ -1,15 +1,20 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { DashboardScreen } from '../screens/DashboardScreen';
-import { ProfilesNavigator } from './ProfilesNavigator';
-import { RangeNavigator } from './RangeNavigator';
+import { RiflesNavigator } from './RiflesNavigator';
+import { SessionNavigator } from './SessionNavigator';
 import { CalculatorNavigator } from './CalculatorNavigator';
-import { LogsNavigator } from './LogsNavigator';
+import { AmmoNavigator } from './AmmoNavigator';
+import { HistoryNavigator } from './HistoryNavigator';
 import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const TabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -18,8 +23,8 @@ export const TabNavigator: React.FC = () => {
         tabBarStyle: {
           backgroundColor: '#2a2a2a',
           borderTopColor: '#404040',
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
@@ -34,20 +39,17 @@ export const TabNavigator: React.FC = () => {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
       />
       <Tab.Screen
-        name="Profiles"
-        component={ProfilesNavigator}
+        name="Session"
+        component={SessionNavigator}
         options={{
-          tabBarLabel: 'Profiles',
-        }}
-      />
-      <Tab.Screen
-        name="Range"
-        component={RangeNavigator}
-        options={{
-          tabBarLabel: 'Range',
+          tabBarLabel: 'Session',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="clipboard" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -55,13 +57,39 @@ export const TabNavigator: React.FC = () => {
         component={CalculatorNavigator}
         options={{
           tabBarLabel: 'Calc',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calculator" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
-        name="Logs"
-        component={LogsNavigator}
+        name="Rifles"
+        component={RiflesNavigator}
         options={{
-          tabBarLabel: 'Logs',
+          tabBarLabel: 'Rifles',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="crosshairs-gps" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Ammo"
+        component={AmmoNavigator}
+        options={{
+          tabBarLabel: 'Ammo',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bullet" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="History"
+        component={HistoryNavigator}
+        options={{
+          tabBarLabel: 'History',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>

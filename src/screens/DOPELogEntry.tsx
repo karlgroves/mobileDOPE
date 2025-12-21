@@ -83,16 +83,36 @@ export function DOPELogEntry({ route, navigation }: Props) {
 
   useEffect(() => {
     if (!existingLog && selectedRifleId && ammoProfiles.length > 0 && !selectedAmmoId) {
-      // Auto-select first ammo for selected rifle
-      const rifleAmmo = ammoProfiles.filter((a) => a.rifleId === selectedRifleId);
-      if (rifleAmmo.length > 0) {
-        setSelectedAmmoId(rifleAmmo[0].id);
+      // Auto-select first ammo for selected rifle (matching caliber)
+      const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
+      if (selectedRifle) {
+        const rifleAmmo = ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber);
+        if (rifleAmmo.length > 0) {
+          setSelectedAmmoId(rifleAmmo[0].id);
+        }
       }
     }
-  }, [selectedRifleId, ammoProfiles, existingLog, selectedAmmoId]);
+  }, [selectedRifleId, ammoProfiles, existingLog, selectedAmmoId, rifles]);
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
-  const filteredAmmo = ammoProfiles.filter((a) => a.rifleId === selectedRifleId);
+  const filteredAmmo = selectedRifle
+    ? ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber)
+    : [];
+
+  const handleAmmoChange = (value: string) => {
+    if (value === '__add_new__') {
+      // Navigate to ammo creation screen
+      if (selectedRifleId) {
+        // @ts-expect-error - Cross-stack navigation
+        navigation.navigate('Profiles', {
+          screen: 'AmmoProfileForm',
+          params: { rifleId: selectedRifleId },
+        });
+      }
+    } else {
+      setSelectedAmmoId(value ? parseInt(value) : undefined);
+    }
+  };
 
   const handleSave = async () => {
     // Validation
@@ -181,8 +201,11 @@ export function DOPELogEntry({ route, navigation }: Props) {
           <Picker
             label="Ammunition"
             value={selectedAmmoId?.toString()}
-            onValueChange={(value) => setSelectedAmmoId(value ? parseInt(value) : undefined)}
-            options={filteredAmmo.map((a) => ({ label: a.name, value: a.id!.toString() }))}
+            onValueChange={handleAmmoChange}
+            options={[
+              ...filteredAmmo.map((a) => ({ label: a.name, value: a.id!.toString() })),
+              { label: '+ Add New Ammunition', value: '__add_new__' },
+            ]}
             placeholder="Select Ammunition"
             disabled={!selectedRifleId}
           />
@@ -201,15 +224,15 @@ export function DOPELogEntry({ route, navigation }: Props) {
             onValueChange={(value) => setDistanceUnit(value as 'yards' | 'meters')}
           />
 
-          <NumberPicker
+          <NumberInput
             label="Target Distance"
-            value={distance || 0}
-            onValueChange={setDistance}
+            value={distance}
+            onChangeValue={setDistance}
             min={10}
-            max={3000}
-            step={10}
+            max={10000}
+            precision={0}
             unit={distanceUnit}
-            presets={DISTANCE_PRESETS}
+            required
           />
         </Card>
 

@@ -46,16 +46,16 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
   const selectedAmmo = ammoProfiles.find((a) => a.id === selectedAmmoId);
-  const availableAmmo = selectedRifleId
-    ? ammoProfiles.filter((a) => a.rifleId === selectedRifleId)
+  const availableAmmo = selectedRifle
+    ? ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber)
     : [];
 
   // Reset ammo selection when rifle changes
   useEffect(() => {
-    if (selectedRifleId && selectedAmmo?.rifleId !== selectedRifleId) {
+    if (selectedRifle && selectedAmmo?.caliber !== selectedRifle.caliber) {
       setSelectedAmmoId(undefined);
     }
-  }, [selectedRifleId]);
+  }, [selectedRifleId, selectedRifle, selectedAmmo]);
 
   const handleCalculate = () => {
     if (!selectedRifle || !selectedAmmo) {
@@ -269,21 +269,25 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
           </Text>
           <View style={styles.unitRow}>
             <Text style={[styles.unitLabel, { color: colors.text.primary }]}>Angular Unit</Text>
-            <UnitToggle
-              type="angular"
-              value={angularUnit}
-              onValueChange={(value) => setAngularUnit(value as 'MIL' | 'MOA')}
-              size="medium"
-            />
+            <View style={styles.unitToggleContainer}>
+              <UnitToggle
+                type="angular"
+                value={angularUnit}
+                onValueChange={(value) => setAngularUnit(value as 'MIL' | 'MOA')}
+                size="medium"
+              />
+            </View>
           </View>
           <View style={styles.unitRow}>
             <Text style={[styles.unitLabel, { color: colors.text.primary }]}>Distance Unit</Text>
-            <UnitToggle
-              type="distance"
-              value={distanceUnit}
-              onValueChange={(value) => setDistanceUnit(value as 'yards' | 'meters')}
-              size="medium"
-            />
+            <View style={styles.unitToggleContainer}>
+              <UnitToggle
+                type="distance"
+                value={distanceUnit}
+                onValueChange={(value) => setDistanceUnit(value as 'yards' | 'meters')}
+                size="medium"
+              />
+            </View>
           </View>
         </Card>
 
@@ -330,6 +334,11 @@ const styles = StyleSheet.create({
   unitLabel: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
+    marginRight: 16,
+  },
+  unitToggleContainer: {
+    width: 140,
   },
   resultRow: {
     flexDirection: 'row',
