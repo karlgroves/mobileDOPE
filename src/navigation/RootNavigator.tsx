@@ -12,9 +12,9 @@ const NAVIGATION_PERSISTENCE_KEY = '@mobileDOPE:navigation_state';
 
 export const RootNavigator: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
-  const [initialState, setInitialState] = useState();
-  const routeNameRef = useRef<string>();
-  const navigationRef = useRef<any>();
+  const [initialState, setInitialState] = useState<any | undefined>(undefined);
+  const routeNameRef = useRef<string | undefined>(undefined);
+  const navigationRef = useRef<any | undefined>(undefined);
 
   useEffect(() => {
     const restoreState = async () => {
