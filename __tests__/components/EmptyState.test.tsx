@@ -16,7 +16,7 @@ describe('EmptyState', () => {
   });
 
   it('should not render message when not provided', () => {
-    const { queryByText, getByText } = render(<EmptyState title="No Data" />);
+    const { getByText } = render(<EmptyState title="No Data" />);
     expect(getByText('No Data')).toBeTruthy();
     // Should only have the title text
   });

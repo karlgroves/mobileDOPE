@@ -41,7 +41,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const recentLogs = dopeLogs.slice(0, 3);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Welcome Header */}
         <View style={styles.header}>

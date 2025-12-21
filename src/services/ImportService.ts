@@ -90,9 +90,11 @@ function validateBackupData(data: any): data is BackupData {
 
   // For full backups, ensure arrays exist
   if (data.type === 'full_backup') {
-    if (!Array.isArray(data.data.rifles) ||
-        !Array.isArray(data.data.ammos) ||
-        !Array.isArray(data.data.logs)) {
+    if (
+      !Array.isArray(data.data.rifles) ||
+      !Array.isArray(data.data.ammos) ||
+      !Array.isArray(data.data.logs)
+    ) {
       return false;
     }
   }

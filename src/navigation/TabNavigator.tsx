@@ -47,9 +47,7 @@ export const TabNavigator: React.FC = () => {
         component={SessionNavigator}
         options={{
           tabBarLabel: 'Session',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -57,9 +55,7 @@ export const TabNavigator: React.FC = () => {
         component={CalculatorNavigator}
         options={{
           tabBarLabel: 'Calc',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calculator" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="calculator" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -87,9 +83,7 @@ export const TabNavigator: React.FC = () => {
         component={HistoryNavigator}
         options={{
           tabBarLabel: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>

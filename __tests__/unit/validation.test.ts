@@ -20,7 +20,6 @@ import {
   isValidZeroDistance,
   isValidScopeHeight,
   isValidClickValue,
-  ValidationResult,
   validate,
 } from '../../src/utils/validation';
 

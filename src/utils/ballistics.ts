@@ -340,11 +340,7 @@ export function calculateBallisticSolution(
   const targetPoint = trajectory[trajectory.length - 1];
 
   // Calculate wind drift
-  const windage = calculateWindDrift(
-    targetPoint.time,
-    shot.windSpeed,
-    shot.windDirection
-  );
+  const windage = calculateWindDrift(targetPoint.time, shot.windSpeed, shot.windDirection);
 
   // Calculate corrections
   const elevationMIL = inchesToCorrection(-targetPoint.drop, shot.distance, 'MIL');

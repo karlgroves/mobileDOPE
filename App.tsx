@@ -8,8 +8,15 @@ import { databaseService, migrationRunner } from './src/services/database';
 import { theme } from './src/constants/theme';
 
 function AppContent() {
-  const { isInitialized, setInitialized, setDatabaseReady, error, setError, settings, loadSettings } =
-    useAppStore();
+  const {
+    isInitialized,
+    setInitialized,
+    setDatabaseReady,
+    error,
+    setError,
+    settings,
+    loadSettings,
+  } = useAppStore();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -35,6 +42,7 @@ function AppContent() {
     };
 
     initializeApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isDark = settings.themeMode === 'dark' || settings.themeMode === 'nightVision';

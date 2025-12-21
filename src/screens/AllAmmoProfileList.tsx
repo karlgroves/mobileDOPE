@@ -30,7 +30,12 @@ export const AllAmmoProfileList: React.FC = () => {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { ammoProfiles, loading: ammoLoading, loadAmmoProfiles, deleteAmmoProfile } = useAmmoStore();
+  const {
+    ammoProfiles,
+    loading: ammoLoading,
+    loadAmmoProfiles,
+    deleteAmmoProfile,
+  } = useAmmoStore();
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [ammoToDelete, setAmmoToDelete] = useState<AmmoProfile | null>(null);

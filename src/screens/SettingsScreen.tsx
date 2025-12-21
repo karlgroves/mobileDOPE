@@ -18,11 +18,7 @@ import {
   exportDOPELogsCSV,
   exportDOPELogsJSON,
 } from '../services/ExportService';
-import {
-  importFullBackup,
-  importRifleProfiles,
-  importDOPELogs,
-} from '../services/ImportService';
+import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
 
 type Props = RootStackScreenProps<'Settings'>;
 

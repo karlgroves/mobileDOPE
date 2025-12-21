@@ -1,4 +1,4 @@
-import { generateWindTable, type WindTableEntry } from '../../src/utils/windTable';
+import { generateWindTable } from '../../src/utils/windTable';
 import type { RifleConfig, AmmoConfig } from '../../src/types/ballistic.types';
 import { standardAtmosphere } from '../../src/utils/atmospheric';
 
