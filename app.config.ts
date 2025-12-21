@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: env === 'production' ? 'Mobile DOPE' : `Mobile DOPE (${env})`,
     slug: 'mobiledope',
     version: '1.0.0',
-    orientation: 'portrait',
+    orientation: 'default',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
     splash: {
