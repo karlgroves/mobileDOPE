@@ -14,12 +14,14 @@ import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useOrientation } from '../hooks/useOrientation';
 
 type Props = MainTabScreenProps<'Dashboard'>;
 
 export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { isLandscape } = useOrientation();
 
   const { rifles, loadRifles } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
@@ -78,7 +80,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.cardTitle, { color: colors.text.primary }]}>
               Current Conditions
             </Text>
-            <View style={styles.envGrid}>
+            <View style={[styles.envGrid, isLandscape && styles.envGridLandscape]}>
               <View style={styles.envItem}>
                 <Text style={[styles.envLabel, { color: colors.text.secondary }]}>Temp</Text>
                 <Text style={[styles.envValue, { color: colors.text.primary }]}>
@@ -269,6 +271,10 @@ const styles = StyleSheet.create({
   envItem: {
     flex: 1,
     minWidth: '40%',
+  },
+  envGridLandscape: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   envLabel: {
     fontSize: 12,
