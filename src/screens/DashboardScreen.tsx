@@ -47,9 +47,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, isLandscape && styles.contentLandscape]}
+      >
         {/* Welcome Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, isLandscape && styles.headerLandscape]}>
           <Text style={[styles.title, { color: colors.text.primary }]}>Mobile DOPE</Text>
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
             Data On Previous Engagements
@@ -57,7 +60,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* Quick Stats */}
-        <View style={styles.statsContainer}>
+        <View style={[styles.statsContainer, isLandscape && styles.statsContainerLandscape]}>
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.statValue, { color: colors.primary }]}>{rifles.length}</Text>
             <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Rifles</Text>
@@ -136,7 +139,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         {/* Quick Actions */}
         <Card style={styles.card}>
           <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Quick Actions</Text>
-          <View style={styles.actionGrid}>
+          <View style={[styles.actionGrid, isLandscape && styles.actionGridLandscape]}>
             <Button
               title="New DOPE Log"
               onPress={() =>
@@ -146,11 +149,13 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 })
               }
               variant="primary"
+              style={isLandscape && styles.actionButton}
             />
             <Button
               title="Calculator"
               onPress={() => navigation.navigate('Calculator')}
               variant="secondary"
+              style={isLandscape && styles.actionButton}
             />
             <Button
               title="Environment"
@@ -160,16 +165,19 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 })
               }
               variant="secondary"
+              style={isLandscape && styles.actionButton}
             />
             <Button
               title="Profiles"
               onPress={() => navigation.navigate('Rifles')}
               variant="secondary"
+              style={isLandscape && styles.actionButton}
             />
             <Button
               title="Settings"
               onPress={() => navigation.navigate('Settings')}
               variant="secondary"
+              style={isLandscape && styles.actionButton}
             />
           </View>
         </Card>
@@ -213,10 +221,18 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  contentLandscape: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
   header: {
     marginTop: 24,
     marginBottom: 24,
     alignItems: 'center',
+  },
+  headerLandscape: {
+    marginTop: 12,
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
@@ -231,6 +247,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
+  },
+  statsContainerLandscape: {
+    maxWidth: '80%',
+    alignSelf: 'center',
   },
   statCard: {
     flex: 1,
@@ -273,8 +293,7 @@ const styles = StyleSheet.create({
     minWidth: '40%',
   },
   envGridLandscape: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'nowrap',
   },
   envLabel: {
     fontSize: 12,
@@ -300,6 +319,15 @@ const styles = StyleSheet.create({
   },
   actionGrid: {
     gap: 12,
+  },
+  actionGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    width: '48%',
+    minWidth: 150,
   },
   gettingStartedText: {
     fontSize: 14,
