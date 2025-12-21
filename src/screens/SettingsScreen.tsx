@@ -18,6 +18,11 @@ import {
   exportDOPELogsCSV,
   exportDOPELogsJSON,
 } from '../services/ExportService';
+import {
+  importFullBackup,
+  importRifleProfiles,
+  importDOPELogs,
+} from '../services/ImportService';
 
 type Props = RootStackScreenProps<'Settings'>;
 
@@ -119,7 +124,50 @@ export const SettingsScreen: React.FC<Props> = () => {
   };
 
   const handleImportData = () => {
-    Alert.alert('Not Implemented', 'Data import functionality coming in Phase 2.');
+    Alert.alert(
+      'Import Data',
+      'Choose what to import:',
+      [
+        {
+          text: 'Full Backup',
+          onPress: async () => {
+            const result = await importFullBackup();
+            if (result.success && result.imported) {
+              Alert.alert(
+                'Success',
+                `Imported:\n• ${result.imported.rifles || 0} rifle profiles\n• ${result.imported.ammos || 0} ammo profiles\n• ${result.imported.logs || 0} DOPE logs`
+              );
+            } else {
+              Alert.alert('Error', result.error || 'Import failed');
+            }
+          },
+        },
+        {
+          text: 'Rifle Profiles Only',
+          onPress: async () => {
+            const result = await importRifleProfiles();
+            if (result.success && result.imported) {
+              Alert.alert('Success', `Imported ${result.imported.rifles || 0} rifle profiles`);
+            } else {
+              Alert.alert('Error', result.error || 'Import failed');
+            }
+          },
+        },
+        {
+          text: 'DOPE Logs Only',
+          onPress: async () => {
+            const result = await importDOPELogs();
+            if (result.success && result.imported) {
+              Alert.alert('Success', `Imported ${result.imported.logs || 0} DOPE logs`);
+            } else {
+              Alert.alert('Error', result.error || 'Import failed');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
   };
 
   const themeOptions = [
