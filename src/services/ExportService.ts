@@ -8,6 +8,8 @@ import * as Sharing from 'expo-sharing';
 import type { RifleProfile } from '../models/RifleProfile';
 import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
+import type { RangeSession } from '../models/RangeSession';
+import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
 
 export interface ExportResult {
   success: boolean;
@@ -299,6 +301,226 @@ export async function exportFullBackup(
     return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting full backup:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Generate session report as Markdown
+ */
+function generateSessionReportMarkdown(
+  session: RangeSession,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  environment: EnvironmentSnapshot | null
+): string {
+  const formatDate = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const calculateDuration = (): string => {
+    if (!session.startTime || !session.endTime) return 'In progress';
+
+    const start = new Date(session.startTime);
+    const end = new Date(session.endTime);
+    const diffMs = end.getTime() - start.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+
+    const hrs = Math.floor(diffSeconds / 3600);
+    const mins = Math.floor((diffSeconds % 3600) / 60);
+    const secs = diffSeconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs}h ${mins}m ${secs}s`;
+    } else if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  let report = `# Range Session Report\n\n`;
+
+  // Session header
+  if (session.sessionName) {
+    report += `**Session:** ${session.sessionName}\n\n`;
+  }
+  report += `**Date:** ${formatDate(session.startTime)}\n\n`;
+
+  // Summary section
+  report += `## Summary\n\n`;
+  report += `| Metric | Value |\n`;
+  report += `|--------|-------|\n`;
+  report += `| Shots Fired | ${session.shotCount} |\n`;
+  report += `| Duration | ${calculateDuration()} |\n`;
+  report += `| Distance | ${session.distance} yards |\n`;
+  report += `| Cold Bore | ${session.coldBoreShot ? 'Yes' : 'No'} |\n\n`;
+
+  // Time details
+  report += `## Time Details\n\n`;
+  report += `- **Started:** ${formatTime(session.startTime)}\n`;
+  if (session.endTime) {
+    report += `- **Ended:** ${formatTime(session.endTime)}\n`;
+  }
+  report += `\n`;
+
+  // Equipment section
+  report += `## Equipment\n\n`;
+  report += `### Rifle\n\n`;
+  if (rifle) {
+    report += `- **Name:** ${rifle.name}\n`;
+    report += `- **Caliber:** ${rifle.caliber}\n`;
+    report += `- **Zero Distance:** ${rifle.zeroDistance} yards\n`;
+    if (rifle.opticManufacturer || rifle.opticModel) {
+      report += `- **Optic:** ${rifle.opticManufacturer || ''} ${rifle.opticModel || ''}\n`;
+    }
+  } else {
+    report += `Unknown rifle\n`;
+  }
+  report += `\n`;
+
+  report += `### Ammunition\n\n`;
+  if (ammo) {
+    report += `- **Name:** ${ammo.name}\n`;
+    report += `- **Manufacturer:** ${ammo.manufacturer}\n`;
+    report += `- **Caliber:** ${ammo.caliber}\n`;
+    report += `- **Bullet Weight:** ${ammo.bulletWeight} gr\n`;
+    report += `- **Muzzle Velocity:** ${ammo.muzzleVelocity} fps\n`;
+    if (ammo.ballisticCoefficientG1) {
+      report += `- **BC (G1):** ${ammo.ballisticCoefficientG1}\n`;
+    }
+    if (ammo.ballisticCoefficientG7) {
+      report += `- **BC (G7):** ${ammo.ballisticCoefficientG7}\n`;
+    }
+  } else {
+    report += `Unknown ammunition\n`;
+  }
+  report += `\n`;
+
+  // Environmental conditions
+  report += `## Environmental Conditions\n\n`;
+  if (environment) {
+    report += `| Parameter | Value |\n`;
+    report += `|-----------|-------|\n`;
+    report += `| Temperature | ${environment.temperature}°F |\n`;
+    report += `| Humidity | ${environment.humidity}% |\n`;
+    report += `| Pressure | ${environment.pressure} inHg |\n`;
+    report += `| Altitude | ${environment.altitude} ft |\n`;
+    report += `| Wind Speed | ${environment.windSpeed} mph |\n`;
+    report += `| Wind Direction | ${environment.windDirection}° |\n`;
+    if (environment.densityAltitude !== undefined) {
+      report += `| Density Altitude | ${environment.densityAltitude} ft |\n`;
+    }
+  } else {
+    report += `No environmental data recorded.\n`;
+  }
+  report += `\n`;
+
+  // Notes section
+  if (session.notes) {
+    report += `## Notes\n\n`;
+    report += `${session.notes}\n\n`;
+  }
+
+  // Footer
+  report += `---\n\n`;
+  report += `*Generated by Mobile DOPE on ${new Date().toLocaleString()}*\n`;
+
+  return report;
+}
+
+/**
+ * Export range session report as Markdown
+ */
+export async function exportSessionReportMarkdown(
+  session: RangeSession,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  environment: EnvironmentSnapshot | null
+): Promise<ExportResult> {
+  try {
+    const sessionName = session.sessionName || `session_${session.id}`;
+    const filename = `range_session_${sessionName.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.md`;
+    const file = new File(Paths.document, filename);
+
+    const markdownContent = generateSessionReportMarkdown(session, rifle, ammo, environment);
+    await file.write(markdownContent);
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'text/markdown',
+        dialogTitle: 'Export Session Report',
+        UTI: 'net.daringfireball.markdown',
+      });
+    }
+
+    return { success: true, uri: file.uri };
+  } catch (error) {
+    console.error('Error exporting session report:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Export range session report as JSON
+ */
+export async function exportSessionReportJSON(
+  session: RangeSession,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  environment: EnvironmentSnapshot | null
+): Promise<ExportResult> {
+  try {
+    const sessionName = session.sessionName || `session_${session.id}`;
+    const filename = `range_session_${sessionName.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
+    const file = new File(Paths.document, filename);
+
+    const data = {
+      exportDate: new Date().toISOString(),
+      exportVersion: '1.0',
+      type: 'range_session_report',
+      session: session.toJSON(),
+      rifle: rifle ? rifle.toJSON() : null,
+      ammo: ammo ? ammo.toJSON() : null,
+      environment: environment ? environment.toJSON() : null,
+    };
+
+    await file.write(JSON.stringify(data, null, 2));
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/json',
+        dialogTitle: 'Export Session Report',
+        UTI: 'public.json',
+      });
+    }
+
+    return { success: true, uri: file.uri };
+  } catch (error) {
+    console.error('Error exporting session report JSON:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
