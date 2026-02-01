@@ -36,8 +36,10 @@ export type RiflesStackParamList = {
   RifleProfileDetail: { rifleId: number };
   AmmoProfileList: { rifleId: number };
   AmmoProfileDetail: { ammoId?: number; rifleId?: number };
-  AmmoProfileForm: { ammoId?: number };
+  AmmoProfileForm: { ammoId?: number; caliber?: string };
   DOPECardGenerator: { rifleId: number; ammoId: number };
+  ChronographInput: { ammoId: number };
+  ShotStringHistory: { ammoId: number };
 };
 
 /**
@@ -46,7 +48,10 @@ export type RiflesStackParamList = {
 export type AmmoStackParamList = {
   AllAmmoProfileList: undefined;
   AmmoProfileDetail: { ammoId?: number; rifleId?: number };
-  AmmoProfileForm: { ammoId?: number };
+  AmmoProfileForm: { ammoId?: number; caliber?: string };
+  DOPECardGenerator: { rifleId?: number; ammoId: number };
+  ChronographInput: { ammoId: number };
+  ShotStringHistory: { ammoId: number };
 };
 
 /**

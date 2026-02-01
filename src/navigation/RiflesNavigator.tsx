@@ -7,6 +7,8 @@ import { AmmoProfileList } from '../screens/AmmoProfileList';
 import { AmmoProfileForm } from '../screens/AmmoProfileForm';
 import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
 import { DOPECardGenerator } from '../screens/DOPECardGenerator';
+import { ChronographInput } from '../screens/ChronographInput';
+import { ShotStringHistory } from '../screens/ShotStringHistory';
 import type { RiflesStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RiflesStackParamList>();
@@ -63,6 +65,16 @@ export const RiflesNavigator: React.FC = () => {
         name="DOPECardGenerator"
         component={DOPECardGenerator}
         options={{ title: 'DOPE Card Generator' }}
+      />
+      <Stack.Screen
+        name="ChronographInput"
+        component={ChronographInput}
+        options={{ title: 'Chronograph' }}
+      />
+      <Stack.Screen
+        name="ShotStringHistory"
+        component={ShotStringHistory}
+        options={{ title: 'Velocity History' }}
       />
     </Stack.Navigator>
   );

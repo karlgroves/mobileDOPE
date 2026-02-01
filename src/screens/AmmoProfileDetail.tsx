@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfilesStackParamList } from '../navigation/types';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { Card, Button } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-import { exportAmmoProfileJSON } from '../services/ExportService';
 
 type AmmoProfileDetailNavigationProp = NativeStackNavigationProp<
   ProfilesStackParamList,
@@ -62,12 +61,15 @@ export const AmmoProfileDetail: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    const result = await exportAmmoProfileJSON(ammo);
-    if (result.success) {
-      Alert.alert('Success', `Ammo profile "${ammo.name}" exported successfully.`);
-    } else {
-      Alert.alert('Error', result.error || 'Export failed');
+  const handleChronograph = () => {
+    if (ammo.id) {
+      navigation.navigate('ChronographInput', { ammoId: ammo.id });
+    }
+  };
+
+  const handleVelocityHistory = () => {
+    if (ammo.id) {
+      navigation.navigate('ShotStringHistory', { ammoId: ammo.id });
     }
   };
 
@@ -78,6 +80,9 @@ export const AmmoProfileDetail: React.FC = () => {
           <Text style={[styles.title, { color: colors.text.primary }]}>{ammo.name}</Text>
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
             {ammo.manufacturer}
+          </Text>
+          <Text style={[styles.caliber, { color: colors.text.secondary }]}>
+            {ammo.caliber}
           </Text>
         </Card>
 
@@ -123,8 +128,9 @@ export const AmmoProfileDetail: React.FC = () => {
         )}
 
         <View style={styles.actions}>
-          <Button title="Generate DOPE Card" onPress={handleGenerateDOPECard} variant="primary" />
-          <Button title="Export Profile" onPress={handleExport} variant="secondary" />
+          <Button title="Chronograph" onPress={handleChronograph} variant="primary" />
+          <Button title="Velocity History" onPress={handleVelocityHistory} variant="secondary" />
+          <Button title="Generate DOPE Card" onPress={handleGenerateDOPECard} variant="secondary" />
           <Button title="Edit Profile" onPress={handleEdit} variant="secondary" />
         </View>
       </ScrollView>
@@ -159,6 +165,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     fontWeight: '500',
+  },
+  caliber: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 4,
   },
   card: {
     marginBottom: 16,
