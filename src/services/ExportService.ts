@@ -776,3 +776,408 @@ export async function exportSessionReportJSON(
     };
   }
 }
+
+/**
+ * Generate HTML for range session PDF report
+ */
+function generateSessionReportPDFHtml(
+  session: RangeSession,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  environment: EnvironmentSnapshot | null
+): string {
+  const formatDate = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const calculateDuration = (): string => {
+    if (!session.startTime || !session.endTime) return 'In progress';
+
+    const start = new Date(session.startTime);
+    const end = new Date(session.endTime);
+    const diffMs = end.getTime() - start.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+
+    const hrs = Math.floor(diffSeconds / 3600);
+    const mins = Math.floor((diffSeconds % 3600) / 60);
+    const secs = diffSeconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs}h ${mins}m ${secs}s`;
+    } else if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          line-height: 1.5;
+          color: #1a1a1a;
+          padding: 30px;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 3px solid #2E7D32;
+          padding-bottom: 20px;
+          margin-bottom: 25px;
+        }
+        .header h1 {
+          font-size: 28px;
+          font-weight: bold;
+          color: #2E7D32;
+          margin-bottom: 5px;
+        }
+        .header .session-name {
+          font-size: 18px;
+          color: #333;
+        }
+        .header .date {
+          font-size: 14px;
+          color: #666;
+          margin-top: 5px;
+        }
+        .summary-grid {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 30px;
+          padding: 20px;
+          background-color: #f8f8f8;
+          border-radius: 8px;
+        }
+        .summary-item {
+          text-align: center;
+        }
+        .summary-item .value {
+          font-size: 32px;
+          font-weight: bold;
+          color: #2E7D32;
+        }
+        .summary-item .label {
+          font-size: 11px;
+          color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .section {
+          margin-bottom: 25px;
+        }
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #2E7D32;
+          border-bottom: 2px solid #e0e0e0;
+          padding-bottom: 8px;
+          margin-bottom: 15px;
+        }
+        .two-columns {
+          display: flex;
+          gap: 30px;
+        }
+        .column {
+          flex: 1;
+        }
+        .info-row {
+          display: flex;
+          padding: 8px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .info-label {
+          width: 140px;
+          font-weight: 500;
+          color: #666;
+        }
+        .info-value {
+          flex: 1;
+          color: #1a1a1a;
+        }
+        .environment-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .environment-table th,
+        .environment-table td {
+          padding: 10px;
+          text-align: left;
+          border-bottom: 1px solid #ddd;
+        }
+        .environment-table th {
+          background-color: #2E7D32;
+          color: white;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+        .environment-table tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .notes-section {
+          background-color: #fff9e6;
+          border-left: 4px solid #f0ad4e;
+          padding: 15px;
+          margin-top: 20px;
+        }
+        .notes-section h3 {
+          color: #8a6d3b;
+          margin-bottom: 10px;
+        }
+        .time-details {
+          display: flex;
+          gap: 40px;
+          padding: 15px 0;
+        }
+        .time-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .time-item .label {
+          color: #666;
+        }
+        .time-item .value {
+          font-weight: 600;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 10px;
+          color: #999;
+          border-top: 1px solid #ddd;
+          padding-top: 15px;
+        }
+        .cold-bore-badge {
+          display: inline-block;
+          background-color: #ff9800;
+          color: white;
+          padding: 4px 12px;
+          border-radius: 15px;
+          font-size: 11px;
+          font-weight: 600;
+          margin-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Range Session Report</h1>
+        ${session.sessionName ? `<div class="session-name">${session.sessionName}</div>` : ''}
+        <div class="date">${formatDate(session.startTime)}</div>
+        ${session.coldBoreShot ? '<div class="cold-bore-badge">Cold Bore Shot</div>' : ''}
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="value">${session.shotCount}</div>
+          <div class="label">Shots Fired</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">${calculateDuration()}</div>
+          <div class="label">Duration</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">${session.distance}</div>
+          <div class="label">Distance (yds)</div>
+        </div>
+      </div>
+
+      <div class="time-details">
+        <div class="time-item">
+          <span class="label">Started:</span>
+          <span class="value">${formatTime(session.startTime)}</span>
+        </div>
+        ${session.endTime ? `
+        <div class="time-item">
+          <span class="label">Ended:</span>
+          <span class="value">${formatTime(session.endTime)}</span>
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="two-columns">
+        <div class="column">
+          <div class="section">
+            <div class="section-title">Rifle</div>
+            ${
+              rifle
+                ? `
+              <div class="info-row">
+                <div class="info-label">Name</div>
+                <div class="info-value">${rifle.name}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Caliber</div>
+                <div class="info-value">${rifle.caliber}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Zero Distance</div>
+                <div class="info-value">${rifle.zeroDistance} yards</div>
+              </div>
+              ${
+                rifle.opticManufacturer || rifle.opticModel
+                  ? `
+              <div class="info-row">
+                <div class="info-label">Optic</div>
+                <div class="info-value">${rifle.opticManufacturer || ''} ${rifle.opticModel || ''}</div>
+              </div>
+              `
+                  : ''
+              }
+            `
+                : '<p>Unknown rifle</p>'
+            }
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="section">
+            <div class="section-title">Ammunition</div>
+            ${
+              ammo
+                ? `
+              <div class="info-row">
+                <div class="info-label">Name</div>
+                <div class="info-value">${ammo.name}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Manufacturer</div>
+                <div class="info-value">${ammo.manufacturer}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Bullet Weight</div>
+                <div class="info-value">${ammo.bulletWeight} gr</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Muzzle Velocity</div>
+                <div class="info-value">${ammo.muzzleVelocity} fps</div>
+              </div>
+              ${
+                ammo.ballisticCoefficientG1
+                  ? `
+              <div class="info-row">
+                <div class="info-label">BC (G1)</div>
+                <div class="info-value">${ammo.ballisticCoefficientG1}</div>
+              </div>
+              `
+                  : ''
+              }
+            `
+                : '<p>Unknown ammunition</p>'
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Environmental Conditions</div>
+        ${
+          environment
+            ? `
+          <table class="environment-table">
+            <thead>
+              <tr>
+                <th>Temperature</th>
+                <th>Humidity</th>
+                <th>Pressure</th>
+                <th>Altitude</th>
+                <th>Wind</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${environment.temperature}°F</td>
+                <td>${environment.humidity}%</td>
+                <td>${environment.pressure} inHg</td>
+                <td>${environment.altitude} ft</td>
+                <td>${environment.windSpeed} mph @ ${environment.windDirection}°</td>
+              </tr>
+            </tbody>
+          </table>
+          ${environment.densityAltitude !== undefined ? `<p style="margin-top: 10px; color: #666;">Density Altitude: ${environment.densityAltitude} ft</p>` : ''}
+        `
+            : '<p>No environmental data recorded.</p>'
+        }
+      </div>
+
+      ${
+        session.notes
+          ? `
+      <div class="notes-section">
+        <h3>Notes</h3>
+        <p>${session.notes}</p>
+      </div>
+      `
+          : ''
+      }
+
+      <div class="footer">
+        Generated by Mobile DOPE on ${new Date().toLocaleString()}
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Export range session report as PDF
+ */
+export async function exportSessionReportPDF(
+  session: RangeSession,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  environment: EnvironmentSnapshot | null
+): Promise<ExportResult> {
+  try {
+    const html = generateSessionReportPDFHtml(session, rifle, ammo, environment);
+
+    const { uri } = await Print.printToFileAsync({
+      html,
+      base64: false,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Export Session Report PDF',
+        UTI: 'com.adobe.pdf',
+      });
+    }
+
+    return { success: true, uri };
+  } catch (error) {
+    console.error('Error exporting session report PDF:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

@@ -6,7 +6,11 @@ import { useAmmoStore } from '../store/useAmmoStore';
 import { Card, Button, LoadingSpinner } from '../components';
 import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
 import { environmentRepository } from '../services/database/EnvironmentRepository';
-import { exportSessionReportMarkdown, exportSessionReportJSON } from '../services/ExportService';
+import {
+  exportSessionReportMarkdown,
+  exportSessionReportJSON,
+  exportSessionReportPDF,
+} from '../services/ExportService';
 import { RangeSession } from '../models/RangeSession';
 import { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
 import type { SessionStackScreenProps } from '../navigation/types';
@@ -81,6 +85,18 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
   const handleExportSession = () => {
     Alert.alert('Export Session', 'Choose export format:', [
       { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'PDF Report',
+        onPress: async () => {
+          if (!session) return;
+          const rifle = rifles.find((r) => r.id === session.rifleId) || null;
+          const ammo = ammoProfiles.find((a) => a.id === session.ammoId) || null;
+          const result = await exportSessionReportPDF(session, rifle, ammo, environment);
+          if (!result.success) {
+            Alert.alert('Export Failed', result.error || 'Unknown error');
+          }
+        },
+      },
       {
         text: 'Markdown (.md)',
         onPress: async () => {
