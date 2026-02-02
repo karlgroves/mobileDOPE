@@ -278,7 +278,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
 
   const rifle = session ? rifles.find((r) => r.id === session.rifleId) : null;
   const ammo = session ? ammoProfiles.find((a) => a.id === session.ammoId) : null;
-  const distancePresets = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+  const distancePresets = settings.distancePresets;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useAppStore } from '../store/useAppStore';
 import { Card, Picker, NumberPicker, Button, EmptyState, LoadingSpinner } from '../components';
 import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
 import type { SessionStackScreenProps } from '../navigation/types';
@@ -17,6 +18,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
   const { rifles, loadRifles, loading: riflesLoading } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles, loading: ammoLoading } = useAmmoStore();
   const { snapshots, loadSnapshots, createSnapshot, loading: envLoading } = useEnvironmentStore();
+  const { settings } = useAppStore();
 
   // Form state
   const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>();
@@ -130,7 +132,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
 
   const rifleOptions = rifles.map((r) => ({ label: r.name, value: r.id!.toString() }));
   const ammoOptions = availableAmmo.map((a) => ({ label: a.name, value: a.id!.toString() }));
-  const distancePresets = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+  const distancePresets = settings.distancePresets;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

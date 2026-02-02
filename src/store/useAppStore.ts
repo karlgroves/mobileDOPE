@@ -14,6 +14,7 @@ interface AppSettings {
   hapticFeedbackEnabled: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
+  distancePresets: number[];
 }
 
 interface AppState {
@@ -41,12 +42,17 @@ interface AppState {
   clearError: () => void;
 }
 
+const DEFAULT_DISTANCE_PRESETS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+
 const defaultSettings: AppSettings = {
   defaultDistanceUnit: 'yards',
   defaultCorrectionUnit: 'MIL',
   themeMode: 'dark',
   hapticFeedbackEnabled: true,
+  distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
+
+export { DEFAULT_DISTANCE_PRESETS };
 
 const SETTINGS_STORAGE_KEY = '@mobileDOPE:settings';
 

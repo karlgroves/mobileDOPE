@@ -3,15 +3,15 @@
  * User preferences and app configuration
  */
 
-import React from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
+import React, { useState } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert, Switch, TextInput, Pressable } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -30,6 +30,49 @@ export const SettingsScreen: React.FC<Props> = () => {
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
   const { dopeLogs } = useDOPEStore();
+
+  // Distance preset customization state
+  const [newPresetValue, setNewPresetValue] = useState<string>('');
+
+  const handleAddPreset = async () => {
+    const value = parseInt(newPresetValue, 10);
+    if (isNaN(value) || value < 25 || value > 3000) {
+      Alert.alert('Invalid Distance', 'Please enter a distance between 25 and 3000.');
+      return;
+    }
+    if (settings.distancePresets.includes(value)) {
+      Alert.alert('Duplicate', 'This distance is already in your presets.');
+      return;
+    }
+    const newPresets = [...settings.distancePresets, value].sort((a, b) => a - b);
+    await updateSettings({ distancePresets: newPresets });
+    setNewPresetValue('');
+  };
+
+  const handleRemovePreset = async (value: number) => {
+    if (settings.distancePresets.length <= 1) {
+      Alert.alert('Cannot Remove', 'You must have at least one distance preset.');
+      return;
+    }
+    const newPresets = settings.distancePresets.filter((p) => p !== value);
+    await updateSettings({ distancePresets: newPresets });
+  };
+
+  const handleResetPresets = () => {
+    Alert.alert(
+      'Reset Distance Presets',
+      'Reset to default presets (100-1000 in 100-yard increments)?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            await updateSettings({ distancePresets: DEFAULT_DISTANCE_PRESETS });
+          },
+        },
+      ]
+    );
+  };
 
   const handleClearData = () => {
     Alert.alert(
@@ -219,6 +262,67 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
         </Card>
 
+        {/* Distance Presets */}
+        <Card style={styles.card}>
+          <View style={styles.presetHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Distance Presets
+            </Text>
+            <Pressable onPress={handleResetPresets}>
+              <Text style={[styles.resetLink, { color: colors.primary }]}>Reset</Text>
+            </Pressable>
+          </View>
+          <Text style={[styles.settingHelp, { color: colors.text.secondary, marginBottom: 12 }]}>
+            Quick-select distances shown in calculators and range sessions
+          </Text>
+          <View style={styles.presetsContainer}>
+            {settings.distancePresets.map((preset) => (
+              <Pressable
+                key={preset}
+                style={[styles.presetChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onLongPress={() => handleRemovePreset(preset)}
+              >
+                <Text style={[styles.presetChipText, { color: colors.text.primary }]}>
+                  {preset}
+                </Text>
+                <Pressable
+                  onPress={() => handleRemovePreset(preset)}
+                  style={styles.presetRemoveButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={[styles.presetRemoveText, { color: colors.text.secondary }]}>×</Text>
+                </Pressable>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.addPresetRow}>
+            <TextInput
+              style={[
+                styles.presetInput,
+                {
+                  color: colors.text.primary,
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={newPresetValue}
+              onChangeText={setNewPresetValue}
+              placeholder="Add distance..."
+              placeholderTextColor={colors.text.secondary}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              onSubmitEditing={handleAddPreset}
+            />
+            <Button
+              title="Add"
+              onPress={handleAddPreset}
+              variant="secondary"
+              size="small"
+              disabled={!newPresetValue}
+            />
+          </View>
+        </Card>
+
         {/* Feedback */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Feedback</Text>
@@ -357,5 +461,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 4,
+  },
+  presetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  resetLink: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  presetsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  presetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  presetChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  presetRemoveButton: {
+    marginLeft: 6,
+    padding: 2,
+  },
+  presetRemoveText: {
+    fontSize: 18,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  addPresetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  presetInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
   },
 });

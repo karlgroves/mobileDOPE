@@ -3,6 +3,7 @@ import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import {
   Card,
   Picker,
@@ -16,6 +17,18 @@ import { calculateBallisticSolution } from '../utils/ballistics';
 import { BallisticSolution } from '../types/ballistic.types';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
+// Wind direction options in degrees
+const WIND_DIRECTION_OPTIONS = [
+  { label: '0° (Headwind)', value: '0' },
+  { label: '45°', value: '45' },
+  { label: '90° (Right)', value: '90' },
+  { label: '135°', value: '135' },
+  { label: '180° (Tailwind)', value: '180' },
+  { label: '225°', value: '225' },
+  { label: '270° (Left)', value: '270' },
+  { label: '315°', value: '315' },
+];
+
 type Props = CalculatorStackScreenProps<'BallisticCalculator'>;
 
 export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
@@ -23,6 +36,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
   const { colors } = theme;
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
+  const { settings } = useAppStore();
 
   // Selection state
   const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>();
@@ -131,7 +145,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
   const rifleOptions = rifles.map((r) => ({ label: r.name, value: r.id!.toString() }));
   const ammoOptions = availableAmmo.map((a) => ({ label: a.name, value: a.id!.toString() }));
 
-  const distancePresets = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+  const distancePresets = settings.distancePresets;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -250,15 +264,12 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             precision={0}
             unit="mph"
           />
-          <NumberInput
+          <Picker
             label="Wind Direction"
-            value={windDirection}
-            onChangeValue={setWindDirection}
-            min={0}
-            max={359}
-            precision={0}
-            unit="degrees"
-            helperText="0° = headwind, 90° = right crosswind, 180° = tailwind"
+            value={windDirection?.toString()}
+            onValueChange={(value) => setWindDirection(value ? parseInt(value) : undefined)}
+            options={WIND_DIRECTION_OPTIONS}
+            placeholder="Select direction"
           />
         </Card>
 
