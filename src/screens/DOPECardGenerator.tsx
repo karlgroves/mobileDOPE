@@ -30,6 +30,8 @@ export function DOPECardGenerator({ route, navigation }: Props) {
 
   const [angularUnit, setAngularUnit] = useState<'MIL' | 'MOA'>('MIL');
   const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>('yards');
+  const [cardFormat, setCardFormat] = useState<'detailed' | 'condensed'>('detailed');
+  const [colorMode, setColorMode] = useState<'light' | 'nightVision'>('light');
   const [minDistance, setMinDistance] = useState(100);
   const [maxDistance, setMaxDistance] = useState(1000);
   const [increment, setIncrement] = useState(100);
@@ -125,10 +127,123 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     if (!rifle || !ammo) return '';
 
     const today = new Date().toLocaleDateString();
+    const isNightVision = colorMode === 'nightVision';
+    const isCondensed = cardFormat === 'condensed';
 
+    // Color scheme based on mode
+    const colors = isNightVision
+      ? {
+          background: '#000000',
+          text: '#ff0000',
+          headerBg: '#330000',
+          border: '#660000',
+          cellBorder: '#440000',
+        }
+      : {
+          background: '#ffffff',
+          text: '#000000',
+          headerBg: '#e0e0e0',
+          border: '#000000',
+          cellBorder: '#666666',
+        };
+
+    // Generate condensed format (distance + elevation only)
+    if (isCondensed) {
+      return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @page {
+      size: 3.5in 1.5in;
+      margin: 0.1in;
+    }
+    body {
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      margin: 0;
+      padding: 8px;
+      background: ${colors.background};
+      color: ${colors.text};
+    }
+    .header {
+      text-align: center;
+      border-bottom: 1px solid ${colors.border};
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .title {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+    .subtitle {
+      font-size: 7pt;
+      margin-bottom: 1px;
+    }
+    .dope-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2px;
+    }
+    .dope-item {
+      width: 48px;
+      text-align: center;
+      padding: 3px 2px;
+      border: 1px solid ${colors.cellBorder};
+      font-size: 7pt;
+    }
+    .dope-dist {
+      font-weight: bold;
+      font-size: 8pt;
+    }
+    .dope-elev {
+      font-size: 9pt;
+      font-weight: bold;
+    }
+    .footer {
+      font-size: 6pt;
+      text-align: center;
+      margin-top: 4px;
+      padding-top: 2px;
+      border-top: 1px solid ${colors.border};
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">${rifle.name}</div>
+    <div class="subtitle">${ammo.name} (${ammo.bulletWeight}gr) | Zero: ${rifle.zeroDistance}${distanceUnit === 'yards' ? 'yd' : 'm'}</div>
+  </div>
+
+  <div class="dope-grid">
+    ${dopeData
+      .map(
+        (row) => `
+      <div class="dope-item">
+        <div class="dope-dist">${row.distance}</div>
+        <div class="dope-elev">${row.elevation.toFixed(1)}</div>
+      </div>
+    `
+      )
+      .join('')}
+  </div>
+
+  <div class="footer">
+    ${angularUnit} | ${today}
+  </div>
+</body>
+</html>
+      `;
+    }
+
+    // Generate detailed format (with wind table)
     return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -142,12 +257,12 @@ export function DOPECardGenerator({ route, navigation }: Props) {
       font-size: 7pt;
       margin: 0;
       padding: 8px;
-      background: white;
-      color: black;
+      background: ${colors.background};
+      color: ${colors.text};
     }
     .header {
       text-align: center;
-      border-bottom: 1px solid #000;
+      border-bottom: 1px solid ${colors.border};
       padding-bottom: 4px;
       margin-bottom: 4px;
     }
@@ -166,16 +281,16 @@ export function DOPECardGenerator({ route, navigation }: Props) {
       font-size: 6pt;
     }
     th {
-      background: #e0e0e0;
+      background: ${colors.headerBg};
       font-weight: bold;
       padding: 2px 1px;
       text-align: center;
-      border: 1px solid #000;
+      border: 1px solid ${colors.border};
     }
     td {
       padding: 2px 1px;
       text-align: center;
-      border: 1px solid #666;
+      border: 1px solid ${colors.cellBorder};
     }
     .wind-header {
       font-size: 5pt;
@@ -185,7 +300,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
       text-align: center;
       margin-top: 4px;
       padding-top: 2px;
-      border-top: 1px solid #000;
+      border-top: 1px solid ${colors.border};
     }
   </style>
 </head>
@@ -341,6 +456,34 @@ export function DOPECardGenerator({ route, navigation }: Props) {
               ]}
               selectedValue={distanceUnit}
               onValueChange={(value) => setDistanceUnit(value as 'yards' | 'meters')}
+            />
+          </View>
+
+          <View style={styles.setting}>
+            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>
+              Card Format
+            </Text>
+            <SegmentedControl
+              options={[
+                { label: 'Detailed', value: 'detailed' },
+                { label: 'Condensed', value: 'condensed' },
+              ]}
+              selectedValue={cardFormat}
+              onValueChange={(value) => setCardFormat(value as 'detailed' | 'condensed')}
+            />
+          </View>
+
+          <View style={styles.setting}>
+            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>
+              Color Mode
+            </Text>
+            <SegmentedControl
+              options={[
+                { label: 'Light', value: 'light' },
+                { label: 'Night Vision', value: 'nightVision' },
+              ]}
+              selectedValue={colorMode}
+              onValueChange={(value) => setColorMode(value as 'light' | 'nightVision')}
             />
           </View>
         </Card>
