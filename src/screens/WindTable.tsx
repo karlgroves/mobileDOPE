@@ -1,13 +1,16 @@
 /**
  * Wind Table Screen
  * Displays comprehensive wind drift data for various distances and wind speeds
+ * Includes both table view and chart visualization
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import { CartesianChart, Line } from 'victory-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { UnitToggle } from '../components/UnitToggle';
 import { NumberPicker } from '../components/NumberPicker';
+import { SegmentedControl } from '../components';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -15,6 +18,12 @@ import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { generateComprehensiveWindTable, WindTableEntry } from '../utils/windTable';
 import { calculateAtmosphericConditions } from '../utils/atmospheric';
 import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
+
+// Chart data point interface with index signature for CartesianChart
+interface ChartDataPoint {
+  distance: number;
+  [key: string]: number;
+}
 
 type Props = CalculatorStackScreenProps<'WindTable'>;
 
@@ -44,6 +53,7 @@ export function WindTable({ route }: Props) {
   const [windDirection, setWindDirection] = useState(90); // Default: full right-to-left
   const [windTable, setWindTable] = useState<WindTableEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   // Standard distances for wind table (yards)
   const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
@@ -136,9 +146,36 @@ export function WindTable({ route }: Props) {
     return `${Math.abs(drift).toFixed(1)}"`;
   };
 
-  const getWindSpeedColumn = (windSpeed: number): WindTableEntry[] => {
-    return windTable.filter((entry) => entry.windSpeed === windSpeed);
-  };
+  // Prepare chart data - group by distance with separate keys for each wind speed
+  const chartData: ChartDataPoint[] = useMemo(() => {
+    if (windTable.length === 0) return [];
+
+    return distances.map((distance) => {
+      const point: ChartDataPoint = { distance };
+      windSpeeds.forEach((speed) => {
+        const entry = windTable.find((e) => e.distance === distance && e.windSpeed === speed);
+        if (entry) {
+          // Use wind drift (inches) for chart - more intuitive visualization
+          point[`wind${speed}`] = Math.abs(entry.windDrift);
+        } else {
+          point[`wind${speed}`] = 0;
+        }
+      });
+      return point;
+    });
+  }, [windTable, distances, windSpeeds]);
+
+  // Wind speed chart colors
+  const windChartColors = [
+    colors.text.disabled, // 0 mph
+    '#4CAF50', // 5 mph - green
+    '#FFC107', // 10 mph - yellow
+    '#FF9800', // 15 mph - orange
+    '#F44336', // 20 mph - red
+  ];
+
+  const screenWidth = Dimensions.get('window').width;
+  const chartHeight = 250;
 
   if (!rifle || !ammo) {
     return (
@@ -182,6 +219,17 @@ export function WindTable({ route }: Props) {
           />
         </View>
 
+        <View style={styles.controlRow}>
+          <SegmentedControl
+            options={[
+              { label: 'Table', value: 'table' },
+              { label: 'Chart', value: 'chart' },
+            ]}
+            selectedValue={viewMode}
+            onValueChange={(value) => setViewMode(value as 'table' | 'chart')}
+          />
+        </View>
+
         {currentEnv && (
           <View style={[styles.envCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.envText, { color: colors.text.secondary }]}>
@@ -191,7 +239,7 @@ export function WindTable({ route }: Props) {
         )}
       </View>
 
-      {/* Wind Table */}
+      {/* Wind Table or Chart */}
       <ScrollView style={styles.scrollView} horizontal={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -200,7 +248,74 @@ export function WindTable({ route }: Props) {
               Generating wind table...
             </Text>
           </View>
+        ) : viewMode === 'chart' ? (
+          /* Wind Drift Chart View */
+          <View style={styles.chartSection}>
+            <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.chartTitle, { color: colors.text.primary }]}>
+                Wind Drift vs Distance
+              </Text>
+              <Text style={[styles.chartSubtitle, { color: colors.text.secondary }]}>
+                Wind direction: {getWindDirectionLabel(windDirection)}
+              </Text>
+
+              {chartData.length > 0 ? (
+                <View style={[styles.chartContainer, { height: chartHeight }]}>
+                  <CartesianChart<ChartDataPoint, 'distance', 'wind5' | 'wind10' | 'wind15' | 'wind20'>
+                    data={chartData}
+                    xKey="distance"
+                    yKeys={['wind5', 'wind10', 'wind15', 'wind20']}
+                    domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                    axisOptions={{
+                      font: null,
+                      tickCount: { x: 5, y: 5 },
+                      lineColor: colors.border,
+                      labelColor: colors.text.secondary,
+                      formatXLabel: (value: number) => `${value}`,
+                      formatYLabel: (value: number) => `${value.toFixed(1)}"`,
+                    }}
+                  >
+                    {({ points }) => (
+                      <>
+                        <Line points={points.wind5} color={windChartColors[1]} strokeWidth={2} curveType="natural" />
+                        <Line points={points.wind10} color={windChartColors[2]} strokeWidth={2} curveType="natural" />
+                        <Line points={points.wind15} color={windChartColors[3]} strokeWidth={2} curveType="natural" />
+                        <Line points={points.wind20} color={windChartColors[4]} strokeWidth={2} curveType="natural" />
+                      </>
+                    )}
+                  </CartesianChart>
+                </View>
+              ) : (
+                <View style={[styles.noChartData, { height: chartHeight }]}>
+                  <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
+                    No wind data available
+                  </Text>
+                </View>
+              )}
+
+              {/* Chart Legend */}
+              <View style={styles.chartLegend}>
+                {windSpeeds.slice(1).map((speed, index) => (
+                  <View key={speed} style={styles.legendItem}>
+                    <View style={[styles.legendLine, { backgroundColor: windChartColors[index + 1] }]} />
+                    <Text style={[styles.legendText, { color: colors.text.secondary }]}>
+                      {speed} mph
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Y-Axis Label */}
+            <Text style={[styles.axisLabel, { color: colors.text.secondary }]}>
+              Wind Drift (inches)
+            </Text>
+            <Text style={[styles.xAxisLabel, { color: colors.text.secondary }]}>
+              Distance (yards)
+            </Text>
+          </View>
         ) : (
+          /* Table View */
           <ScrollView horizontal showsHorizontalScrollIndicator>
             <View style={styles.tableContainer}>
               {/* Table Header */}
@@ -377,5 +492,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     margin: 24,
+  },
+  // Chart view styles
+  chartSection: {
+    padding: 16,
+  },
+  chartCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  chartContainer: {
+    marginHorizontal: -8,
+  },
+  noChartData: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendLine: {
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  axisLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  xAxisLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
