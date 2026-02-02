@@ -5,6 +5,7 @@
 
 import { Paths, File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 import type { RifleProfile } from '../models/RifleProfile';
 import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
@@ -252,6 +253,254 @@ export async function exportDOPELogsJSON(logs: DOPELog[]): Promise<ExportResult>
     return { success: true, uri: file.uri };
   } catch (error) {
     console.error('Error exporting DOPE logs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Generate HTML for DOPE logs PDF report
+ */
+function generateDOPELogsPDFHtml(
+  logs: DOPELog[],
+  rifles: RifleProfile[],
+  ammos: AmmoProfile[]
+): string {
+  const getRifleName = (rifleId?: number) => {
+    const rifle = rifles.find((r) => r.id === rifleId);
+    return rifle ? rifle.name : 'Unknown';
+  };
+
+  const getAmmoName = (ammoId?: number) => {
+    const ammo = ammos.find((a) => a.id === ammoId);
+    return ammo ? ammo.name : 'Unknown';
+  };
+
+  const formatDate = (timestamp?: string): string => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  // Group logs by rifle for better organization
+  const logsByRifle = logs.reduce(
+    (acc, log) => {
+      const rifleName = getRifleName(log.rifleId);
+      if (!acc[rifleName]) {
+        acc[rifleName] = [];
+      }
+      acc[rifleName].push(log);
+      return acc;
+    },
+    {} as Record<string, DOPELog[]>
+  );
+
+  const tableRows = Object.entries(logsByRifle)
+    .map(([rifleName, rifleLogs]) => {
+      const rows = rifleLogs
+        .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+        .map(
+          (log) => `
+        <tr>
+          <td>${formatDate(log.timestamp)}</td>
+          <td>${log.distance || 'N/A'}</td>
+          <td class="correction">${log.elevationCorrection?.toFixed(1) || '--'}</td>
+          <td class="correction">${log.windageCorrection?.toFixed(1) || '--'}</td>
+          <td>${log.correctionUnit || 'MIL'}</td>
+          <td>${getAmmoName(log.ammoId)}</td>
+          <td>${log.notes || ''}</td>
+        </tr>
+      `
+        )
+        .join('');
+
+      return `
+        <tr class="rifle-header">
+          <td colspan="7">${rifleName} (${rifleLogs.length} logs)</td>
+        </tr>
+        ${rows}
+      `;
+    })
+    .join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #1a1a1a;
+          padding: 20px;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 2px solid #333;
+          padding-bottom: 15px;
+          margin-bottom: 20px;
+        }
+        .header h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        .header .subtitle {
+          font-size: 12px;
+          color: #666;
+        }
+        .summary {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #f5f5f5;
+          border-radius: 4px;
+        }
+        .summary-item {
+          text-align: center;
+        }
+        .summary-item .value {
+          font-size: 20px;
+          font-weight: bold;
+          color: #2E7D32;
+        }
+        .summary-item .label {
+          font-size: 10px;
+          color: #666;
+          text-transform: uppercase;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        th, td {
+          padding: 6px 8px;
+          text-align: left;
+          border-bottom: 1px solid #ddd;
+        }
+        th {
+          background-color: #333;
+          color: white;
+          font-weight: 600;
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .rifle-header {
+          background-color: #2E7D32 !important;
+          color: white;
+          font-weight: bold;
+        }
+        .rifle-header td {
+          padding: 8px;
+          font-size: 12px;
+        }
+        .correction {
+          font-weight: 600;
+          font-family: monospace;
+        }
+        .footer {
+          margin-top: 30px;
+          text-align: center;
+          font-size: 10px;
+          color: #999;
+          border-top: 1px solid #ddd;
+          padding-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>DOPE Logs Report</h1>
+        <div class="subtitle">Generated by Mobile DOPE</div>
+      </div>
+
+      <div class="summary">
+        <div class="summary-item">
+          <div class="value">${logs.length}</div>
+          <div class="label">Total Logs</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">${Object.keys(logsByRifle).length}</div>
+          <div class="label">Rifles</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">${[...new Set(logs.map((l) => l.ammoId))].length}</div>
+          <div class="label">Ammo Types</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Distance</th>
+            <th>Elevation</th>
+            <th>Windage</th>
+            <th>Unit</th>
+            <th>Ammunition</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        Generated on ${new Date().toLocaleString()}
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Export DOPE logs as PDF report
+ */
+export async function exportDOPELogsPDF(
+  logs: DOPELog[],
+  rifles: RifleProfile[],
+  ammos: AmmoProfile[]
+): Promise<ExportResult> {
+  try {
+    const html = generateDOPELogsPDFHtml(logs, rifles, ammos);
+
+    const { uri } = await Print.printToFileAsync({
+      html,
+      base64: false,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Export DOPE Logs PDF',
+        UTI: 'com.adobe.pdf',
+      });
+    }
+
+    return { success: true, uri };
+  } catch (error) {
+    console.error('Error exporting DOPE logs PDF:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

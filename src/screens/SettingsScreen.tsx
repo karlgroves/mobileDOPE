@@ -17,6 +17,7 @@ import {
   exportAllRifleProfilesJSON,
   exportDOPELogsCSV,
   exportDOPELogsJSON,
+  exportDOPELogsPDF,
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
 
@@ -151,6 +152,21 @@ export const SettingsScreen: React.FC<Props> = () => {
             const result = await exportDOPELogsJSON(dopeLogs);
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
+            } else {
+              Alert.alert('Error', result.error || 'Export failed');
+            }
+          },
+        },
+        {
+          text: 'DOPE Logs (PDF Report)',
+          onPress: async () => {
+            if (dopeLogs.length === 0) {
+              Alert.alert('No Data', 'You have no DOPE logs to export.');
+              return;
+            }
+            const result = await exportDOPELogsPDF(dopeLogs, rifles, ammoProfiles);
+            if (result.success) {
+              Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs as PDF report.`);
             } else {
               Alert.alert('Error', result.error || 'Export failed');
             }
