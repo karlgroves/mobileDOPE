@@ -6,6 +6,7 @@ import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
 import { DOPECardGenerator } from '../screens/DOPECardGenerator';
 import { ChronographInput } from '../screens/ChronographInput';
 import { ShotStringHistory } from '../screens/ShotStringHistory';
+import { AmmoCompare } from '../screens/AmmoCompare';
 import type { AmmoStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AmmoStackParamList>();
@@ -55,6 +56,11 @@ export const AmmoNavigator: React.FC = () => {
         name="ShotStringHistory"
         component={ShotStringHistory}
         options={{ title: 'Velocity History' }}
+      />
+      <Stack.Screen
+        name="AmmoCompare"
+        component={AmmoCompare}
+        options={{ title: 'Compare Ammunition' }}
       />
     </Stack.Navigator>
   );

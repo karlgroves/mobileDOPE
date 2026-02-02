@@ -52,6 +52,7 @@ export type AmmoStackParamList = {
   DOPECardGenerator: { rifleId?: number; ammoId: number };
   ChronographInput: { ammoId: number };
   ShotStringHistory: { ammoId: number };
+  AmmoCompare: { rifleId?: number };
 };
 
 /**

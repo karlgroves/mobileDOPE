@@ -12,6 +12,7 @@ import {
   IconButton,
   ConfirmationDialog,
   SegmentedControl,
+  Button,
 } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -197,6 +198,16 @@ export const AllAmmoProfileList: React.FC = () => {
                 }
               />
             </View>
+            {ammoProfiles.length >= 2 && (
+              <View style={styles.compareButtonContainer}>
+                <Button
+                  title="Compare Ammunition"
+                  onPress={() => navigation.navigate('AmmoCompare', {})}
+                  variant="secondary"
+                  size="small"
+                />
+              </View>
+            )}
           </View>
 
           <FlatList
@@ -260,6 +271,10 @@ const styles = StyleSheet.create({
   },
   sortContainer: {
     marginBottom: 8,
+  },
+  compareButtonContainer: {
+    marginTop: 8,
+    alignItems: 'flex-start',
   },
   sortLabel: {
     fontSize: 14,
