@@ -251,3 +251,206 @@ export function getDragCoefficient(
     ? getG1DragCoefficient(velocity, speedOfSound)
     : getG7DragCoefficient(velocity, speedOfSound);
 }
+
+/**
+ * Flight regime boundaries for drag modeling
+ */
+export const MACH_SUBSONIC = 0.8; // Below this is fully subsonic
+export const MACH_TRANSONIC_LOW = 0.8; // Transonic zone lower bound
+export const MACH_TRANSONIC_HIGH = 1.2; // Transonic zone upper bound
+export const MACH_SUPERSONIC = 1.2; // Above this is fully supersonic
+
+/**
+ * Flight regime type
+ */
+export type FlightRegime = 'subsonic' | 'transonic' | 'supersonic';
+
+/**
+ * Determine flight regime based on Mach number
+ */
+export function getFlightRegime(mach: number): FlightRegime {
+  if (mach < MACH_TRANSONIC_LOW) return 'subsonic';
+  if (mach > MACH_TRANSONIC_HIGH) return 'supersonic';
+  return 'transonic';
+}
+
+/**
+ * Get the rate of change of drag coefficient (dCd/dM)
+ * This indicates how rapidly drag is changing with velocity
+ * High values indicate the transonic instability zone
+ *
+ * @param velocity - Velocity in fps
+ * @param model - Drag model
+ * @param speedOfSound - Speed of sound in fps
+ * @returns Rate of change of Cd per Mach 0.01
+ */
+export function getDragChangeRate(
+  velocity: number,
+  model: DragModel,
+  speedOfSound: number = 1116
+): number {
+  const delta = 0.01; // Small Mach increment
+  const machDelta = delta * speedOfSound;
+
+  const cdLow = getDragCoefficient(velocity - machDelta / 2, model, speedOfSound);
+  const cdHigh = getDragCoefficient(velocity + machDelta / 2, model, speedOfSound);
+
+  return (cdHigh - cdLow) / delta;
+}
+
+/**
+ * Subsonic BC adjustment factor
+ *
+ * BC values are typically measured at supersonic velocities.
+ * When a bullet goes subsonic, the effective BC changes because
+ * the drag characteristics are different.
+ *
+ * This provides an adjustment factor to apply to the published BC
+ * for more accurate subsonic trajectory calculation.
+ *
+ * @param mach - Current Mach number
+ * @param model - Drag model ('G1' or 'G7')
+ * @returns BC adjustment factor (multiply published BC by this)
+ */
+export function getSubsonicBCAdjustment(mach: number, model: DragModel): number {
+  // Reference Mach for BC measurement (typically around Mach 2.0-2.5)
+  const referenceMach = 2.0;
+
+  // Get drag coefficients at reference and current Mach
+  const cdReference = getDragFromTable(referenceMach, model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE);
+  const cdCurrent = getDragFromTable(mach, model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE);
+
+  // BC is inversely proportional to Cd, so adjustment = Cd_ref / Cd_current
+  // If current Cd is higher (subsonic), BC is effectively lower
+  if (cdCurrent <= 0) return 1.0;
+
+  return cdReference / cdCurrent;
+}
+
+/**
+ * Get effective BC at current velocity
+ *
+ * @param publishedBC - BC as published (measured at supersonic velocity)
+ * @param velocity - Current velocity in fps
+ * @param model - Drag model
+ * @param speedOfSound - Speed of sound in fps
+ * @returns Effective BC at current velocity
+ */
+export function getEffectiveBC(
+  publishedBC: number,
+  velocity: number,
+  model: DragModel,
+  speedOfSound: number = 1116
+): number {
+  const mach = velocity / speedOfSound;
+  const adjustment = getSubsonicBCAdjustment(mach, model);
+  return publishedBC * adjustment;
+}
+
+/**
+ * Drag analysis result for a given velocity
+ */
+export interface DragAnalysis {
+  /** Current Mach number */
+  mach: number;
+  /** Flight regime */
+  regime: FlightRegime;
+  /** Drag coefficient */
+  cd: number;
+  /** Rate of change of Cd per Mach 0.01 */
+  cdChangeRate: number;
+  /** BC adjustment factor for subsonic flight */
+  bcAdjustment: number;
+  /** Whether bullet is in unstable transonic zone */
+  isUnstable: boolean;
+  /** Description of current drag characteristics */
+  description: string;
+}
+
+/**
+ * Analyze drag characteristics at a given velocity
+ *
+ * @param velocity - Velocity in fps
+ * @param model - Drag model
+ * @param speedOfSound - Speed of sound in fps
+ * @returns Comprehensive drag analysis
+ */
+export function analyzeDrag(
+  velocity: number,
+  model: DragModel,
+  speedOfSound: number = 1116
+): DragAnalysis {
+  const mach = velocity / speedOfSound;
+  const regime = getFlightRegime(mach);
+  const cd = getDragCoefficient(velocity, model, speedOfSound);
+  const cdChangeRate = getDragChangeRate(velocity, model, speedOfSound);
+  const bcAdjustment = getSubsonicBCAdjustment(mach, model);
+
+  // The bullet is considered unstable when drag is changing rapidly
+  // This typically occurs in the transonic zone (Mach 0.9-1.1)
+  const isUnstable = Math.abs(cdChangeRate) > 0.05;
+
+  let description: string;
+  if (regime === 'supersonic') {
+    description = `Supersonic flight (Mach ${mach.toFixed(2)}). Drag is stable and predictable.`;
+  } else if (regime === 'subsonic') {
+    description = `Subsonic flight (Mach ${mach.toFixed(2)}). BC effectiveness reduced to ${(bcAdjustment * 100).toFixed(0)}% of published value.`;
+  } else {
+    if (isUnstable) {
+      description = `Transonic zone (Mach ${mach.toFixed(2)}). Drag is changing rapidly - accuracy may be degraded.`;
+    } else {
+      description = `Transonic zone (Mach ${mach.toFixed(2)}). Bullet transitioning between flight regimes.`;
+    }
+  }
+
+  return {
+    mach,
+    regime,
+    cd,
+    cdChangeRate,
+    bcAdjustment,
+    isUnstable,
+    description,
+  };
+}
+
+/**
+ * Get drag coefficient ratio between two Mach numbers
+ * Useful for understanding how much drag increases/decreases
+ *
+ * @param machFrom - Starting Mach number
+ * @param machTo - Ending Mach number
+ * @param model - Drag model
+ * @returns Ratio of drag coefficients (Cd_to / Cd_from)
+ */
+export function getDragRatio(machFrom: number, machTo: number, model: DragModel): number {
+  const table = model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE;
+  const cdFrom = getDragFromTable(machFrom, table);
+  const cdTo = getDragFromTable(machTo, table);
+
+  if (cdFrom <= 0) return 1.0;
+  return cdTo / cdFrom;
+}
+
+/**
+ * Find the Mach number where drag coefficient is maximum
+ * This is typically in the transonic zone
+ *
+ * @param model - Drag model
+ * @returns Mach number of maximum drag
+ */
+export function getMaxDragMach(model: DragModel): { mach: number; cd: number } {
+  const table = model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE;
+
+  let maxCd = 0;
+  let maxMach = 0;
+
+  for (const [mach, cd] of table) {
+    if (cd > maxCd) {
+      maxCd = cd;
+      maxMach = mach;
+    }
+  }
+
+  return { mach: maxMach, cd: maxCd };
+}
