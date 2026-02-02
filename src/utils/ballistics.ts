@@ -14,6 +14,7 @@ import { calculateSpeedOfSound, calculateAirDensity } from './atmospheric';
 import { getDragCoefficient } from './dragModels';
 import { inchesToCorrection } from '../types/ballistic.types';
 import { getBulletDiameter, calculateSpinDriftComplete } from './spinDrift';
+import { calculateCoriolisComplete } from './coriolis';
 
 const GRAVITY = 32.174; // ft/s²
 
@@ -413,6 +414,34 @@ export function calculateBallisticSolution(
     }
   }
 
+  // Calculate Coriolis effect if latitude is provided
+  let coriolisHorizontal: number | undefined;
+  let coriolisVertical: number | undefined;
+  let coriolisHorizontalMIL: number | undefined;
+  let coriolisHorizontalMOA: number | undefined;
+  let coriolisVerticalMIL: number | undefined;
+  let coriolisVerticalMOA: number | undefined;
+
+  if (shot.latitude !== undefined) {
+    const coriolisResult = calculateCoriolisComplete(
+      {
+        latitude: shot.latitude,
+        azimuth: shot.azimuth,
+        timeOfFlight: targetPoint.time,
+        muzzleVelocity: ammo.muzzleVelocity,
+        velocityAtTarget: targetPoint.velocity,
+      },
+      shot.distance
+    );
+
+    coriolisHorizontal = coriolisResult.horizontalDeflection;
+    coriolisVertical = coriolisResult.verticalDeflection;
+    coriolisHorizontalMIL = coriolisResult.horizontalMIL;
+    coriolisHorizontalMOA = coriolisResult.horizontalMOA;
+    coriolisVerticalMIL = coriolisResult.verticalMIL;
+    coriolisVerticalMOA = coriolisResult.verticalMOA;
+  }
+
   return {
     rifle,
     ammo,
@@ -435,5 +464,11 @@ export function calculateBallisticSolution(
     spinDriftMIL,
     spinDriftMOA,
     stabilityFactor,
+    coriolisHorizontal,
+    coriolisVertical,
+    coriolisHorizontalMIL,
+    coriolisHorizontalMOA,
+    coriolisVerticalMIL,
+    coriolisVerticalMOA,
   };
 }

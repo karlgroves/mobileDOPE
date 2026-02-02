@@ -35,6 +35,8 @@ export interface ShotParameters {
   angle: number; // degrees, positive = uphill, negative = downhill
   windSpeed: number; // mph
   windDirection: number; // degrees, 0 = headwind, 90 = right-to-left, 270 = left-to-right
+  latitude?: number; // degrees, for Coriolis calculation (-90 to 90, positive = North)
+  azimuth?: number; // degrees, direction of fire (0 = North, 90 = East, etc.) for Eötvös effect
 }
 
 /**
@@ -85,6 +87,14 @@ export interface BallisticSolution {
   spinDriftMIL?: number; // MIL correction for spin drift
   spinDriftMOA?: number; // MOA correction for spin drift
   stabilityFactor?: number; // gyroscopic stability factor (SG)
+
+  // Coriolis effect (optional, requires latitude)
+  coriolisHorizontal?: number; // inches (positive = right in Northern Hemisphere)
+  coriolisVertical?: number; // inches (positive = additional drop when firing East)
+  coriolisHorizontalMIL?: number; // MIL correction for horizontal Coriolis
+  coriolisHorizontalMOA?: number; // MOA correction for horizontal Coriolis
+  coriolisVerticalMIL?: number; // MIL correction for vertical Coriolis (Eötvös)
+  coriolisVerticalMOA?: number; // MOA correction for vertical Coriolis (Eötvös)
 }
 
 /**
