@@ -13,6 +13,8 @@ export interface RifleConfig {
   sightHeight: number; // inches, height of scope over bore
   twistRate: string; // e.g., "1:10" for 1 turn in 10 inches
   barrelLength: number; // inches
+  caliber?: string; // caliber string for spin drift calculation (e.g., ".308 Win")
+  isRightHandTwist?: boolean; // default: true
 }
 
 /**
@@ -77,6 +79,12 @@ export interface BallisticSolution {
   zeroAngle: number; // line of sight angle at zero distance (radians)
   maxOrdinate: number; // maximum height above line of sight (inches)
   maxOrdinateDistance: number; // distance where max ordinate occurs (yards)
+
+  // Advanced corrections (optional)
+  spinDrift?: number; // inches (positive = right for right-hand twist)
+  spinDriftMIL?: number; // MIL correction for spin drift
+  spinDriftMOA?: number; // MOA correction for spin drift
+  stabilityFactor?: number; // gyroscopic stability factor (SG)
 }
 
 /**

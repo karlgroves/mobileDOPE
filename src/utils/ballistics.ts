@@ -13,6 +13,7 @@ import type { AtmosphericConditions } from './atmospheric';
 import { calculateSpeedOfSound, calculateAirDensity } from './atmospheric';
 import { getDragCoefficient } from './dragModels';
 import { inchesToCorrection } from '../types/ballistic.types';
+import { getBulletDiameter, calculateSpinDriftComplete } from './spinDrift';
 
 const GRAVITY = 32.174; // ft/s²
 
@@ -386,6 +387,32 @@ export function calculateBallisticSolution(
     }
   }
 
+  // Calculate spin drift if caliber is available
+  let spinDrift: number | undefined;
+  let spinDriftMIL: number | undefined;
+  let spinDriftMOA: number | undefined;
+  let stabilityFactor: number | undefined;
+
+  if (rifle.caliber) {
+    const bulletDiameter = getBulletDiameter(rifle.caliber);
+    if (bulletDiameter) {
+      const spinDriftResult = calculateSpinDriftComplete({
+        bulletWeight: ammo.bulletWeight,
+        bulletDiameter,
+        twistRate: rifle.twistRate,
+        timeOfFlight: targetPoint.time,
+        isRightHandTwist: rifle.isRightHandTwist !== false, // default true
+      });
+
+      if (spinDriftResult) {
+        spinDrift = spinDriftResult.spinDrift;
+        spinDriftMIL = inchesToCorrection(spinDriftResult.spinDrift, shot.distance, 'MIL');
+        spinDriftMOA = inchesToCorrection(spinDriftResult.spinDrift, shot.distance, 'MOA');
+        stabilityFactor = spinDriftResult.stabilityFactor;
+      }
+    }
+  }
+
   return {
     rifle,
     ammo,
@@ -404,5 +431,9 @@ export function calculateBallisticSolution(
     zeroAngle,
     maxOrdinate,
     maxOrdinateDistance,
+    spinDrift,
+    spinDriftMIL,
+    spinDriftMOA,
+    stabilityFactor,
   };
 }
