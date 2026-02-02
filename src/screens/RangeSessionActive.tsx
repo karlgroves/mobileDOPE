@@ -74,14 +74,16 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
     loadSession();
   }, [loadSession]);
 
-  // Screen wake lock - keep screen on during active session
+  // Screen wake lock - keep screen on during active session (if enabled in settings)
   useEffect(() => {
-    activateKeepAwakeAsync('rangeSession');
+    if (settings.keepScreenAwakeDuringSession) {
+      activateKeepAwakeAsync('rangeSession');
+    }
 
     return () => {
       deactivateKeepAwake('rangeSession');
     };
-  }, []);
+  }, [settings.keepScreenAwakeDuringSession]);
 
   // Timer effect
   useEffect(() => {

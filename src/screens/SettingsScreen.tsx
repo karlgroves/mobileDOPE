@@ -362,6 +362,29 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
         </Card>
 
+        {/* Range Session Settings */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Range Session</Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Keep Screen Awake
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Prevent screen from sleeping during active range sessions
+              </Text>
+            </View>
+            <Switch
+              value={settings.keepScreenAwakeDuringSession}
+              onValueChange={async (value) => {
+                await updateSettings({ keepScreenAwakeDuringSession: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.keepScreenAwakeDuringSession ? '#ffffff' : '#f4f3f4'}
+            />
+          </View>
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>

@@ -12,6 +12,7 @@ interface AppSettings {
   defaultCorrectionUnit: 'MIL' | 'MOA';
   themeMode: ThemeMode;
   hapticFeedbackEnabled: boolean;
+  keepScreenAwakeDuringSession: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -49,6 +50,7 @@ const defaultSettings: AppSettings = {
   defaultCorrectionUnit: 'MIL',
   themeMode: 'dark',
   hapticFeedbackEnabled: true,
+  keepScreenAwakeDuringSession: true,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
