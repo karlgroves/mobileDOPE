@@ -8,9 +8,12 @@ import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useDOPEStore } from '../store/useDOPEStore';
 import { Card, Button } from '../components';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
 import type { CalculatorStackScreenProps } from '../navigation/types';
+import type { DOPELogData } from '../models/DOPELog';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
@@ -21,11 +24,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
+  const { current: currentEnv, saveCurrent } = useEnvironmentStore();
+  const { createDopeLog } = useDOPEStore();
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -44,6 +50,68 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
       Alert.alert('Export Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleSaveToDOPE = async () => {
+    if (!rifle?.id || !ammo?.id) {
+      Alert.alert('Error', 'Rifle or ammunition profile not found');
+      return;
+    }
+
+    // Show target type selection
+    Alert.alert(
+      'Save to DOPE Log',
+      'Select target type:',
+      [
+        { text: 'Steel', onPress: () => saveDOPELog('steel') },
+        { text: 'Paper', onPress: () => saveDOPELog('paper') },
+        { text: 'Vital Zone', onPress: () => saveDOPELog('vital_zone') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const saveDOPELog = async (targetType: 'steel' | 'paper' | 'vital_zone' | 'other') => {
+    setIsSaving(true);
+    try {
+      // Need an environment snapshot - save current or create default
+      let environmentId: number;
+
+      if (currentEnv) {
+        // Save current environment
+        const envSnapshot = await saveCurrent();
+        environmentId = envSnapshot.id!;
+      } else {
+        // No current environment - alert user
+        Alert.alert(
+          'Environment Required',
+          'Please set environmental conditions first in the Environment screen.',
+          [{ text: 'OK' }]
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      const dopeData: DOPELogData = {
+        rifleId: rifle!.id!,
+        ammoId: ammo!.id!,
+        environmentId,
+        distance,
+        distanceUnit: 'yards',
+        elevationCorrection: angularUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA,
+        windageCorrection: angularUnit === 'MIL' ? solution.windageMIL : solution.windageMOA,
+        correctionUnit: angularUnit,
+        targetType,
+        notes: `Calculated at ${distance} yards with ${rifle?.name} / ${ammo?.name}`,
+      };
+
+      await createDopeLog(dopeData);
+      Alert.alert('Success', 'Ballistic solution saved to DOPE log');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save DOPE log');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -156,6 +224,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <Button
+            title={isSaving ? 'Saving...' : 'Save to DOPE Log'}
+            onPress={handleSaveToDOPE}
+            variant="primary"
+            size="large"
+            style={styles.button}
+            disabled={isSaving}
+          />
+          <Button
             title={isExporting ? 'Exporting...' : 'Export PDF'}
             onPress={handleExportPDF}
             variant="secondary"
@@ -173,7 +249,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           <Button
             title="New Calculation"
             onPress={() => navigation.goBack()}
-            variant="primary"
+            variant="secondary"
             size="large"
             style={styles.button}
           />
