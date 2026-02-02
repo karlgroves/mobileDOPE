@@ -5,6 +5,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import { Card, Button, NumberPicker } from '../components';
 import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
 import { environmentRepository } from '../services/database/EnvironmentRepository';
@@ -23,6 +24,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
 
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
+  const { settings } = useAppStore();
 
   // Session state
   const [session, setSession] = useState<RangeSession | null>(null);
@@ -157,21 +159,27 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   const handleRecordShot = async () => {
     if (!session) return;
 
-    // Haptic feedback on shot press
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // Haptic feedback on shot press (if enabled)
+    if (settings.hapticFeedbackEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
 
     setIsRecording(true);
     try {
       const updated = await rangeSessionRepository.incrementShotCount(session.id!);
       if (updated) {
         setSession(updated);
-        // Success haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Success haptic feedback (if enabled)
+        if (settings.hapticFeedbackEnabled) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       }
     } catch (error) {
       console.error('Failed to record shot:', error);
-      // Error haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // Error haptic feedback (if enabled)
+      if (settings.hapticFeedbackEnabled) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       Alert.alert('Error', 'Failed to record shot');
     } finally {
       setIsRecording(false);

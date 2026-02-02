@@ -11,6 +11,7 @@ interface AppSettings {
   defaultDistanceUnit: 'yards' | 'meters';
   defaultCorrectionUnit: 'MIL' | 'MOA';
   themeMode: ThemeMode;
+  hapticFeedbackEnabled: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
 }
@@ -44,6 +45,7 @@ const defaultSettings: AppSettings = {
   defaultDistanceUnit: 'yards',
   defaultCorrectionUnit: 'MIL',
   themeMode: 'dark',
+  hapticFeedbackEnabled: true,
 };
 
 const SETTINGS_STORAGE_KEY = '@mobileDOPE:settings';

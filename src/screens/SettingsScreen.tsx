@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -219,6 +219,29 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
         </Card>
 
+        {/* Feedback */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Feedback</Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Haptic Feedback
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Vibration feedback when recording shots
+              </Text>
+            </View>
+            <Switch
+              value={settings.hapticFeedbackEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ hapticFeedbackEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.hapticFeedbackEnabled ? '#ffffff' : '#f4f3f4'}
+            />
+          </View>
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>
@@ -299,6 +322,19 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: 12,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  switchLabel: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingHelp: {
+    fontSize: 12,
+    marginTop: 2,
   },
   infoRow: {
     flexDirection: 'row',
