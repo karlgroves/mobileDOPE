@@ -35,6 +35,10 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
 
+  // Quick adjustment state (manual corrections on top of calculated solution)
+  const [elevationAdjustment, setElevationAdjustment] = useState<number>(0);
+  const [windageAdjustment, setWindageAdjustment] = useState<number>(0);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
@@ -213,6 +217,9 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   // Handle distance change
   const handleDistanceChange = async (newDistance: number) => {
     setDistance(newDistance);
+    // Reset adjustments when distance changes
+    setElevationAdjustment(0);
+    setWindageAdjustment(0);
     if (session) {
       try {
         await rangeSessionRepository.update(session.id!, { distance: newDistance });
@@ -221,6 +228,33 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
       }
     }
   };
+
+  // Quick adjustment handlers
+  const adjustElevation = (delta: number) => {
+    if (settings.hapticFeedbackEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setElevationAdjustment((prev) => Math.round((prev + delta) * 10) / 10);
+  };
+
+  const adjustWindage = (delta: number) => {
+    if (settings.hapticFeedbackEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setWindageAdjustment((prev) => Math.round((prev + delta) * 10) / 10);
+  };
+
+  const resetAdjustments = () => {
+    if (settings.hapticFeedbackEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setElevationAdjustment(0);
+    setWindageAdjustment(0);
+  };
+
+  // Calculate adjusted values
+  const adjustedElevation = solution ? solution.elevationMIL + elevationAdjustment : null;
+  const adjustedWindage = solution ? solution.windageMIL + windageAdjustment : null;
 
   // Format elapsed time
   const formatTime = (seconds: number): string => {
@@ -280,29 +314,76 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
             <Text style={[styles.distanceText, { color: colors.text.secondary }]}>
               {distance} yards
             </Text>
+            {(elevationAdjustment !== 0 || windageAdjustment !== 0) && (
+              <Pressable onPress={resetAdjustments} style={styles.resetButton}>
+                <Text style={[styles.resetButtonText, { color: colors.primary }]}>Reset</Text>
+              </Pressable>
+            )}
           </View>
 
           <View style={styles.correctionRow}>
+            {/* Elevation with adjustment controls */}
             <View style={styles.correctionItem}>
               <Text style={[styles.correctionLabel, { color: colors.text.secondary }]}>
                 ELEVATION
               </Text>
-              <Text style={[styles.correctionValue, { color: colors.primary }]}>
-                {solution ? solution.elevationMIL.toFixed(1) : '--'}
-              </Text>
+              <View style={styles.adjustmentRow}>
+                <Pressable
+                  style={[styles.adjustButton, { backgroundColor: colors.surface }]}
+                  onPress={() => adjustElevation(-0.1)}
+                >
+                  <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>−</Text>
+                </Pressable>
+                <Text style={[styles.correctionValue, { color: colors.primary }]}>
+                  {adjustedElevation !== null ? adjustedElevation.toFixed(1) : '--'}
+                </Text>
+                <Pressable
+                  style={[styles.adjustButton, { backgroundColor: colors.surface }]}
+                  onPress={() => adjustElevation(0.1)}
+                >
+                  <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>+</Text>
+                </Pressable>
+              </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
+              {elevationAdjustment !== 0 && (
+                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                  {elevationAdjustment > 0 ? '+' : ''}{elevationAdjustment.toFixed(1)}
+                </Text>
+              )}
             </View>
+
             <View style={styles.correctionDivider} />
+
+            {/* Windage with adjustment controls */}
             <View style={styles.correctionItem}>
               <Text style={[styles.correctionLabel, { color: colors.text.secondary }]}>
                 WINDAGE
               </Text>
-              <Text style={[styles.correctionValue, { color: colors.primary }]}>
-                {solution
-                  ? `${solution.windageMIL >= 0 ? 'R ' : 'L '}${Math.abs(solution.windageMIL).toFixed(1)}`
-                  : '--'}
-              </Text>
+              <View style={styles.adjustmentRow}>
+                <Pressable
+                  style={[styles.adjustButton, { backgroundColor: colors.surface }]}
+                  onPress={() => adjustWindage(-0.1)}
+                >
+                  <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>−</Text>
+                </Pressable>
+                <Text style={[styles.correctionValue, { color: colors.primary }]}>
+                  {adjustedWindage !== null
+                    ? `${adjustedWindage >= 0 ? 'R ' : 'L '}${Math.abs(adjustedWindage).toFixed(1)}`
+                    : '--'}
+                </Text>
+                <Pressable
+                  style={[styles.adjustButton, { backgroundColor: colors.surface }]}
+                  onPress={() => adjustWindage(0.1)}
+                >
+                  <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>+</Text>
+                </Pressable>
+              </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
+              {windageAdjustment !== 0 && (
+                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                  {windageAdjustment > 0 ? '+' : ''}{windageAdjustment.toFixed(1)}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -592,5 +673,36 @@ const styles = StyleSheet.create({
   windValue: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  resetButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  adjustmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  adjustButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adjustButtonText: {
+    fontSize: 24,
+    fontWeight: '600',
+    lineHeight: 28,
+  },
+  adjustmentIndicator: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
