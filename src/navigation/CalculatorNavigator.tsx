@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BallisticCalculator } from '../screens/BallisticCalculator';
 import { BallisticSolutionResults } from '../screens/BallisticSolutionResults';
 import { WindTable } from '../screens/WindTable';
+import { MovingTargetCalculator } from '../screens/MovingTargetCalculator';
 import type { CalculatorStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<CalculatorStackParamList>();
@@ -32,6 +33,11 @@ export const CalculatorNavigator: React.FC = () => {
         options={{ title: 'Ballistic Solution' }}
       />
       <Stack.Screen name="WindTable" component={WindTable} options={{ title: 'Wind Table' }} />
+      <Stack.Screen
+        name="MovingTargetCalculator"
+        component={MovingTargetCalculator}
+        options={{ title: 'Moving Target' }}
+      />
     </Stack.Navigator>
   );
 };

@@ -309,6 +309,23 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
           size="large"
           disabled={!selectedRifle || !selectedAmmo}
         />
+
+        <View style={styles.additionalTools}>
+          <Text style={[styles.additionalToolsLabel, { color: colors.text.secondary }]}>
+            Additional Tools
+          </Text>
+          <Button
+            title="Moving Target Calculator"
+            onPress={() =>
+              navigation.navigate('MovingTargetCalculator', {
+                rifleId: selectedRifleId,
+                ammoId: selectedAmmoId,
+              })
+            }
+            variant="secondary"
+            size="medium"
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -372,5 +389,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  additionalTools: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  additionalToolsLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
