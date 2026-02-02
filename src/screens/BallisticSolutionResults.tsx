@@ -3,12 +3,13 @@
  * Displays calculated ballistic solution for a target
  */
 
-import React from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { Card, Button } from '../components';
+import { exportBallisticSolutionPDF } from '../services/ExportService';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
@@ -23,6 +24,28 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const result = await exportBallisticSolutionPDF(
+        solution,
+        rifle ?? null,
+        ammo ?? null,
+        distance,
+        angularUnit
+      );
+      if (!result.success) {
+        Alert.alert('Export Failed', result.error || 'Unknown error');
+      }
+    } catch (error) {
+      Alert.alert('Export Failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -132,6 +155,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
+          <Button
+            title={isExporting ? 'Exporting...' : 'Export PDF'}
+            onPress={handleExportPDF}
+            variant="secondary"
+            size="large"
+            style={styles.button}
+            disabled={isExporting}
+          />
           <Button
             title="View Wind Table"
             onPress={() => navigation.navigate('WindTable', { rifleId, ammoId, distance })}

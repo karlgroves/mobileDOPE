@@ -11,6 +11,7 @@ import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
 import type { RangeSession } from '../models/RangeSession';
 import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import type { BallisticSolution } from '../types/ballistic.types';
 
 export interface ExportResult {
   success: boolean;
@@ -1175,6 +1176,245 @@ export async function exportSessionReportPDF(
     return { success: true, uri };
   } catch (error) {
     console.error('Error exporting session report PDF:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Generate HTML for ballistic solution PDF
+ */
+function generateBallisticSolutionPDFHtml(
+  solution: BallisticSolution,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  distance: number,
+  angularUnit: 'MIL' | 'MOA'
+): string {
+  const date = new Date().toLocaleString();
+
+  const elevationValue = angularUnit === 'MIL'
+    ? solution.elevationMIL.toFixed(2)
+    : solution.elevationMOA.toFixed(2);
+
+  const windageValue = angularUnit === 'MIL'
+    ? solution.windageMIL.toFixed(2)
+    : solution.windageMOA.toFixed(2);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Ballistic Solution</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          padding: 24px;
+          background: #1a1a1a;
+          color: #fff;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #333;
+        }
+        .title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .subtitle { font-size: 14px; color: #888; }
+        .section {
+          background: #2a2a2a;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 16px;
+        }
+        .section-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #888;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 16px;
+        }
+        .config-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #333;
+        }
+        .config-row:last-child { border-bottom: none; }
+        .config-label { color: #888; }
+        .config-value { font-weight: 600; }
+        .corrections {
+          display: flex;
+          justify-content: space-around;
+          text-align: center;
+          padding: 24px 0;
+        }
+        .correction-item {
+          flex: 1;
+        }
+        .correction-label {
+          font-size: 12px;
+          color: #888;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+        }
+        .correction-value {
+          font-size: 48px;
+          font-weight: 700;
+          color: #4A90E2;
+        }
+        .correction-unit {
+          font-size: 16px;
+          color: #888;
+          margin-top: 4px;
+        }
+        .divider {
+          width: 1px;
+          background: #333;
+          margin: 0 24px;
+        }
+        .details-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .detail-item {
+          padding: 12px;
+          background: #333;
+          border-radius: 8px;
+        }
+        .detail-label {
+          font-size: 12px;
+          color: #888;
+          margin-bottom: 4px;
+        }
+        .detail-value {
+          font-size: 18px;
+          font-weight: 600;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 24px;
+          padding-top: 16px;
+          border-top: 1px solid #333;
+          color: #666;
+          font-size: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="title">Ballistic Solution</div>
+        <div class="subtitle">Generated ${date}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Configuration</div>
+        <div class="config-row">
+          <span class="config-label">Rifle</span>
+          <span class="config-value">${rifle?.name || 'Unknown'}</span>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Ammunition</span>
+          <span class="config-value">${ammo?.name || 'Unknown'}</span>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Distance</span>
+          <span class="config-value">${distance} yards</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Required Corrections</div>
+        <div class="corrections">
+          <div class="correction-item">
+            <div class="correction-label">Elevation</div>
+            <div class="correction-value">${elevationValue}</div>
+            <div class="correction-unit">${angularUnit}</div>
+          </div>
+          <div class="divider"></div>
+          <div class="correction-item">
+            <div class="correction-label">Windage</div>
+            <div class="correction-value">${windageValue}</div>
+            <div class="correction-unit">${angularUnit}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Ballistic Details</div>
+        <div class="details-grid">
+          <div class="detail-item">
+            <div class="detail-label">Drop</div>
+            <div class="detail-value">${solution.drop.toFixed(1)} in</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Windage Drift</div>
+            <div class="detail-value">${solution.windage.toFixed(1)} in</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Time of Flight</div>
+            <div class="detail-value">${solution.timeOfFlight.toFixed(2)} sec</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Velocity at Target</div>
+            <div class="detail-value">${solution.velocity.toFixed(0)} fps</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Energy at Target</div>
+            <div class="detail-value">${solution.energy.toFixed(0)} ft-lbs</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Max Ordinate</div>
+            <div class="detail-value">${solution.maxOrdinate.toFixed(1)} in</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        Mobile DOPE App • Ballistic Calculator
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Export ballistic solution results as PDF
+ */
+export async function exportBallisticSolutionPDF(
+  solution: BallisticSolution,
+  rifle: RifleProfile | null,
+  ammo: AmmoProfile | null,
+  distance: number,
+  angularUnit: 'MIL' | 'MOA'
+): Promise<ExportResult> {
+  try {
+    const html = generateBallisticSolutionPDFHtml(solution, rifle, ammo, distance, angularUnit);
+
+    const { uri } = await Print.printToFileAsync({
+      html,
+      base64: false,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Export Ballistic Solution',
+        UTI: 'com.adobe.pdf',
+      });
+    }
+
+    return { success: true, uri };
+  } catch (error) {
+    console.error('Error exporting ballistic solution PDF:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
