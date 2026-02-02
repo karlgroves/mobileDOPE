@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DOPELogList } from '../screens/DOPELogList';
 import { DOPELogDetail } from '../screens/DOPELogDetail';
 import { DOPELogEntry } from '../screens/DOPELogEntry';
+import { DOPECurve } from '../screens/DOPECurve';
 import type { HistoryStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<HistoryStackParamList>();
@@ -33,6 +34,11 @@ export const HistoryNavigator: React.FC = () => {
         options={({ route }) => ({
           title: route.params?.logId ? 'Edit DOPE Log' : 'New DOPE Log',
         })}
+      />
+      <Stack.Screen
+        name="DOPECurve"
+        component={DOPECurve}
+        options={{ title: 'Ballistic Curve' }}
       />
     </Stack.Navigator>
   );
