@@ -3,15 +3,16 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, ScrollView, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { CartesianChart, Line } from 'victory-native';
-import { Circle } from '@shopify/react-native-skia';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
-import { Card, LoadingSpinner, EmptyState, SegmentedControl } from '../components';
+import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
 import { calculateBallisticSolution } from '../utils/ballistics';
 import type { HistoryStackScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
@@ -36,6 +37,8 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
   const [correctionUnit, setCorrectionUnit] = useState<'MIL' | 'MOA'>('MIL');
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const chartRef = useRef<View>(null);
 
   const rifle = rifles.find((r) => r.id === rifleId);
   const ammo = ammoProfiles.find((a) => a.id === ammoId);
@@ -124,8 +127,40 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - 64;
+  const handleExportImage = async () => {
+    if (!chartRef.current) {
+      Alert.alert('Error', 'Chart not available for export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Capture the chart view as an image
+      const uri = await captureRef(chartRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+
+      // Share the image
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Export Ballistic Curve',
+          UTI: 'public.png',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const chartHeight = 280;
 
   if (isLoading) {
@@ -176,12 +211,21 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
         {/* Chart */}
         <Card style={styles.chartCard}>
-          <Text style={[styles.chartTitle, { color: colors.text.primary }]}>
-            Elevation Drop Curve
-          </Text>
+          <View style={styles.chartHeader}>
+            <Text style={[styles.chartTitle, { color: colors.text.primary }]}>
+              Elevation Drop Curve
+            </Text>
+            <Button
+              title={isExporting ? 'Exporting...' : 'Export'}
+              onPress={handleExportImage}
+              variant="secondary"
+              size="small"
+              disabled={isExporting || !hasData}
+            />
+          </View>
 
           {hasData ? (
-            <View style={[styles.chartContainer, { height: chartHeight }]}>
+            <View ref={chartRef} collapsable={false} style={[styles.chartContainer, { height: chartHeight, backgroundColor: colors.background }]}>
               <CartesianChart<DataPoint, 'distance', 'elevation'>
                 data={calculatedCurve}
                 xKey="distance"
@@ -371,10 +415,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 16,
   },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   chartTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
   },
   chartContainer: {
     marginHorizontal: -8,

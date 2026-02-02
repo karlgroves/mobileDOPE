@@ -4,13 +4,15 @@
  * Includes both table view and chart visualization
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { CartesianChart, Line } from 'victory-native';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useTheme } from '../contexts/ThemeContext';
 import { UnitToggle } from '../components/UnitToggle';
 import { NumberPicker } from '../components/NumberPicker';
-import { SegmentedControl } from '../components';
+import { SegmentedControl, Button } from '../components';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -54,6 +56,8 @@ export function WindTable({ route }: Props) {
   const [windTable, setWindTable] = useState<WindTableEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [isExporting, setIsExporting] = useState(false);
+  const chartRef = useRef<View>(null);
 
   // Standard distances for wind table (yards)
   const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
@@ -174,8 +178,39 @@ export function WindTable({ route }: Props) {
     '#F44336', // 20 mph - red
   ];
 
-  const screenWidth = Dimensions.get('window').width;
   const chartHeight = 250;
+
+  const handleExportChart = async () => {
+    if (!chartRef.current) {
+      Alert.alert('Error', 'Chart not available for export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const uri = await captureRef(chartRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Export Wind Chart',
+          UTI: 'public.png',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (!rifle || !ammo) {
     return (
@@ -252,15 +287,26 @@ export function WindTable({ route }: Props) {
           /* Wind Drift Chart View */
           <View style={styles.chartSection}>
             <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.chartTitle, { color: colors.text.primary }]}>
-                Wind Drift vs Distance
-              </Text>
-              <Text style={[styles.chartSubtitle, { color: colors.text.secondary }]}>
-                Wind direction: {getWindDirectionLabel(windDirection)}
-              </Text>
+              <View style={styles.chartHeaderRow}>
+                <View>
+                  <Text style={[styles.chartTitle, { color: colors.text.primary }]}>
+                    Wind Drift vs Distance
+                  </Text>
+                  <Text style={[styles.chartSubtitle, { color: colors.text.secondary }]}>
+                    Wind direction: {getWindDirectionLabel(windDirection)}
+                  </Text>
+                </View>
+                <Button
+                  title={isExporting ? 'Exporting...' : 'Export'}
+                  onPress={handleExportChart}
+                  variant="secondary"
+                  size="small"
+                  disabled={isExporting || chartData.length === 0}
+                />
+              </View>
 
               {chartData.length > 0 ? (
-                <View style={[styles.chartContainer, { height: chartHeight }]}>
+                <View ref={chartRef} collapsable={false} style={[styles.chartContainer, { height: chartHeight, backgroundColor: colors.surface }]}>
                   <CartesianChart<ChartDataPoint, 'distance', 'wind5' | 'wind10' | 'wind15' | 'wind20'>
                     data={chartData}
                     xKey="distance"
@@ -501,6 +547,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
+  },
+  chartHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   chartTitle: {
     fontSize: 16,
