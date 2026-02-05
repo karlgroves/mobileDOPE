@@ -1,4 +1,4 @@
-name: CI
+name: CI Quality Checks
 
 on:
   push:
@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-typecheck:
+    name: Lint & Format
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +37,24 @@ jobs:
       - name: Run TypeScript type checking
         run: npm run type-check
 
+      - name: Lint Markdown
+        run: npm run lint:md
+        continue-on-error: true
+
+      - name: Check for code duplication (jscpd)
+        run: npm run lint:cpd:ci
+        continue-on-error: true
+
+      - name: Upload duplication report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jscpd-report
+          path: reports/jscpd/
+          retention-days: 30
+        if: always()
+
   test:
+    name: Tests
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
 
