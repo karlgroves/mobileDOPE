@@ -3,11 +3,6 @@
  * Handles data import from various formats (JSON backups)
  */
 
-import * as DocumentPicker from 'expo-document-picker';
-import { File } from 'expo-file-system';
-import type { RifleProfile } from '../models/RifleProfile';
-import type { AmmoProfile } from '../models/AmmoProfile';
-import type { DOPELog } from '../models/DOPELog';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
@@ -27,9 +22,9 @@ interface BackupData {
   exportVersion: string;
   type: string;
   data: {
-    rifles?: any[];
-    ammos?: any[];
-    logs?: any[];
+    rifles?: Record<string, unknown>[];
+    ammos?: Record<string, unknown>[];
+    logs?: Record<string, unknown>[];
   };
   counts?: {
     rifles?: number;
@@ -47,6 +42,9 @@ export async function pickImportFile(): Promise<{
   error?: string;
 }> {
   try {
+    // Lazy load native modules only when needed
+    const DocumentPicker = await import('expo-document-picker');
+
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/json',
       copyToCacheDirectory: true,
@@ -56,8 +54,8 @@ export async function pickImportFile(): Promise<{
       return { success: false, error: 'Import cancelled' };
     }
 
-    const file = new File(result.assets[0].uri);
-    const content = await file.text();
+    const response = await fetch(result.assets[0].uri);
+    const content = await response.text();
     const data: BackupData = JSON.parse(content);
 
     return { success: true, data };
@@ -73,27 +71,31 @@ export async function pickImportFile(): Promise<{
 /**
  * Validate backup data structure
  */
-function validateBackupData(data: any): data is BackupData {
+function validateBackupData(data: unknown): data is BackupData {
   if (!data || typeof data !== 'object') {
     return false;
   }
 
+  const record = data as Record<string, unknown>;
+
   // Check required top-level fields
-  if (!data.exportVersion || !data.type || !data.data) {
+  if (!record.exportVersion || !record.type || !record.data) {
     return false;
   }
 
   // Check data structure
-  if (typeof data.data !== 'object') {
+  if (typeof record.data !== 'object') {
     return false;
   }
 
+  const innerData = record.data as Record<string, unknown>;
+
   // For full backups, ensure arrays exist
-  if (data.type === 'full_backup') {
+  if (record.type === 'full_backup') {
     if (
-      !Array.isArray(data.data.rifles) ||
-      !Array.isArray(data.data.ammos) ||
-      !Array.isArray(data.data.logs)
+      !Array.isArray(innerData.rifles) ||
+      !Array.isArray(innerData.ammos) ||
+      !Array.isArray(innerData.logs)
     ) {
       return false;
     }
@@ -147,7 +149,7 @@ export async function importFullBackup(): Promise<ImportResult> {
       for (const rifleData of data.data.rifles) {
         try {
           // Remove ID to create new records (avoid conflicts)
-          const { id, ...rifleWithoutId } = rifleData;
+          const { id: _id, ...rifleWithoutId } = rifleData;
           await rifleStore.createRifle(rifleWithoutId);
           riflesImported++;
         } catch (error) {
@@ -161,7 +163,7 @@ export async function importFullBackup(): Promise<ImportResult> {
       for (const ammoData of data.data.ammos) {
         try {
           // Remove ID and rifleId (ammo is now caliber-based)
-          const { id, rifleId, ...ammoWithoutId } = ammoData;
+          const { id: _id, rifleId: _rifleId, ...ammoWithoutId } = ammoData;
           await ammoStore.createAmmo(ammoWithoutId);
           ammosImported++;
         } catch (error) {
@@ -175,7 +177,7 @@ export async function importFullBackup(): Promise<ImportResult> {
       for (const logData of data.data.logs) {
         try {
           // Remove ID to create new records
-          const { id, ...logWithoutId } = logData;
+          const { id: _id, ...logWithoutId } = logData;
           await dopeStore.createDopeLog(logWithoutId);
           logsImported++;
         } catch (error) {
@@ -233,7 +235,7 @@ export async function importRifleProfiles(): Promise<ImportResult> {
     if (Array.isArray(rifles)) {
       for (const rifleData of rifles) {
         try {
-          const { id, ...rifleWithoutId } = rifleData;
+          const { id: _id, ...rifleWithoutId } = rifleData;
           await rifleStore.createRifle(rifleWithoutId);
           riflesImported++;
         } catch (error) {
@@ -284,7 +286,7 @@ export async function importDOPELogs(): Promise<ImportResult> {
     if (data.data && Array.isArray(data.data)) {
       for (const logData of data.data) {
         try {
-          const { id, ...logWithoutId } = logData;
+          const { id: _id, ...logWithoutId } = logData;
           await dopeStore.createDopeLog(logWithoutId);
           logsImported++;
         } catch (error) {

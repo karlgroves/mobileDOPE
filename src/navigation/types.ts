@@ -81,13 +81,14 @@ export type HistoryStackParamList = {
 export type CalculatorStackParamList = {
   BallisticCalculator: undefined;
   BallisticSolutionResults: {
-    solution: any; // BallisticSolution type
+    solution: Record<string, unknown>; // BallisticSolution type
     rifleId: number;
     ammoId: number;
     distance: number;
     angularUnit: 'MIL' | 'MOA';
   };
   WindTable: { rifleId: number; ammoId: number; distance: number };
+  MovingTargetCalculator: { rifleId?: number; ammoId?: number };
 };
 
 /**
@@ -148,7 +149,9 @@ export type LogsStackScreenProps<T extends keyof LogsStackParamList> = HistorySt
 
 // Declare global navigation types for type-safe navigation
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface RootParamList extends RootStackParamList {}
   }
 }

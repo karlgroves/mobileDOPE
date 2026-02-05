@@ -3,12 +3,11 @@
  * Quick-entry form for logging shooting data in the field
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
-import { NumberPicker } from '../components/NumberPicker';
 import { TextInput } from '../components/TextInput';
 import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -21,9 +20,6 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import type { DOPELogData } from '../models/DOPELog';
 
 type Props = LogsStackScreenProps<'DOPELogEdit'>;
-
-// Common distance presets (yards)
-const DISTANCE_PRESETS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
 
 export function DOPELogEntry({ route, navigation }: Props) {
   const { logId } = route.params || {};
@@ -38,8 +34,13 @@ export function DOPELogEntry({ route, navigation }: Props) {
   // Load existing log if editing
   const existingLog = logId ? getDopeById(logId) : undefined;
 
-  // Profile selection
-  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(existingLog?.rifleId);
+  // Profile selection - auto-select first rifle if creating new log
+  const getInitialRifleId = () => {
+    if (existingLog?.rifleId) return existingLog.rifleId;
+    if (rifles.length > 0) return rifles[0].id;
+    return undefined;
+  };
+  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(getInitialRifleId());
   const [selectedAmmoId, setSelectedAmmoId] = useState<number | undefined>(existingLog?.ammoId);
 
   // Target parameters
@@ -73,42 +74,34 @@ export function DOPELogEntry({ route, navigation }: Props) {
     existingLog?.environmentId
   );
 
-  // Auto-select last used rifle/ammo on mount
-  useEffect(() => {
-    if (!existingLog && rifles.length > 0 && !selectedRifleId) {
-      // Auto-select first rifle
-      setSelectedRifleId(rifles[0].id);
-    }
-  }, [rifles, existingLog, selectedRifleId]);
-
-  useEffect(() => {
-    if (!existingLog && selectedRifleId && ammoProfiles.length > 0 && !selectedAmmoId) {
-      // Auto-select first ammo for selected rifle (matching caliber)
-      const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
-      if (selectedRifle) {
-        const rifleAmmo = ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber);
+  // Auto-select compatible ammo when rifle changes
+  const handleRifleChange = (newRifleId: number | undefined) => {
+    setSelectedRifleId(newRifleId);
+    if (!existingLog && newRifleId) {
+      const rifle = rifles.find((r) => r.id === newRifleId);
+      if (rifle) {
+        const rifleAmmo = ammoProfiles.filter((a) => a.caliber === rifle.caliber);
         if (rifleAmmo.length > 0) {
           setSelectedAmmoId(rifleAmmo[0].id);
         }
       }
     }
-  }, [selectedRifleId, ammoProfiles, existingLog, selectedAmmoId, rifles]);
+  };
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
   const filteredAmmo = selectedRifle
-    ? ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber)
+    ? ammoProfiles.filter((a) => a.caliber === selectedRifle.caliber || a.caliber === 'Unknown')
     : [];
 
   const handleAmmoChange = (value: string) => {
     if (value === '__add_new__') {
-      // Navigate to ammo creation screen
-      if (selectedRifleId) {
-        // @ts-expect-error - Cross-stack navigation
-        navigation.navigate('Profiles', {
-          screen: 'AmmoProfileForm',
-          params: { rifleId: selectedRifleId },
-        });
-      }
+      // Navigate to ammo creation screen, pre-fill caliber from selected rifle
+      const caliber = selectedRifle?.caliber;
+      // @ts-expect-error - Cross-stack navigation
+      navigation.navigate('Ammo', {
+        screen: 'AmmoProfileForm',
+        params: { caliber },
+      });
     } else {
       setSelectedAmmoId(value ? parseInt(value) : undefined);
     }
@@ -191,8 +184,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
             label="Rifle Profile"
             value={selectedRifleId?.toString()}
             onValueChange={(value) => {
-              setSelectedRifleId(value ? parseInt(value) : undefined);
-              setSelectedAmmoId(undefined); // Reset ammo selection
+              handleRifleChange(value ? parseInt(value) : undefined);
             }}
             options={rifles.map((r) => ({ label: r.name, value: r.id!.toString() }))}
             placeholder="Select Rifle"
@@ -344,7 +336,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
               Current Environment
             </Text>
             <Text style={[styles.envText, { color: colors.text.primary }]}>
-              {currentEnv.temperature}°F • {currentEnv.pressure}" Hg • {currentEnv.altitude}' MSL
+              {`${currentEnv.temperature}°F • ${currentEnv.pressure}" Hg • ${currentEnv.altitude}' MSL`}
             </Text>
             <Text style={[styles.envText, { color: colors.text.primary }]}>
               Wind: {currentEnv.windSpeed} mph @ {currentEnv.windDirection}°

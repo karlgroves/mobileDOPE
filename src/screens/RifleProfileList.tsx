@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Alert, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Card,
-  Button,
   EmptyState,
   LoadingSpinner,
   IconButton,
@@ -12,7 +11,6 @@ import {
   SegmentedControl,
 } from '../components';
 import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { RifleProfile } from '../models/RifleProfile';
 
@@ -30,7 +28,6 @@ export const RifleProfileList: React.FC = () => {
   const { colors } = theme;
 
   const { rifles, loading, deleteRifle } = useRifleStore();
-  const { ammoProfiles } = useAmmoStore();
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [rifleToDelete, setRifleToDelete] = useState<RifleProfile | null>(null);
@@ -133,8 +130,6 @@ export const RifleProfileList: React.FC = () => {
   };
 
   const renderRifleItem = ({ item }: { item: RifleProfile }) => {
-    const rifleAmmoCount = ammoProfiles.filter((a) => a.caliber === item.caliber).length;
-
     return (
       <Card
         style={styles.card}
@@ -142,23 +137,6 @@ export const RifleProfileList: React.FC = () => {
         title={item.name}
         subtitle={`${item.caliber} • ${item.barrelLength}" barrel • ${item.zeroDistance}yd zero`}
       >
-        <View style={styles.ammoSection}>
-          <Text style={[styles.ammoCount, { color: colors.text.secondary }]}>
-            {rifleAmmoCount} {rifleAmmoCount === 1 ? 'ammo profile' : 'ammo profiles'}
-          </Text>
-          <Button
-            title={rifleAmmoCount === 0 ? 'Add Ammunition' : 'View Ammunition'}
-            onPress={() => {
-              if (rifleAmmoCount === 0) {
-                (navigation as any).navigate('AmmoProfileForm', {});
-              } else {
-                (navigation as any).navigate('AmmoProfileList', { rifleId: item.id! });
-              }
-            }}
-            variant="secondary"
-            size="small"
-          />
-        </View>
         <View style={styles.cardActions}>
           <IconButton
             icon="📋"
@@ -245,15 +223,14 @@ export const RifleProfileList: React.FC = () => {
               </View>
             }
           />
-          <View style={styles.fabContainer}>
-            <Button
-              title="+ New Rifle"
-              onPress={handleCreate}
-              variant="primary"
-              size="large"
-              style={styles.fab}
-            />
-          </View>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={handleCreate}
+            accessibilityLabel="Create new rifle profile"
+            accessibilityRole="button"
+          >
+            <Text style={[styles.fabIcon, { color: colors.text.inverse }]}>+</Text>
+          </TouchableOpacity>
         </>
       )}
 
@@ -299,7 +276,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-    paddingBottom: 100, // Make room for FAB
+    paddingBottom: 80,
   },
   emptySearch: {
     padding: 32,
@@ -312,36 +289,32 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 12,
   },
-  ammoSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.2)',
-  },
-  ammoCount: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 12,
     gap: 8,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    left: 16,
-  },
   fab: {
-    elevation: 4,
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  fabIcon: {
+    fontSize: 28,
+    fontWeight: 'bold',
   },
 });

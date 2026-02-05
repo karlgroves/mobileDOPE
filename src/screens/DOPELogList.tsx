@@ -15,7 +15,6 @@ import {
   TextInput,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -82,17 +81,18 @@ export function DOPELogList({ navigation }: Props) {
     return sorted;
   }, [dopeLogs, searchQuery, sortBy, getRifleById, getAmmoById]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       await loadDopeLogs();
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to load DOPE logs');
     }
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -123,7 +123,7 @@ export function DOPELogList({ navigation }: Props) {
             if (log.id) {
               await deleteDopeLog(log.id);
             }
-          } catch (error) {
+          } catch (_error) {
             Alert.alert('Error', 'Failed to delete DOPE log');
           }
         },
@@ -215,7 +215,7 @@ export function DOPELogList({ navigation }: Props) {
               <View style={styles.detailItem}>
                 <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>Group:</Text>
                 <Text style={[styles.detailValue, { color: colors.text.primary }]}>
-                  {item.groupSize.toFixed(2)}"
+                  {`${item.groupSize.toFixed(2)}"`}
                 </Text>
               </View>
             )}
@@ -466,16 +466,19 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: '300',
+    fontSize: 28,
+    fontWeight: 'bold',
   },
   exportFab: {
     width: 56,
@@ -484,11 +487,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    elevation: 4,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   exportFabText: {
     fontSize: 24,

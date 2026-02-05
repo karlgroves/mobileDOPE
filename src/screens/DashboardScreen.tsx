@@ -1,209 +1,411 @@
 /**
- * Dashboard Screen
- * Main overview with quick stats and actions
+ * Dashboard Screen - Quick DOPE Solution
+ * Minimal, field-optimized interface for immediate ballistic solutions
  */
 
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
 import type { MainTabScreenProps } from '../navigation/types';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useOrientation } from '../hooks/useOrientation';
+import { useAppStore } from '../store';
+import { calculateBallisticSolution } from '../utils/ballistics';
+import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
+import type { AtmosphericConditions } from '../utils/atmospheric';
 
 type Props = MainTabScreenProps<'Dashboard'>;
 
 export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
-  const { isLandscape } = useOrientation();
+  const { settings } = useAppStore();
 
   const { rifles, loadRifles } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
-  const { dopeLogs, loadDopeLogs } = useDOPEStore();
-  const { current: currentEnv } = useEnvironmentStore();
+  const { snapshots, loadSnapshots } = useEnvironmentStore();
 
+  // Selected profiles
+  const [selectedRifleId, setSelectedRifleId] = useState<number | null>(null);
+  const [selectedAmmoId, setSelectedAmmoId] = useState<number | null>(null);
+
+  // Load initial data
   useEffect(() => {
-    loadData();
+    loadRifles();
+    loadAmmoProfiles();
+    loadSnapshots(1); // Load most recent snapshot
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async () => {
-    try {
-      await Promise.all([loadRifles(), loadAmmoProfiles(), loadDopeLogs()]);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+  // Shooting parameters
+  const [distance, setDistance] = useState(300); // yards
+  const [windSpeed, setWindSpeed] = useState(5); // mph
+  const [windDirection, setWindDirection] = useState(180); // degrees (3 o'clock = 90, 9 o'clock = 270)
+
+  // Ballistic solution
+  const [elevation, setElevation] = useState<number | null>(null);
+  const [windage, setWindage] = useState<number | null>(null);
+
+  const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
+  const selectedAmmo = ammoProfiles.find((a) => a.id === selectedAmmoId);
+  const latestEnv = snapshots[0];
+
+  // Auto-select first rifle when rifles load and none selected
+  const prevRiflesLength = React.useRef(rifles.length);
+  if (!selectedRifleId && rifles.length > 0 && prevRiflesLength.current === 0) {
+    setSelectedRifleId(rifles[0].id!);
+    // Also auto-select compatible ammo
+    const compatibleAmmo = ammoProfiles.find((a) => a.caliber === rifles[0].caliber);
+    if (compatibleAmmo) {
+      setSelectedAmmoId(compatibleAmmo.id!);
     }
+  }
+  prevRiflesLength.current = rifles.length;
+
+  // Auto-select compatible ammo when ammo profiles load
+  const prevAmmoLength = React.useRef(ammoProfiles.length);
+  if (selectedRifle && !selectedAmmoId && ammoProfiles.length > 0 && prevAmmoLength.current === 0) {
+    const compatibleAmmo = ammoProfiles.find((a) => a.caliber === selectedRifle.caliber);
+    if (compatibleAmmo) {
+      setSelectedAmmoId(compatibleAmmo.id!);
+    }
+  }
+  prevAmmoLength.current = ammoProfiles.length;
+
+  // Calculate ballistic solution
+  const calculateSolution = useCallback(() => {
+    if (!selectedRifle || !selectedAmmo || !latestEnv) {
+      setElevation(null);
+      setWindage(null);
+      return;
+    }
+
+    try {
+      // Validate required data
+      if (!selectedRifle.scopeHeight || selectedRifle.scopeHeight <= 0) {
+        console.warn('Invalid sight height:', selectedRifle.scopeHeight);
+        setElevation(null);
+        setWindage(null);
+        return;
+      }
+
+      if (!selectedRifle.zeroDistance || selectedRifle.zeroDistance <= 0) {
+        console.warn('Invalid zero distance:', selectedRifle.zeroDistance);
+        setElevation(null);
+        setWindage(null);
+        return;
+      }
+
+      if (!selectedAmmo.muzzleVelocity || selectedAmmo.muzzleVelocity <= 0) {
+        console.warn('Invalid muzzle velocity:', selectedAmmo.muzzleVelocity);
+        setElevation(null);
+        setWindage(null);
+        return;
+      }
+
+      if (!selectedAmmo.ballisticCoefficientG7 || selectedAmmo.ballisticCoefficientG7 <= 0) {
+        console.warn('Invalid BC G7:', selectedAmmo.ballisticCoefficientG7);
+        setElevation(null);
+        setWindage(null);
+        return;
+      }
+
+      const rifleConfig: RifleConfig = {
+        sightHeight: selectedRifle.scopeHeight,
+        zeroDistance: selectedRifle.zeroDistance,
+        twistRate: selectedRifle.twistRate,
+        barrelLength: selectedRifle.barrelLength,
+      };
+
+      const ammoConfig: AmmoConfig = {
+        muzzleVelocity: selectedAmmo.muzzleVelocity,
+        ballisticCoefficient: selectedAmmo.ballisticCoefficientG7,
+        dragModel: 'G7',
+        bulletWeight: selectedAmmo.bulletWeight,
+      };
+
+      const shotParams: ShotParameters = {
+        distance: distance,
+        angle: 0,
+        windSpeed: windSpeed,
+        windDirection: windDirection,
+      };
+
+      const atmosphere: AtmosphericConditions = {
+        temperature: latestEnv.temperature,
+        pressure: latestEnv.pressure,
+        humidity: latestEnv.humidity,
+        altitude: latestEnv.altitude,
+      };
+
+      console.log('Calculating ballistics with:', {
+        rifle: rifleConfig,
+        ammo: ammoConfig,
+        shot: shotParams,
+        atmosphere,
+      });
+
+      const solution = calculateBallisticSolution(
+        rifleConfig,
+        ammoConfig,
+        shotParams,
+        atmosphere,
+        false
+      );
+
+      console.log('Ballistic solution:', solution);
+
+      const unit = settings.defaultCorrectionUnit;
+      const elevVal = unit === 'MIL' ? solution.elevationMIL : solution.elevationMOA;
+      const windVal = unit === 'MIL' ? solution.windageMIL : solution.windageMOA;
+
+      if (!isFinite(elevVal) || !isFinite(windVal)) {
+        console.error('Invalid solution values:', { elevation: elevVal, windage: windVal });
+        setElevation(null);
+        setWindage(null);
+        return;
+      }
+
+      setElevation(elevVal);
+      setWindage(windVal);
+    } catch (error) {
+      console.error('Ballistic calculation error:', error);
+      setElevation(null);
+      setWindage(null);
+    }
+  }, [selectedRifle, selectedAmmo, latestEnv, distance, windSpeed, windDirection, settings]);
+
+  useEffect(() => {
+    calculateSolution();
+  }, [calculateSolution]);
+
+  const adjustDistance = (delta: number) => {
+    setDistance((prev) => Math.max(25, Math.min(2000, prev + delta)));
   };
 
-  const recentLogs = dopeLogs.slice(0, 3);
+  const adjustWindSpeed = (delta: number) => {
+    setWindSpeed((prev) => Math.max(0, Math.min(50, prev + delta)));
+  };
+
+  const cycleWindDirection = () => {
+    // Cycle through common clock positions: 3, 6, 9, 12 o'clock
+    const clockPositions = [90, 180, 270, 0];
+    const currentIndex = clockPositions.findIndex((pos) => pos === windDirection);
+    const nextIndex = (currentIndex + 1) % clockPositions.length;
+    setWindDirection(clockPositions[nextIndex]);
+  };
+
+  const getWindDirectionText = (degrees: number): string => {
+    if (degrees === 0) return "12 o'clock";
+    if (degrees === 90) return "3 o'clock";
+    if (degrees === 180) return "6 o'clock";
+    if (degrees === 270) return "9 o'clock";
+    return `${degrees}°`;
+  };
+
+  const getWindHoldDirection = (): string => {
+    if (windDirection >= 315 || windDirection < 45) return 'Head/Tail';
+    if (windDirection >= 45 && windDirection < 135) return 'L→R';
+    if (windDirection >= 135 && windDirection < 225) return 'Head/Tail';
+    return 'R→L';
+  };
+
+  const handleConfirmShot = () => {
+    if (!selectedRifle || !selectedAmmo) {
+      Alert.alert('Setup Required', 'Please select a rifle and ammunition profile');
+      return;
+    }
+
+    // Navigate to DOPE log entry with pre-filled data
+    // @ts-expect-error Cross-stack navigation typing
+    navigation.navigate('History', {
+      screen: 'DOPELogEdit',
+      params: {
+        prefill: {
+          rifleId: selectedRifleId,
+          ammoId: selectedAmmoId,
+          distance: distance,
+          distanceUnit: settings.defaultDistanceUnit,
+          elevationCorrection: elevation || 0,
+          windageCorrection: windage || 0,
+          correctionUnit: settings.defaultCorrectionUnit,
+        },
+      },
+    });
+  };
+
+  const hasRifle = !!selectedRifle;
+  const hasAmmo = !!selectedAmmo;
+  const hasEnv = !!latestEnv;
+  const canCalculate = hasRifle && hasAmmo && hasEnv;
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, isLandscape && styles.contentLandscape]}
-      >
-        {/* Welcome Header */}
-        <View style={[styles.header, isLandscape && styles.headerLandscape]}>
-          <Text style={[styles.title, { color: colors.text.primary }]}>Mobile DOPE</Text>
-          <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-            Data On Previous Engagements
-          </Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* App Title */}
+        <View style={styles.header}>
+          <Text style={[styles.appTitle, { color: colors.text.primary }]}>Mobile DOPE</Text>
         </View>
 
-        {/* Quick Stats */}
-        <View style={[styles.statsContainer, isLandscape && styles.statsContainerLandscape]}>
-          <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{rifles.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Rifles</Text>
-          </Card>
-
-          <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{ammoProfiles.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Ammo</Text>
-          </Card>
-
-          <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{dopeLogs.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>DOPE Logs</Text>
-          </Card>
-        </View>
-
-        {/* Current Environment */}
-        {currentEnv && (
-          <Card style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text.primary }]}>
-              Current Conditions
+        {/* Trust Indicators */}
+        <View style={[styles.trustBar, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Rifles')} style={styles.trustItem}>
+            <Text
+              style={[
+                styles.trustText,
+                { color: hasRifle ? colors.primary : colors.text.secondary },
+              ]}
+            >
+              Rifle {hasRifle ? '✓' : '○'}
             </Text>
-            <View style={[styles.envGrid, isLandscape && styles.envGridLandscape]}>
-              <View style={styles.envItem}>
-                <Text style={[styles.envLabel, { color: colors.text.secondary }]}>Temp</Text>
-                <Text style={[styles.envValue, { color: colors.text.primary }]}>
-                  {currentEnv.temperature}°F
-                </Text>
-              </View>
-              <View style={styles.envItem}>
-                <Text style={[styles.envLabel, { color: colors.text.secondary }]}>Pressure</Text>
-                <Text style={[styles.envValue, { color: colors.text.primary }]}>
-                  {currentEnv.pressure}"
-                </Text>
-              </View>
-              <View style={styles.envItem}>
-                <Text style={[styles.envLabel, { color: colors.text.secondary }]}>Altitude</Text>
-                <Text style={[styles.envValue, { color: colors.text.primary }]}>
-                  {currentEnv.altitude}'
-                </Text>
-              </View>
-              <View style={styles.envItem}>
-                <Text style={[styles.envLabel, { color: colors.text.secondary }]}>Wind</Text>
-                <Text style={[styles.envValue, { color: colors.text.primary }]}>
-                  {currentEnv.windSpeed} mph
-                </Text>
-              </View>
-            </View>
-          </Card>
-        )}
+          </TouchableOpacity>
+          <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Ammo')} style={styles.trustItem}>
+            <Text
+              style={[
+                styles.trustText,
+                { color: hasAmmo ? colors.primary : colors.text.secondary },
+              ]}
+            >
+              Ammo {hasAmmo ? '✓' : '○'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Session')} style={styles.trustItem}>
+            <Text
+              style={[styles.trustText, { color: hasEnv ? colors.primary : colors.text.secondary }]}
+            >
+              Env {hasEnv ? '✓' : '○'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Recent DOPE Logs */}
-        {recentLogs.length > 0 && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: colors.text.primary }]}>
-                Recent DOPE Logs
+        {canCalculate ? (
+          <>
+            {/* Distance Selector */}
+            <View style={[styles.distanceSection, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>DISTANCE</Text>
+              <Text style={[styles.distanceValue, { color: colors.text.primary }]}>
+                {distance} yd
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('History')}>
-                <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            {recentLogs.map((log) => (
-              <View key={log.id} style={[styles.logItem, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.logDistance, { color: colors.text.primary }]}>
-                  {log.distance} {log.distanceUnit}
-                </Text>
-                <Text style={[styles.logCorrection, { color: colors.primary }]}>
-                  ↑ {log.elevationCorrection.toFixed(2)} {log.correctionUnit}
-                </Text>
+              <View style={styles.distanceButtons}>
+                <TouchableOpacity
+                  style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
+                  onPress={() => adjustDistance(-25)}
+                >
+                  <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-25</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
+                  onPress={() => adjustDistance(-10)}
+                >
+                  <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-10</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
+                  onPress={() => adjustDistance(10)}
+                >
+                  <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+10</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
+                  onPress={() => adjustDistance(25)}
+                >
+                  <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+25</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-          </Card>
-        )}
-
-        {/* Quick Actions */}
-        <Card style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Quick Actions</Text>
-          <View style={[styles.actionGrid, isLandscape && styles.actionGridLandscape]}>
-            <Button
-              title="New DOPE Log"
-              onPress={() =>
-                (navigation as any).navigate('History', {
-                  screen: 'DOPELogEdit',
-                  params: {},
-                })
-              }
-              variant="primary"
-              style={isLandscape && styles.actionButton}
-            />
-            <Button
-              title="Calculator"
-              onPress={() => navigation.navigate('Calculator')}
-              variant="secondary"
-              style={isLandscape && styles.actionButton}
-            />
-            <Button
-              title="Environment"
-              onPress={() =>
-                (navigation as any).navigate('Session', {
-                  screen: 'EnvironmentInput',
-                })
-              }
-              variant="secondary"
-              style={isLandscape && styles.actionButton}
-            />
-            <Button
-              title="Profiles"
-              onPress={() => navigation.navigate('Rifles')}
-              variant="secondary"
-              style={isLandscape && styles.actionButton}
-            />
-            <Button
-              title="Settings"
-              onPress={() => navigation.navigate('Settings')}
-              variant="secondary"
-              style={isLandscape && styles.actionButton}
-            />
-          </View>
-        </Card>
-
-        {/* Getting Started */}
-        {rifles.length === 0 && (
-          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Getting Started</Text>
-            <Text style={[styles.gettingStartedText, { color: colors.text.secondary }]}>
-              Welcome to Mobile DOPE! Start by creating a rifle profile, then add ammunition
-              profiles for your loads. You can then use the ballistic calculator and log your
-              shooting data.
-            </Text>
-            <View style={styles.gettingStartedButton}>
-              <Button
-                title="Create Rifle Profile"
-                onPress={() =>
-                  (navigation as any).navigate('Rifles', {
-                    screen: 'RifleProfileForm',
-                    params: {},
-                  })
-                }
-                variant="primary"
-              />
             </View>
-          </Card>
+
+            {/* Elevation Solution - Largest on screen */}
+            <View style={[styles.elevationSection, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
+              <Text style={[styles.elevationValue, { color: colors.primary }]}>
+                {elevation !== null ? elevation.toFixed(2) : '--'} {settings.defaultCorrectionUnit}
+              </Text>
+            </View>
+
+            {/* Wind Hold */}
+            <View style={[styles.windHoldSection, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>WIND HOLD</Text>
+              <Text style={[styles.windHoldValue, { color: colors.text.primary }]}>
+                {windage !== null ? Math.abs(windage).toFixed(2) : '--'}{' '}
+                {settings.defaultCorrectionUnit} ({getWindHoldDirection()})
+              </Text>
+            </View>
+
+            {/* Wind Controls */}
+            <View style={[styles.windControls, { backgroundColor: colors.surface }]}>
+              <View style={styles.windControlRow}>
+                <Text style={[styles.windLabel, { color: colors.text.secondary }]}>Wind Dir:</Text>
+                <TouchableOpacity
+                  style={[styles.windButton, { backgroundColor: colors.background }]}
+                  onPress={cycleWindDirection}
+                >
+                  <Text style={[styles.windValue, { color: colors.text.primary }]}>
+                    {getWindDirectionText(windDirection)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.windControlRow}>
+                <Text style={[styles.windLabel, { color: colors.text.secondary }]}>Wind:</Text>
+                <View style={styles.windSpeedControls}>
+                  <TouchableOpacity
+                    style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
+                    onPress={() => adjustWindSpeed(-1)}
+                  >
+                    <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.windSpeedValue, { color: colors.text.primary }]}>
+                    {windSpeed} mph
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
+                    onPress={() => adjustWindSpeed(1)}
+                  >
+                    <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Confirm Shot Button */}
+            <TouchableOpacity
+              style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+              onPress={handleConfirmShot}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.confirmButtonText, { color: colors.text.inverse }]}>
+                CONFIRM SHOT
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.setupRequired}>
+            <Text style={[styles.setupTitle, { color: colors.text.primary }]}>Setup Required</Text>
+            <Text style={[styles.setupMessage, { color: colors.text.secondary }]}>
+              Tap the indicators above to configure:
+            </Text>
+            {!hasRifle && (
+              <Text style={[styles.setupItem, { color: colors.text.secondary }]}>
+                • Select a rifle profile
+              </Text>
+            )}
+            {!hasAmmo && (
+              <Text style={[styles.setupItem, { color: colors.text.secondary }]}>
+                • Select ammunition
+              </Text>
+            )}
+            {!hasEnv && (
+              <Text style={[styles.setupItem, { color: colors.text.secondary }]}>
+                • Record weather conditions
+              </Text>
+            )}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -214,127 +416,160 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     padding: 16,
-    paddingBottom: 32,
-  },
-  contentLandscape: {
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-  },
-  header: {
-    marginTop: 24,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  headerLandscape: {
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statsContainerLandscape: {
-    maxWidth: '80%',
-    alignSelf: 'center',
-  },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-  },
-  card: {
-    marginBottom: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  envGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 16,
   },
-  envItem: {
-    flex: 1,
-    minWidth: '40%',
+  header: {
+    alignItems: 'center',
+    paddingVertical: 8,
   },
-  envGridLandscape: {
-    flexWrap: 'nowrap',
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '600',
   },
-  envLabel: {
-    fontSize: 12,
-    marginBottom: 4,
+  trustBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
   },
-  envValue: {
+  trustItem: {
+    paddingVertical: 4,
+  },
+  trustText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  logItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+  trustDivider: {
+    fontSize: 16,
   },
-  logDistance: {
-    fontSize: 15,
-    fontWeight: '500',
+  distanceSection: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  logCorrection: {
-    fontSize: 15,
+  sectionLabel: {
+    fontSize: 12,
     fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 8,
   },
-  actionGrid: {
-    gap: 12,
-  },
-  actionGridLandscape: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    width: '48%',
-    minWidth: 150,
-  },
-  gettingStartedText: {
-    fontSize: 14,
-    lineHeight: 20,
+  distanceValue: {
+    fontSize: 48,
+    fontWeight: 'bold',
     marginBottom: 16,
   },
-  gettingStartedButton: {
+  distanceButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickAdjustButton: {
+    minWidth: 60,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  quickAdjustText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  elevationSection: {
+    padding: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  elevationValue: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    letterSpacing: -2,
+  },
+  windHoldSection: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  windHoldValue: {
+    fontSize: 28,
+    fontWeight: '600',
+  },
+  windControls: {
+    padding: 20,
+    borderRadius: 12,
+    gap: 16,
+  },
+  windControlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  windLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  windButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  windValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  windSpeedControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  windAdjustButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  windAdjustText: {
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  windSpeedValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    minWidth: 70,
+    textAlign: 'center',
+  },
+  confirmButton: {
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
     marginTop: 8,
+  },
+  confirmButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  setupRequired: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  setupTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  setupMessage: {
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  setupItem: {
+    fontSize: 16,
+    marginBottom: 8,
   },
 });

@@ -4,21 +4,26 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
+import { Picker } from '../components/Picker';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import * as Location from 'expo-location';
+
+// Wind direction options in degrees
+const WIND_DIRECTION_OPTIONS = [
+  { label: '0° (Headwind)', value: '0' },
+  { label: '45°', value: '45' },
+  { label: '90° (Right)', value: '90' },
+  { label: '135°', value: '135' },
+  { label: '180° (Tailwind)', value: '180' },
+  { label: '225°', value: '225' },
+  { label: '270° (Left)', value: '270' },
+  { label: '315°', value: '315' },
+];
 
 // Environmental presets for common conditions
 const PRESETS = {
@@ -76,14 +81,6 @@ export function EnvironmentInput() {
   // Density altitude (calculated)
   const [densityAltitude, setDensityAltitude] = useState<number>(0);
 
-  useEffect(() => {
-    checkSensorPermissions();
-  }, []);
-
-  useEffect(() => {
-    calculateDensityAltitude();
-  }, [temperature, pressure, altitude]);
-
   /**
    * Check and request sensor permissions
    */
@@ -122,7 +119,7 @@ export function EnvironmentInput() {
           'Location permission is required to automatically fetch GPS data.'
         );
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to request location permission');
     }
   };
@@ -153,7 +150,7 @@ export function EnvironmentInput() {
       setLongitude(Number(location.coords.longitude.toFixed(6)));
 
       Alert.alert('Success', 'GPS data updated from device location');
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to fetch GPS data. Please enter altitude manually.');
     }
   };
@@ -176,6 +173,16 @@ export function EnvironmentInput() {
 
     setDensityAltitude(Math.round(da));
   };
+
+  useEffect(() => {
+    checkSensorPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    calculateDensityAltitude();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [temperature, pressure, altitude]);
 
   /**
    * Apply a preset
@@ -361,16 +368,13 @@ export function EnvironmentInput() {
             required
           />
 
-          <NumberInput
+          <Picker
             label="Wind Direction"
-            value={windDirection}
-            onChangeValue={setWindDirection}
-            min={0}
-            max={359}
-            precision={0}
-            unit="°"
+            value={windDirection?.toString()}
+            onValueChange={(value) => setWindDirection(value ? parseInt(value) : undefined)}
+            options={WIND_DIRECTION_OPTIONS}
+            placeholder="Select direction"
             required
-            helperText="0° = headwind, 90° = right-to-left, 180° = tailwind, 270° = left-to-right"
           />
         </View>
 

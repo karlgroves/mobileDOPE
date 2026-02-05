@@ -37,5 +37,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       isStaging: env === 'staging',
       isProduction: env === 'production',
     },
+    plugins: ['expo-sqlite'],
   };
 };
