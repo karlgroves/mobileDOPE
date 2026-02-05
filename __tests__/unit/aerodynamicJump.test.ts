@@ -382,9 +382,7 @@ describe('aerodynamicJump', () => {
         1000
       );
 
-      expect(Math.abs(marginal.verticalOffset)).toBeGreaterThan(
-        Math.abs(stable.verticalOffset)
-      );
+      expect(Math.abs(marginal.verticalOffset)).toBeGreaterThan(Math.abs(stable.verticalOffset));
     });
 
     it('should show that aero jump is typically smaller than spin drift at long range', () => {

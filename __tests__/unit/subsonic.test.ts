@@ -14,8 +14,6 @@ import {
   getMachMargin,
   TRANSONIC_UPPER,
   TRANSONIC_LOWER,
-  SONIC,
-  STANDARD_SPEED_OF_SOUND,
 } from '../../src/utils/subsonic';
 
 describe('subsonic', () => {
@@ -188,13 +186,13 @@ describe('subsonic', () => {
 
     it('should return false for very long distance', () => {
       // Most bullets will go subsonic by 2500+ yards with this model
-      expect(willRemainSupersonic(2650, 0.400, 2500, 59)).toBe(false);
+      expect(willRemainSupersonic(2650, 0.4, 2500, 59)).toBe(false);
     });
 
     it('should account for muzzle velocity', () => {
       // Higher MV = stays supersonic longer
-      const highMV = willRemainSupersonic(3000, 0.400, 1000, 59);
-      const lowMV = willRemainSupersonic(2400, 0.400, 1000, 59);
+      const highMV = willRemainSupersonic(3000, 0.4, 1000, 59);
+      const lowMV = willRemainSupersonic(2400, 0.4, 1000, 59);
 
       // Higher MV should stay supersonic at same distance more often
       // (though both might be true or false, highMV should not be false when lowMV is true)
@@ -203,8 +201,8 @@ describe('subsonic', () => {
 
     it('should account for ballistic coefficient', () => {
       // Higher BC = stays supersonic longer
-      const highBC = willRemainSupersonic(2650, 0.600, 2000, 59);
-      const lowBC = willRemainSupersonic(2650, 0.200, 2000, 59);
+      const highBC = willRemainSupersonic(2650, 0.6, 2000, 59);
+      const lowBC = willRemainSupersonic(2650, 0.2, 2000, 59);
 
       // High BC should stay supersonic when low BC doesn't
       expect(highBC).toBe(true);
@@ -224,29 +222,29 @@ describe('subsonic', () => {
     });
 
     it('should increase with higher BC', () => {
-      const lowBC = estimateMaxSupersonicRange(2650, 0.300, 59);
-      const highBC = estimateMaxSupersonicRange(2650, 0.600, 59);
+      const lowBC = estimateMaxSupersonicRange(2650, 0.3, 59);
+      const highBC = estimateMaxSupersonicRange(2650, 0.6, 59);
 
       expect(highBC).toBeGreaterThan(lowBC);
     });
 
     it('should increase with higher muzzle velocity', () => {
-      const lowMV = estimateMaxSupersonicRange(2400, 0.450, 59);
-      const highMV = estimateMaxSupersonicRange(3000, 0.450, 59);
+      const lowMV = estimateMaxSupersonicRange(2400, 0.45, 59);
+      const highMV = estimateMaxSupersonicRange(3000, 0.45, 59);
 
       expect(highMV).toBeGreaterThan(lowMV);
     });
 
     it('should return 0 if already subsonic at muzzle', () => {
-      const range = estimateMaxSupersonicRange(900, 0.450, 59);
+      const range = estimateMaxSupersonicRange(900, 0.45, 59);
       expect(range).toBe(0);
     });
 
     it('should account for temperature', () => {
       // Cold air: lower speed of sound = bullet stays supersonic longer
       // Warm air: higher speed of sound = bullet goes subsonic sooner
-      const cold = estimateMaxSupersonicRange(2650, 0.450, 20);
-      const warm = estimateMaxSupersonicRange(2650, 0.450, 100);
+      const cold = estimateMaxSupersonicRange(2650, 0.45, 20);
+      const warm = estimateMaxSupersonicRange(2650, 0.45, 100);
 
       expect(cold).toBeGreaterThan(warm);
     });

@@ -1,5 +1,6 @@
 module.exports = {
   root: true,
+  ignorePatterns: ['reports/', 'coverage/', 'dist/', 'build/'],
   extends: [
     'expo',
     'plugin:@typescript-eslint/recommended',
@@ -39,6 +40,17 @@ module.exports = {
     'no-implied-eval': 'error',
     'no-new-func': 'error',
   },
+  overrides: [
+    {
+      files: ['jest.setup.js', '__tests__/**/*.{js,ts,tsx}'],
+      env: {
+        jest: true,
+      },
+      rules: {
+        '@typescript-eslint/no-require-imports': 'off',
+      },
+    },
+  ],
   settings: {
     react: {
       version: 'detect',

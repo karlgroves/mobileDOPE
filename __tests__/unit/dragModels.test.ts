@@ -1,7 +1,6 @@
 import {
   getG1DragCoefficient,
   getG7DragCoefficient,
-  getDragCoefficient,
   getFlightRegime,
   getDragChangeRate,
   getSubsonicBCAdjustment,
@@ -161,21 +160,21 @@ describe('Drag Models', () => {
 
   describe('getEffectiveBC', () => {
     it('should increase BC at Mach 1.0 for G1 (lower drag than reference)', () => {
-      const publishedBC = 0.500;
+      const publishedBC = 0.5;
       const effectiveBC = getEffectiveBC(publishedBC, 1116, 'G1'); // Mach 1.0
       // G1 Cd at Mach 1.0 is lower than at Mach 2.0, so effective BC is higher
       expect(effectiveBC).toBeGreaterThan(publishedBC);
     });
 
     it('should return similar BC at reference Mach (2.0)', () => {
-      const publishedBC = 0.500;
+      const publishedBC = 0.5;
       const effectiveBC = getEffectiveBC(publishedBC, 2232, 'G1'); // Mach 2.0
       expect(effectiveBC).toBeCloseTo(publishedBC, 1);
     });
 
     it('should scale with published BC', () => {
-      const lowBC = getEffectiveBC(0.300, 1116, 'G1');
-      const highBC = getEffectiveBC(0.600, 1116, 'G1');
+      const lowBC = getEffectiveBC(0.3, 1116, 'G1');
+      const highBC = getEffectiveBC(0.6, 1116, 'G1');
       expect(highBC).toBeGreaterThan(lowBC);
     });
   });
