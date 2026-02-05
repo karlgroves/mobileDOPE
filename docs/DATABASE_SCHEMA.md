@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS rifle_profiles (
 ```
 
 **Fields:**
+
 - `id`: Primary key (auto-increment)
 - `name`: Rifle name/identifier
 - `caliber`: Caliber (e.g., ".308 Winchester", "6.5 Creedmoor")
@@ -81,6 +82,7 @@ CREATE TABLE IF NOT EXISTS ammo_profiles (
 ```
 
 **Fields:**
+
 - `id`: Primary key (auto-increment)
 - `name`: Ammunition name/identifier
 - `caliber`: Caliber (must match rifle caliber for pairing)
@@ -122,6 +124,7 @@ CREATE TABLE IF NOT EXISTS environment_snapshots (
 ```
 
 **Fields:**
+
 - `id`: Primary key (auto-increment)
 - `temperature`: Temperature in Fahrenheit
 - `humidity`: Relative humidity (0-100%)
@@ -161,6 +164,7 @@ CREATE TABLE IF NOT EXISTS dope_logs (
 ```
 
 **Fields:**
+
 - `id`: Primary key (auto-increment)
 - `rifle_id`: Foreign key to rifle_profiles
 - `ammo_id`: Foreign key to ammo_profiles
@@ -178,6 +182,7 @@ CREATE TABLE IF NOT EXISTS dope_logs (
 - `timestamp`: Timestamp of engagement
 
 **Foreign Keys:**
+
 - All foreign keys use `ON DELETE CASCADE` to maintain referential integrity
 - When a rifle is deleted, all associated DOPE logs are deleted
 - When ammo is deleted, all associated DOPE logs are deleted
@@ -193,6 +198,7 @@ CREATE INDEX IF NOT EXISTS idx_environment_timestamp ON environment_snapshots(ti
 ```
 
 **Purpose:**
+
 - `idx_dope_rifle`: Fast lookups of DOPE logs by rifle
 - `idx_dope_ammo`: Fast lookups of DOPE logs by ammunition
 - `idx_dope_timestamp`: Fast sorting and filtering by date
@@ -219,6 +225,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 ```
 
 The migration runner ensures:
+
 - Migrations run in order
 - Each migration runs only once
 - Failed migrations don't corrupt the database (transaction-based)
@@ -241,6 +248,7 @@ environment_snapshots (1) ── (1)
 ### Common Query Patterns
 
 **Get DOPE logs for a rifle:**
+
 ```sql
 SELECT * FROM dope_logs
 WHERE rifle_id = ?
@@ -248,12 +256,14 @@ ORDER BY timestamp DESC;
 ```
 
 **Get ammo compatible with a rifle:**
+
 ```sql
 SELECT * FROM ammo_profiles
 WHERE caliber = (SELECT caliber FROM rifle_profiles WHERE id = ?);
 ```
 
 **Get DOPE with full details:**
+
 ```sql
 SELECT
   d.*,

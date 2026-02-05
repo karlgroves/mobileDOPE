@@ -9,6 +9,7 @@
 The Mobile DOPE app implements critical ballistic calculations that must be accurate and reliable. Errors in calculations could lead to incorrect shooting corrections, potentially dangerous situations, and loss of user trust.
 
 We need a development methodology that ensures:
+
 - **Correctness:** Ballistic calculations are mathematically accurate
 - **Reliability:** Code behaves predictably across inputs
 - **Maintainability:** Future changes don't break existing functionality
@@ -38,6 +39,7 @@ We will use **Test-Driven Development (TDD)** as the primary development methodo
 ### When to Use TDD
 
 **Required (Mandatory TDD):**
+
 - Ballistic calculation functions
 - Data validation logic
 - Unit conversion utilities
@@ -45,12 +47,14 @@ We will use **Test-Driven Development (TDD)** as the primary development methodo
 - Business logic with complex rules
 
 **Recommended (Strong TDD):**
+
 - Component behavior logic
 - State management operations
 - Service layer functions
 - Repository methods
 
 **Optional (Test as Needed):**
+
 - Simple UI components without logic
 - Configuration files
 - Type definitions
@@ -61,6 +65,7 @@ We will use **Test-Driven Development (TDD)** as the primary development methodo
 ### Why TDD for Ballistics?
 
 Ballistic calculations involve complex mathematics:
+
 - Runge-Kutta 4th order integration
 - Atmospheric density calculations
 - Drag coefficient interpolation
@@ -68,11 +73,13 @@ Ballistic calculations involve complex mathematics:
 - Wind drift modeling
 
 **Without TDD:**
+
 - How do you know calculations are correct?
 - How do you prevent regressions when refactoring?
 - How do you document expected behavior?
 
 **With TDD:**
+
 ```typescript
 // Test defines exact expected behavior
 it('should calculate elevation correction for 600 yards', () => {
@@ -93,6 +100,7 @@ it('should calculate elevation correction for 600 yards', () => {
 **1. Correctness from Design**
 
 Tests written first ensure we think about:
+
 - Edge cases before they're bugs
 - Expected inputs and outputs
 - Error conditions
@@ -108,14 +116,15 @@ describe('Atmospheric calculations', () => {
 
   it('should increase DA with temperature', () => {
     // Hot day increases density altitude
-    const da1 = calculateDA(59, 29.92, 0);   // Standard
-    const da2 = calculateDA(95, 29.92, 0);   // Hot
+    const da1 = calculateDA(59, 29.92, 0); // Standard
+    const da2 = calculateDA(95, 29.92, 0); // Hot
     expect(da2).toBeGreaterThan(da1);
   });
 });
 ```
 
 Tests document:
+
 - What the function does
 - How to use it
 - Expected behavior
@@ -124,6 +133,7 @@ Tests document:
 **3. Refactoring Confidence**
 
 With 119 passing tests:
+
 - Refactor without fear
 - Optimize without breaking behavior
 - Change implementation details safely
@@ -131,6 +141,7 @@ With 119 passing tests:
 **4. Faster Debugging**
 
 When a test fails:
+
 - Exact location of failure
 - Expected vs actual values
 - Stack trace to problem
@@ -236,7 +247,7 @@ it('should decrease density with increasing temperature', () => {
 
 ```typescript
 // Extract constants
-const AIR_GAS_CONSTANT = 287.05;  // J/(kg·K)
+const AIR_GAS_CONSTANT = 287.05; // J/(kg·K)
 const RANKINE_OFFSET = 459.67;
 const INHG_TO_PA = 3386.39;
 const KG_M3_TO_LB_FT3 = 0.062428;
@@ -297,7 +308,7 @@ it('should call interpolateDragCoefficient', () => {
 
 // ✅ Good: Testing behavior
 it('should return correct drag coefficient for subsonic velocity', () => {
-  const drag = calculateDrag(1000);  // Subsonic
+  const drag = calculateDrag(1000); // Subsonic
   expect(drag).toBeCloseTo(0.295, 3);
 });
 ```
@@ -377,13 +388,9 @@ describe('Edge cases', () => {
 module.exports = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)'
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)',
   ],
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/__tests__/**',
-  ],
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts', '!src/**/__tests__/**'],
   coverageThresholds: {
     global: {
       branches: 80,
@@ -454,16 +461,19 @@ npm test -- -u
 ## Results
 
 **Ballistic Calculation Accuracy:**
+
 - Validated against published ballistic tables
 - Within 0.1 MIL of known data at 1000 yards
 - All edge cases (subsonic, extreme temp, altitude) tested
 
 **Development Speed:**
+
 - Initial investment: +20% time for test writing
 - Long-term savings: -50% debugging time
 - Refactoring: 5x faster with test confidence
 
 **Code Quality:**
+
 - More modular design (testability drives good design)
 - Clearer interfaces (tests document usage)
 - Fewer bugs (caught early in red-green-refactor)

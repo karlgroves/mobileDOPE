@@ -51,22 +51,26 @@ Thank you for your interest in contributing to Mobile DOPE! This document provid
 1. **Fork the repository** on GitHub
 
 2. **Clone your fork:**
+
    ```bash
    git clone git@github.com:YOUR_USERNAME/mobileDOPE.git
    cd mobileDOPE/app
    ```
 
 3. **Add upstream remote:**
+
    ```bash
    git remote add upstream git@github.com:karlgroves/mobileDOPE.git
    ```
 
 4. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 5. **Run the app:**
+
    ```bash
    npm start
    ```
@@ -126,9 +130,9 @@ This project uses **Git Flow** for branch management.
 
 - **main** - Production releases only
 - **develop** - Integration branch for features
-- **feature/*** - Feature development branches
-- **release/*** - Release preparation branches
-- **hotfix/*** - Emergency fixes from main
+- **feature/\*** - Feature development branches
+- **release/\*** - Release preparation branches
+- **hotfix/\*** - Emergency fixes from main
 
 ### Creating Feature Branches
 
@@ -187,6 +191,7 @@ git branch -d release/1.0.0
 - **Interface over type:** Prefer `interface` for object shapes
 
 **Good:**
+
 ```typescript
 interface RifleData {
   name: string;
@@ -200,8 +205,10 @@ function createRifle(data: RifleData): RifleProfile {
 ```
 
 **Bad:**
+
 ```typescript
-function createRifle(data: any) {  // ❌ No any
+function createRifle(data: any) {
+  // ❌ No any
   return new RifleProfile(data);
 }
 ```
@@ -436,27 +443,33 @@ feat: everything working now   # ❌ Not specific
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Related Issue
+
 Closes #123
 
 ## Testing
+
 - [ ] Unit tests added
 - [ ] Integration tests added
 - [ ] Tested on iOS
 - [ ] Tested on Android
 
 ## Screenshots (if applicable)
+
 [Add screenshots for UI changes]
 
 ## Checklist
+
 - [ ] Code follows project style guidelines
 - [ ] Self-review completed
 - [ ] Comments added for complex logic
@@ -515,12 +528,7 @@ const effectiveGravity = GRAVITY * Math.cos(angleRad);
  * @param dragModel - 'G1' or 'G7' drag model
  * @returns New state after time step
  */
-function rk4Step(
-  state: State,
-  dt: number,
-  bc: number,
-  dragModel: 'G1' | 'G7'
-): State {
+function rk4Step(state: State, dt: number, bc: number, dragModel: 'G1' | 'G7'): State {
   // ... implementation
 }
 ```
@@ -593,7 +601,7 @@ console.log('Rifle:', rifle.name, 'BC:', rifle.bc);
 // Install: https://reactnative.dev/docs/debugging
 
 // Use debugger
-debugger;  // Breaks in debugger when reached
+debugger; // Breaks in debugger when reached
 ```
 
 ### Performance Profiling

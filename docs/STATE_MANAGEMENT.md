@@ -67,12 +67,14 @@ export const useMyStore = create<MyState>((set, get) => ({
   // Synchronous actions
   setItems: (items) => set({ items }),
   addItem: (item) => set((state) => ({ items: [...state.items, item] })),
-  updateItem: (item) => set((state) => ({
-    items: state.items.map((i) => (i.id === item.id ? item : i)),
-  })),
-  removeItem: (id) => set((state) => ({
-    items: state.items.filter((i) => i.id !== id),
-  })),
+  updateItem: (item) =>
+    set((state) => ({
+      items: state.items.map((i) => (i.id === item.id ? item : i)),
+    })),
+  removeItem: (id) =>
+    set((state) => ({
+      items: state.items.filter((i) => i.id !== id),
+    })),
   setSelectedId: (id) => set({ selectedId: id }),
   setLoading: (value) => set({ loading: value }),
 
@@ -115,6 +117,7 @@ export const useMyStore = create<MyState>((set, get) => ({
 **File:** `src/store/useAppStore.ts`
 
 **Responsibilities:**
+
 - Application settings (theme, default units, last selected profiles)
 - Initialization state (database ready, app initialized)
 - Loading and error states
@@ -130,13 +133,13 @@ updateSettings: async (newSettings) => {
   const updatedSettings = { ...get().settings, ...newSettings };
   set({ settings: updatedSettings });
   await saveSettingsToStorage(updatedSettings);
-}
+};
 
 // Settings are loaded from AsyncStorage on app startup
 loadSettings: async () => {
   const settings = await loadSettingsFromStorage();
   set({ settings });
-}
+};
 ```
 
 #### Initialization Flow
@@ -168,6 +171,7 @@ useEffect(() => {
 **File:** `src/store/useRifleStore.ts`
 
 **Responsibilities:**
+
 - Rifle profile CRUD operations
 - Selected rifle tracking
 - In-memory caching of rifle profiles
@@ -186,7 +190,7 @@ createRifle: async (data) => {
 
   // 3. Return created entity
   return rifle;
-}
+};
 ```
 
 #### Safe Updates
@@ -200,7 +204,7 @@ updateRifle: async (id, data) => {
   get().updateRifleInStore(rifle);
 
   return rifle;
-}
+};
 ```
 
 #### Cascading Deletes
@@ -217,7 +221,7 @@ deleteRifle: async (id) => {
   if (get().selectedRifleId === id) {
     get().setSelectedRifleId(null);
   }
-}
+};
 ```
 
 ### 3. AmmoStore - Related Entity Management
@@ -225,6 +229,7 @@ deleteRifle: async (id) => {
 **File:** `src/store/useAmmoStore.ts`
 
 **Responsibilities:**
+
 - Ammunition profile CRUD operations
 - Caliber-based filtering (ammo matched to rifles by caliber, not FK)
 - Selected ammo tracking
@@ -237,7 +242,7 @@ deleteRifle: async (id) => {
 // Get ammo compatible with a specific rifle
 getAmmoForRifle: (rifle: RifleProfile) => {
   return get().ammoProfiles.filter((ammo) => ammo.caliber === rifle.caliber);
-}
+};
 
 // Usage in components
 const { rifles, selectedRifleId } = useRifleStore();
@@ -252,6 +257,7 @@ const compatibleAmmo = selectedRifle ? getAmmoForRifle(selectedRifle) : [];
 **File:** `src/store/useDOPEStore.ts`
 
 **Responsibilities:**
+
 - DOPE log CRUD operations
 - Filtering by rifle, ammo, date, distance
 - Sorting options
@@ -375,7 +381,7 @@ deleteRifle: async (id) => {
   if (settings.lastSelectedRifleId === id) {
     await updateSettings({ lastSelectedRifleId: undefined });
   }
-}
+};
 ```
 
 ## Best Practices
@@ -410,7 +416,7 @@ createItem: async (data) => {
     // Re-throw to allow component to handle
     throw error;
   }
-}
+};
 ```
 
 ### 4. Loading States
@@ -426,31 +432,31 @@ loadItems: async () => {
     // Always clear loading, even on error
     set({ loading: false });
   }
-}
+};
 ```
 
 ### 5. Immutable Updates
 
 ```typescript
 // ✅ Good: Create new array
-addItem: (item) => set((state) => ({
-  items: [...state.items, item],
-}))
+addItem: (item) =>
+  set((state) => ({
+    items: [...state.items, item],
+  }));
 
 // ❌ Bad: Mutate existing array
-addItem: (item) => set((state) => {
-  state.items.push(item); // NEVER mutate state directly
-  return { items: state.items };
-})
+addItem: (item) =>
+  set((state) => {
+    state.items.push(item); // NEVER mutate state directly
+    return { items: state.items };
+  });
 ```
 
 ### 6. Selector Optimization
 
 ```typescript
 // Use selectors to avoid unnecessary re-renders
-const rifleNames = useRifleStore((state) =>
-  state.rifles.map((r) => r.name)
-);
+const rifleNames = useRifleStore((state) => state.rifles.map((r) => r.name));
 
 // Component only re-renders if rifle names change
 // (not on every rifle property change)
@@ -487,7 +493,7 @@ loadData: async () => {
 
   // Single state update
   set({ rifles, ammos, loading: false });
-}
+};
 ```
 
 ## Testing Stores
@@ -623,7 +629,7 @@ updateRifle: async (id, data) => {
     set({ rifles: originalRifles });
     throw error;
   }
-}
+};
 ```
 
 ### 3. Pagination
@@ -652,13 +658,13 @@ loadPage: async (page) => {
     hasMore: rifles.length === get().pageSize,
     loading: false,
   });
-}
+};
 
 loadMore: async () => {
   if (!get().hasMore || get().loading) return;
   const nextPage = get().page + 1;
   await get().loadPage(nextPage);
-}
+};
 ```
 
 ## References

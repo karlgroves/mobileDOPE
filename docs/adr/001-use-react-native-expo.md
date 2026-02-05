@@ -14,6 +14,7 @@ The Mobile DOPE app needs to run on both iOS and Android platforms. We evaluated
 4. **React Native with Expo** - React Native with managed workflow and tooling
 
 Key requirements:
+
 - Cross-platform development (iOS and Android)
 - TypeScript support for type safety
 - Fast development iteration
@@ -47,11 +48,13 @@ We will use **React Native with Expo** as our development platform.
 ### Alternatives Considered
 
 **Flutter:**
+
 - Pros: Excellent performance, beautiful UI framework, hot reload
 - Cons: Dart language has smaller talent pool, newer ecosystem
 - Decision: React Native's ecosystem and TypeScript support were preferred
 
 **Native Development:**
+
 - Pros: Best performance, full platform control
 - Cons: Two codebases to maintain, slower development
 - Decision: Cross-platform benefits outweighed performance gains
@@ -104,6 +107,7 @@ We will use **React Native with Expo** as our development platform.
 ### Build Configuration
 
 Using EAS Build with three profiles:
+
 - **Development:** Internal testing with dev client
 - **Staging:** Beta testing builds
 - **Production:** App store releases
@@ -111,6 +115,7 @@ Using EAS Build with three profiles:
 ### Future Considerations
 
 If performance becomes an issue for ballistic calculations:
+
 1. Optimize TypeScript implementation first
 2. Use React Native's new architecture (Fabric, TurboModules)
 3. Write critical paths as native modules (C++/Rust)

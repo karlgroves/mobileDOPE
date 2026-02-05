@@ -9,6 +9,7 @@
 The app needs to manage the relationship between rifles and ammunition. Two primary architectural approaches were considered:
 
 ### Option 1: Foreign Key Relationship
+
 ```sql
 CREATE TABLE ammo_profiles (
   id INTEGER PRIMARY KEY,
@@ -20,17 +21,20 @@ CREATE TABLE ammo_profiles (
 ```
 
 **Pros:**
+
 - Strict referential integrity
 - Clear ownership model
 - Prevents orphaned ammo records
 
 **Cons:**
+
 - Ammo tied to single rifle
 - Same ammo must be duplicated for multiple rifles
 - Cannot share ammo across rifles of same caliber
 - User friction when managing multiple rifles
 
 ### Option 2: Caliber-Based Matching
+
 ```sql
 CREATE TABLE ammo_profiles (
   id INTEGER PRIMARY KEY,
@@ -41,12 +45,14 @@ CREATE TABLE ammo_profiles (
 ```
 
 **Pros:**
+
 - Ammo can be used with any rifle of matching caliber
 - No duplication needed
 - Natural user mental model
 - Flexible for future features (ammo marketplace, sharing)
 
 **Cons:**
+
 - Weaker referential integrity
 - Application-layer filtering required
 - Potential for orphaned ammo (no matching rifles)
@@ -54,12 +60,14 @@ CREATE TABLE ammo_profiles (
 ### Real-World Usage Pattern
 
 Shooters typically:
+
 1. Own multiple rifles in the same caliber (.308, 6.5 CM, etc.)
 2. Use the same ammunition across those rifles
 3. Track load development separately from specific rifles
 4. Change rifles but keep load data
 
 Example: A shooter with:
+
 - Rifle A: Bolt-action .308 (precision)
 - Rifle B: Semi-auto .308 (competition)
 - Rifle C: .308 hunting rifle
@@ -73,6 +81,7 @@ We will use **caliber-based matching** instead of foreign key relationships.
 ### Implementation
 
 **Database Schema:**
+
 ```sql
 CREATE TABLE rifle_profiles (
   id INTEGER PRIMARY KEY,
@@ -88,6 +97,7 @@ CREATE TABLE ammo_profiles (
 ```
 
 **Application Layer:**
+
 ```typescript
 // Get ammo compatible with a rifle
 function getAmmoForRifle(rifle: RifleProfile): AmmoProfile[] {
@@ -102,6 +112,7 @@ WHERE caliber = (SELECT caliber FROM rifle_profiles WHERE id = ?);
 ### Migration Path
 
 For apps that initially used rifle_id FK:
+
 1. Add caliber column to ammo_profiles (Migration 002)
 2. Populate caliber from linked rifles (Migration 003)
 3. Remove rifle_id foreign key (Migration 004)
@@ -132,6 +143,7 @@ For apps that initially used rifle_id FK:
 ### Mitigation
 
 **Caliber Standardization:**
+
 ```typescript
 // Predefined caliber constants
 const CALIBERS = {
@@ -151,6 +163,7 @@ function validateCaliber(input: string): boolean {
 ```
 
 **Orphaned Data Detection:**
+
 ```typescript
 // Find ammo with no matching rifles
 SELECT DISTINCT caliber FROM ammo_profiles
@@ -166,21 +179,20 @@ function findOrphanedAmmo(): AmmoProfile[] {
 ```
 
 **Deletion Warnings:**
+
 ```typescript
 // Warn when deleting last rifle of a caliber
 async function deleteRifle(id: number): Promise<void> {
   const rifle = getRifleById(id);
-  const otherRifles = rifles.filter(r =>
-    r.id !== id && r.caliber === rifle.caliber
-  );
+  const otherRifles = rifles.filter((r) => r.id !== id && r.caliber === rifle.caliber);
 
   if (otherRifles.length === 0) {
-    const ammoCount = ammos.filter(a => a.caliber === rifle.caliber).length;
+    const ammoCount = ammos.filter((a) => a.caliber === rifle.caliber).length;
     if (ammoCount > 0) {
       Alert.alert(
         'Last Rifle in Caliber',
         `You have ${ammoCount} ammo profiles for ${rifle.caliber}. ` +
-        `Delete this rifle and keep ammo profiles?`,
+          `Delete this rifle and keep ammo profiles?`,
         [
           { text: 'Keep Rifle', style: 'cancel' },
           { text: 'Delete Rifle, Keep Ammo', onPress: () => doDelete(id) },
@@ -256,7 +268,7 @@ export class AmmoProfileRepository {
       WHERE caliber = ?
       ORDER BY name`;
     const rows = await db.getAllAsync(sql, [rifle.caliber]);
-    return rows.map(row => AmmoProfile.fromDB(row));
+    return rows.map((row) => AmmoProfile.fromDB(row));
   }
 
   // Get all ammo for a caliber
@@ -266,7 +278,7 @@ export class AmmoProfileRepository {
       WHERE caliber = ?
       ORDER BY name`;
     const rows = await db.getAllAsync(sql, [caliber]);
-    return rows.map(row => AmmoProfile.fromDB(row));
+    return rows.map((row) => AmmoProfile.fromDB(row));
   }
 
   // Find orphaned ammo
@@ -277,7 +289,7 @@ export class AmmoProfileRepository {
         SELECT DISTINCT caliber FROM rifle_profiles
       )`;
     const rows = await db.getAllAsync(sql);
-    return rows.map(row => AmmoProfile.fromDB(row));
+    return rows.map((row) => AmmoProfile.fromDB(row));
   }
 }
 ```
@@ -324,6 +336,7 @@ describe('Caliber-based matching', () => {
 ### Caliber Aliases
 
 Support common aliases:
+
 ```typescript
 const CALIBER_ALIASES = {
   '.308 Winchester': ['.308 Win', '7.62x51mm', '7.62 NATO'],
@@ -339,6 +352,7 @@ function matchesCaliber(ammo: string, rifle: string): boolean {
 ### Community Ammo Database
 
 Caliber-based architecture enables:
+
 - Sharing ammo profiles between users
 - Community-validated load data
 - Factory ammo database by caliber
@@ -348,7 +362,7 @@ Caliber-based architecture enables:
 ```typescript
 // Suggest popular ammo for user's rifles
 function suggestAmmoForRifles(rifles: RifleProfile[]): AmmoSuggestion[] {
-  const calibers = new Set(rifles.map(r => r.caliber));
+  const calibers = new Set(rifles.map((r) => r.caliber));
   return fetchPopularAmmoForCalibers(Array.from(calibers));
 }
 ```

@@ -7,6 +7,7 @@
 ## Context
 
 The Mobile DOPE app requires state management for:
+
 - Application settings and preferences
 - Rifle and ammunition profiles
 - DOPE logs and filtering
@@ -39,43 +40,51 @@ We will use **Zustand** for all state management.
 ### Why Zustand?
 
 **Simplicity:**
+
 - Minimal API surface - one `create` function
 - No providers, reducers, or actions
 - Direct state mutations in a clean way
 - Hooks-first design
 
 **Performance:**
+
 - Selector-based subscriptions prevent unnecessary re-renders
 - No context provider overhead
 - Minimal runtime footprint (<1KB)
 
 **TypeScript:**
+
 - Excellent TypeScript support with full type inference
 - No need for separate action type definitions
 - Type-safe state updates
 
 **Developer Experience:**
+
 - Redux DevTools integration out of the box
 - Simple testing - just call store methods
 - Middleware support for logging, persistence, etc.
 
 **Async Support:**
+
 - Natural async/await in store methods
 - No thunks or sagas needed
 
 ### Alternatives Considered
 
 **Redux Toolkit:**
+
 - Pros: Industry standard, powerful DevTools, large ecosystem
 - Cons: More boilerplate, learning curve, larger bundle size
 - Decision: Overkill for this app's complexity
 
 **React Context:**
+
 - Pros: Built-in, no dependencies
 - Cons: Performance issues with frequent updates, provider hell
 - Decision: Not suitable for frequently-updated state
 
 **MobX:**
+
 - Pros: Simple observable pattern, automatic derivations
 - Cons: Magic decorators, less explicit, larger bundle
 - Decision: Zustand's explicit approach preferred
@@ -128,14 +137,14 @@ useDOPEStore     - DOPE log CRUD, filtering, sorting
 
 ```typescript
 // Synchronous (immediate UI updates)
-setSelectedRifleId: (id) => set({ selectedRifleId: id })
+setSelectedRifleId: (id) => set({ selectedRifleId: id });
 
 // Asynchronous (database operations)
 createRifle: async (data) => {
   const rifle = await repository.create(data);
   get().addRifle(rifle);
   return rifle;
-}
+};
 ```
 
 ### Persistence
@@ -146,7 +155,7 @@ updateSettings: async (newSettings) => {
   const updated = { ...get().settings, ...newSettings };
   set({ settings: updated });
   await AsyncStorage.setItem(KEY, JSON.stringify(updated));
-}
+};
 ```
 
 ### Selectors
@@ -204,7 +213,7 @@ const store = useRifleStore();
 ```typescript
 // In component, not store
 const filteredRifles = useMemo(() => {
-  return rifles.filter(r => r.caliber === selected);
+  return rifles.filter((r) => r.caliber === selected);
 }, [rifles, selected]);
 ```
 
