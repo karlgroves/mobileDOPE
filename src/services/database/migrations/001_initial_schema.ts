@@ -24,7 +24,7 @@ export const migration001: Migration = {
     await db.execAsync(DB_SCHEMA.APP_SETTINGS);
 
     // Create indexes
-    for (const [name, sql] of Object.entries(DB_INDEXES)) {
+    for (const [_name, sql] of Object.entries(DB_INDEXES)) {
       await db.execAsync(sql);
     }
 

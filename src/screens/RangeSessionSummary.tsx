@@ -52,6 +52,7 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
   }, [sessionId, navigation]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSession();
   }, [loadSession]);
 
@@ -202,7 +203,9 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Shots Fired</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{calculateDuration()}</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                {calculateDuration()}
+              </Text>
               <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Duration</Text>
             </View>
             <View style={styles.statItem}>
@@ -232,7 +235,9 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
           </View>
           <View style={[styles.equipmentRow, { marginTop: 16 }]}>
             <View style={styles.equipmentItem}>
-              <Text style={[styles.equipmentLabel, { color: colors.text.secondary }]}>Ammunition</Text>
+              <Text style={[styles.equipmentLabel, { color: colors.text.secondary }]}>
+                Ammunition
+              </Text>
               <Text style={[styles.equipmentValue, { color: colors.text.primary }]}>
                 {ammo?.name || 'Unknown'}
               </Text>
@@ -330,9 +335,24 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <Button title="Start New Session" onPress={handleNewSession} variant="primary" size="large" />
-          <Button title="Export Session Report" onPress={handleExportSession} variant="secondary" size="large" />
-          <Button title="Delete Session" onPress={handleDeleteSession} variant="danger" size="large" />
+          <Button
+            title="Start New Session"
+            onPress={handleNewSession}
+            variant="primary"
+            size="large"
+          />
+          <Button
+            title="Export Session Report"
+            onPress={handleExportSession}
+            variant="secondary"
+            size="large"
+          />
+          <Button
+            title="Delete Session"
+            onPress={handleDeleteSession}
+            variant="danger"
+            size="large"
+          />
         </View>
       </ScrollView>
     </View>

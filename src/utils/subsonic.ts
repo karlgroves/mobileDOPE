@@ -182,9 +182,14 @@ export function detectSubsonicTransition(
     }
 
     // Track max supersonic distance (Mach 1.2)
-    if (maxSupersonicDistance === null && prevMach >= TRANSONIC_UPPER && currMach < TRANSONIC_UPPER) {
+    if (
+      maxSupersonicDistance === null &&
+      prevMach >= TRANSONIC_UPPER &&
+      currMach < TRANSONIC_UPPER
+    ) {
       const ratio = (TRANSONIC_UPPER - currMach) / (prevMach - currMach);
-      maxSupersonicDistance = currPoint.distance - ratio * (currPoint.distance - prevPoint.distance);
+      maxSupersonicDistance =
+        currPoint.distance - ratio * (currPoint.distance - prevPoint.distance);
     }
   }
 

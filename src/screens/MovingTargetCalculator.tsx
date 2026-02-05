@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -128,7 +128,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
       const distanceInches = distance * 36; // yards to inches
       const leadAngleRad = Math.atan(leadDistance / distanceInches);
       const leadMIL = leadAngleRad * 1000;
-      const leadMOA = (leadAngleRad * 180 / Math.PI) * 60;
+      const leadMOA = ((leadAngleRad * 180) / Math.PI) * 60;
 
       return {
         distance,
@@ -139,6 +139,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
         velocity: solution.velocity,
       };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rifle, ammo, targetSpeed, movementAngle]);
 
   // Get result for the selected distance
@@ -259,9 +260,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
                   <Text style={[styles.resultValue, { color: colors.primary }]}>
                     {currentResult.leadDistance.toFixed(1)}
                   </Text>
-                  <Text style={[styles.resultUnit, { color: colors.text.secondary }]}>
-                    inches
-                  </Text>
+                  <Text style={[styles.resultUnit, { color: colors.text.secondary }]}>inches</Text>
                 </View>
 
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -343,9 +342,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
                       {row.leadDistance.toFixed(1)}
                     </Text>
                     <Text style={[styles.tableCell, { color: colors.primary }]}>
-                      {correctionUnit === 'MIL'
-                        ? row.leadMIL.toFixed(2)
-                        : row.leadMOA.toFixed(2)}
+                      {correctionUnit === 'MIL' ? row.leadMIL.toFixed(2) : row.leadMOA.toFixed(2)}
                     </Text>
                   </View>
                 ))}

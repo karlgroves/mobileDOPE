@@ -317,7 +317,10 @@ export function getSubsonicBCAdjustment(mach: number, model: DragModel): number 
   const referenceMach = 2.0;
 
   // Get drag coefficients at reference and current Mach
-  const cdReference = getDragFromTable(referenceMach, model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE);
+  const cdReference = getDragFromTable(
+    referenceMach,
+    model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE
+  );
   const cdCurrent = getDragFromTable(mach, model === 'G1' ? G1_DRAG_TABLE : G7_DRAG_TABLE);
 
   // BC is inversely proportional to Cd, so adjustment = Cd_ref / Cd_current

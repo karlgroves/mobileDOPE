@@ -35,11 +35,7 @@ export const HistoryNavigator: React.FC = () => {
           title: route.params?.logId ? 'Edit DOPE Log' : 'New DOPE Log',
         })}
       />
-      <Stack.Screen
-        name="DOPECurve"
-        component={DOPECurve}
-        options={{ title: 'Ballistic Curve' }}
-      />
+      <Stack.Screen name="DOPECurve" component={DOPECurve} options={{ title: 'Ballistic Curve' }} />
     </Stack.Navigator>
   );
 };

@@ -73,7 +73,7 @@ class DatabaseService {
     if (!this.db) return;
 
     try {
-      for (const [name, sql] of Object.entries(DB_INDEXES)) {
+      for (const [_name, sql] of Object.entries(DB_INDEXES)) {
         await this.db.execAsync(sql);
       }
       console.log('All indexes created successfully');

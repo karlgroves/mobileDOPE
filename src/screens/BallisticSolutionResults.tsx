@@ -60,16 +60,12 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     }
 
     // Show target type selection
-    Alert.alert(
-      'Save to DOPE Log',
-      'Select target type:',
-      [
-        { text: 'Steel', onPress: () => saveDOPELog('steel') },
-        { text: 'Paper', onPress: () => saveDOPELog('paper') },
-        { text: 'Vital Zone', onPress: () => saveDOPELog('vital_zone') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert('Save to DOPE Log', 'Select target type:', [
+      { text: 'Steel', onPress: () => saveDOPELog('steel') },
+      { text: 'Paper', onPress: () => saveDOPELog('paper') },
+      { text: 'Vital Zone', onPress: () => saveDOPELog('vital_zone') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const saveDOPELog = async (targetType: 'steel' | 'paper' | 'vital_zone' | 'other') => {

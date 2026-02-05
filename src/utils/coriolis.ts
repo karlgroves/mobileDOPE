@@ -171,10 +171,10 @@ export function calculateCoriolisComplete(
 
   // MIL = atan(deflection/distance) * 1000
   const horizontalMIL = Math.atan(horizontalDeflection / distanceInches) * 1000;
-  const horizontalMOA = (Math.atan(horizontalDeflection / distanceInches) * 180) / Math.PI * 60;
+  const horizontalMOA = ((Math.atan(horizontalDeflection / distanceInches) * 180) / Math.PI) * 60;
 
   const verticalMIL = Math.atan(verticalDeflection / distanceInches) * 1000;
-  const verticalMOA = (Math.atan(verticalDeflection / distanceInches) * 180) / Math.PI * 60;
+  const verticalMOA = ((Math.atan(verticalDeflection / distanceInches) * 180) / Math.PI) * 60;
 
   // Determine hemisphere
   let hemisphere: 'Northern' | 'Southern' | 'Equator';

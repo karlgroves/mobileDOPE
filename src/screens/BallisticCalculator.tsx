@@ -4,17 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
-import {
-  Card,
-  Picker,
-  NumberInput,
-  NumberPicker,
-  UnitToggle,
-  Button,
-  SegmentedControl,
-} from '../components';
+import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
 import { calculateBallisticSolution } from '../utils/ballistics';
-import { BallisticSolution } from '../types/ballistic.types';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
 // Wind direction options in degrees
@@ -67,6 +58,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
   // Reset ammo selection when rifle changes
   useEffect(() => {
     if (selectedRifle && selectedAmmo?.caliber !== selectedRifle.caliber) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedAmmoId(undefined);
     }
   }, [selectedRifleId, selectedRifle, selectedAmmo]);
@@ -137,8 +129,11 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
         distance,
         angularUnit,
       });
-    } catch (error: any) {
-      Alert.alert('Calculation Error', error.message || 'Failed to calculate ballistic solution');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Calculation Error',
+        error instanceof Error ? error.message : 'Failed to calculate ballistic solution'
+      );
     }
   };
 

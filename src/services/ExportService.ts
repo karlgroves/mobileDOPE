@@ -1015,12 +1015,16 @@ function generateSessionReportPDFHtml(
           <span class="label">Started:</span>
           <span class="value">${formatTime(session.startTime)}</span>
         </div>
-        ${session.endTime ? `
+        ${
+          session.endTime
+            ? `
         <div class="time-item">
           <span class="label">Ended:</span>
           <span class="value">${formatTime(session.endTime)}</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
 
       <div class="two-columns">
@@ -1195,13 +1199,11 @@ function generateBallisticSolutionPDFHtml(
 ): string {
   const date = new Date().toLocaleString();
 
-  const elevationValue = angularUnit === 'MIL'
-    ? solution.elevationMIL.toFixed(2)
-    : solution.elevationMOA.toFixed(2);
+  const elevationValue =
+    angularUnit === 'MIL' ? solution.elevationMIL.toFixed(2) : solution.elevationMOA.toFixed(2);
 
-  const windageValue = angularUnit === 'MIL'
-    ? solution.windageMIL.toFixed(2)
-    : solution.windageMOA.toFixed(2);
+  const windageValue =
+    angularUnit === 'MIL' ? solution.windageMIL.toFixed(2) : solution.windageMOA.toFixed(2);
 
   return `
     <!DOCTYPE html>

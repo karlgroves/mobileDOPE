@@ -29,6 +29,11 @@ interface ChartDataPoint {
 
 type Props = CalculatorStackScreenProps<'WindTable'>;
 
+// Standard distances for wind table (yards)
+const DISTANCES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+// Standard wind speeds (mph)
+const WIND_SPEEDS = [0, 5, 10, 15, 20];
+
 // Wind direction presets (sorted by degrees)
 const WIND_DIRECTIONS = [
   { label: '↑ 1:00', value: 30 },
@@ -40,7 +45,7 @@ const WIND_DIRECTIONS = [
 ];
 
 export function WindTable({ route }: Props) {
-  const { rifleId, ammoId, distance: initialDistance } = route.params;
+  const { rifleId, ammoId, distance: _initialDistance } = route.params;
   const { theme } = useTheme();
   const { colors } = theme;
 
@@ -59,15 +64,14 @@ export function WindTable({ route }: Props) {
   const [isExporting, setIsExporting] = useState(false);
   const chartRef = useRef<View>(null);
 
-  // Standard distances for wind table (yards)
-  const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
-  // Standard wind speeds (mph)
-  const windSpeeds = [0, 5, 10, 15, 20];
+  const distances = DISTANCES;
+  const windSpeeds = WIND_SPEEDS;
 
   useEffect(() => {
     if (rifle && ammo) {
       generateTable();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rifle, ammo, windDirection, currentEnv]);
 
   const generateTable = async () => {
@@ -268,7 +272,7 @@ export function WindTable({ route }: Props) {
         {currentEnv && (
           <View style={[styles.envCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.envText, { color: colors.text.secondary }]}>
-              {currentEnv.temperature}°F • {currentEnv.pressure}" Hg • {currentEnv.altitude}' MSL
+              {`${currentEnv.temperature}°F • ${currentEnv.pressure}" Hg • ${currentEnv.altitude}' MSL`}
             </Text>
           </View>
         )}
@@ -306,8 +310,19 @@ export function WindTable({ route }: Props) {
               </View>
 
               {chartData.length > 0 ? (
-                <View ref={chartRef} collapsable={false} style={[styles.chartContainer, { height: chartHeight, backgroundColor: colors.surface }]}>
-                  <CartesianChart<ChartDataPoint, 'distance', 'wind5' | 'wind10' | 'wind15' | 'wind20'>
+                <View
+                  ref={chartRef}
+                  collapsable={false}
+                  style={[
+                    styles.chartContainer,
+                    { height: chartHeight, backgroundColor: colors.surface },
+                  ]}
+                >
+                  <CartesianChart<
+                    ChartDataPoint,
+                    'distance',
+                    'wind5' | 'wind10' | 'wind15' | 'wind20'
+                  >
                     data={chartData}
                     xKey="distance"
                     yKeys={['wind5', 'wind10', 'wind15', 'wind20']}
@@ -323,10 +338,30 @@ export function WindTable({ route }: Props) {
                   >
                     {({ points }) => (
                       <>
-                        <Line points={points.wind5} color={windChartColors[1]} strokeWidth={2} curveType="natural" />
-                        <Line points={points.wind10} color={windChartColors[2]} strokeWidth={2} curveType="natural" />
-                        <Line points={points.wind15} color={windChartColors[3]} strokeWidth={2} curveType="natural" />
-                        <Line points={points.wind20} color={windChartColors[4]} strokeWidth={2} curveType="natural" />
+                        <Line
+                          points={points.wind5}
+                          color={windChartColors[1]}
+                          strokeWidth={2}
+                          curveType="natural"
+                        />
+                        <Line
+                          points={points.wind10}
+                          color={windChartColors[2]}
+                          strokeWidth={2}
+                          curveType="natural"
+                        />
+                        <Line
+                          points={points.wind15}
+                          color={windChartColors[3]}
+                          strokeWidth={2}
+                          curveType="natural"
+                        />
+                        <Line
+                          points={points.wind20}
+                          color={windChartColors[4]}
+                          strokeWidth={2}
+                          curveType="natural"
+                        />
                       </>
                     )}
                   </CartesianChart>
@@ -343,7 +378,9 @@ export function WindTable({ route }: Props) {
               <View style={styles.chartLegend}>
                 {windSpeeds.slice(1).map((speed, index) => (
                   <View key={speed} style={styles.legendItem}>
-                    <View style={[styles.legendLine, { backgroundColor: windChartColors[index + 1] }]} />
+                    <View
+                      style={[styles.legendLine, { backgroundColor: windChartColors[index + 1] }]}
+                    />
                     <Text style={[styles.legendText, { color: colors.text.secondary }]}>
                       {speed} mph
                     </Text>

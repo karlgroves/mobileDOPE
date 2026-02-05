@@ -4,17 +4,17 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { Card, Button, EmptyState, LoadingSpinner } from '../components';
+import { Card, EmptyState } from '../components';
 import { Picker } from '../components/Picker';
 import { calculateBallisticSolution } from '../utils/ballistics';
 import type { AmmoStackScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
 import type { AtmosphericConditions } from '../utils/atmospheric';
-import type { AmmoProfile } from '../models/AmmoProfile';
+// AmmoProfile type used via store
 
 type Props = AmmoStackScreenProps<'AmmoCompare'>;
 
@@ -40,7 +40,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
 
   const [selectedAmmo1Id, setSelectedAmmo1Id] = useState<number | null>(null);
   const [selectedAmmo2Id, setSelectedAmmo2Id] = useState<number | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
+  const [_isCalculating] = useState(false);
 
   // Get rifle for zero distance and scope height
   const rifle = rifleId ? rifles.find((r) => r.id === rifleId) : rifles[0];
@@ -112,6 +112,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
         ammo2ElevationMIL: solution2.elevationMIL,
       };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rifle, ammo1, ammo2]);
 
   // Ammo picker options
@@ -240,13 +241,11 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
               Ballistic Comparison
             </Text>
             <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-              Standard conditions: 59°F, 29.92" Hg
+              {`Standard conditions: 59°F, 29.92" Hg`}
             </Text>
 
             {/* Drop Table */}
-            <Text style={[styles.tableTitle, { color: colors.text.primary }]}>
-              Elevation (MIL)
-            </Text>
+            <Text style={[styles.tableTitle, { color: colors.text.primary }]}>Elevation (MIL)</Text>
             <View style={styles.comparisonTable}>
               <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Dist</Text>
@@ -255,25 +254,43 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
-              {comparisonData.filter((_, i) => i % 2 === 0).map((row) => {
-                const diff = row.ammo1ElevationMIL - row.ammo2ElevationMIL;
-                return (
-                  <View key={row.distance} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                      {row.distance}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.primary }]}>
-                      {row.ammo1ElevationMIL.toFixed(1)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.warning }]}>
-                      {row.ammo2ElevationMIL.toFixed(1)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: diff > 0 ? colors.success : diff < 0 ? colors.error : colors.text.secondary }]}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}
-                    </Text>
-                  </View>
-                );
-              })}
+              {comparisonData
+                .filter((_, i) => i % 2 === 0)
+                .map((row) => {
+                  const diff = row.ammo1ElevationMIL - row.ammo2ElevationMIL;
+                  return (
+                    <View
+                      key={row.distance}
+                      style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                    >
+                      <Text style={[styles.tableCell, { color: colors.text.primary }]}>
+                        {row.distance}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.primary }]}>
+                        {row.ammo1ElevationMIL.toFixed(1)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                        {row.ammo2ElevationMIL.toFixed(1)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          {
+                            color:
+                              diff > 0
+                                ? colors.success
+                                : diff < 0
+                                  ? colors.error
+                                  : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        {diff > 0 ? '+' : ''}
+                        {diff.toFixed(1)}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
 
             {/* Velocity Table */}
@@ -288,25 +305,43 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
-              {comparisonData.filter((_, i) => i % 2 === 0).map((row) => {
-                const diff = row.ammo1Velocity - row.ammo2Velocity;
-                return (
-                  <View key={row.distance} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                      {row.distance}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.primary }]}>
-                      {row.ammo1Velocity.toFixed(0)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.warning }]}>
-                      {row.ammo2Velocity.toFixed(0)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: diff > 0 ? colors.success : diff < 0 ? colors.error : colors.text.secondary }]}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(0)}
-                    </Text>
-                  </View>
-                );
-              })}
+              {comparisonData
+                .filter((_, i) => i % 2 === 0)
+                .map((row) => {
+                  const diff = row.ammo1Velocity - row.ammo2Velocity;
+                  return (
+                    <View
+                      key={row.distance}
+                      style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                    >
+                      <Text style={[styles.tableCell, { color: colors.text.primary }]}>
+                        {row.distance}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.primary }]}>
+                        {row.ammo1Velocity.toFixed(0)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                        {row.ammo2Velocity.toFixed(0)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          {
+                            color:
+                              diff > 0
+                                ? colors.success
+                                : diff < 0
+                                  ? colors.error
+                                  : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        {diff > 0 ? '+' : ''}
+                        {diff.toFixed(0)}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
 
             {/* Energy Table */}
@@ -321,25 +356,43 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
-              {comparisonData.filter((_, i) => i % 2 === 0).map((row) => {
-                const diff = row.ammo1Energy - row.ammo2Energy;
-                return (
-                  <View key={row.distance} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                      {row.distance}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.primary }]}>
-                      {row.ammo1Energy.toFixed(0)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: colors.warning }]}>
-                      {row.ammo2Energy.toFixed(0)}
-                    </Text>
-                    <Text style={[styles.tableCell, { color: diff > 0 ? colors.success : diff < 0 ? colors.error : colors.text.secondary }]}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(0)}
-                    </Text>
-                  </View>
-                );
-              })}
+              {comparisonData
+                .filter((_, i) => i % 2 === 0)
+                .map((row) => {
+                  const diff = row.ammo1Energy - row.ammo2Energy;
+                  return (
+                    <View
+                      key={row.distance}
+                      style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                    >
+                      <Text style={[styles.tableCell, { color: colors.text.primary }]}>
+                        {row.distance}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.primary }]}>
+                        {row.ammo1Energy.toFixed(0)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                        {row.ammo2Energy.toFixed(0)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          {
+                            color:
+                              diff > 0
+                                ? colors.success
+                                : diff < 0
+                                  ? colors.error
+                                  : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        {diff > 0 ? '+' : ''}
+                        {diff.toFixed(0)}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
           </Card>
         )}

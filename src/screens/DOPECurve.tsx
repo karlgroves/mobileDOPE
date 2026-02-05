@@ -45,9 +45,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
   // Filter DOPE logs for this rifle/ammo combination
   const filteredLogs = useMemo(() => {
-    return dopeLogs.filter(
-      (log) => log.rifleId === rifleId && log.ammoId === ammoId
-    );
+    return dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId);
   }, [dopeLogs, rifleId, ammoId]);
 
   // Convert DOPE logs to data points
@@ -58,9 +56,10 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         let correction = log.elevationCorrection || 0;
         // Convert if needed
         if (log.correctionUnit !== correctionUnit) {
-          correction = log.correctionUnit === 'MIL'
-            ? correction * 3.438 // MIL to MOA
-            : correction / 3.438; // MOA to MIL
+          correction =
+            log.correctionUnit === 'MIL'
+              ? correction * 3.438 // MIL to MOA
+              : correction / 3.438; // MOA to MIL
         }
         return {
           distance: log.distance || 0,
@@ -113,9 +112,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
       const solution = calculateBallisticSolution(rifleConfig, ammoConfig, shot, atmosphere);
 
-      const correction = correctionUnit === 'MIL'
-        ? solution.elevationMIL
-        : solution.elevationMOA;
+      const correction = correctionUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA;
 
       return { distance, elevation: correction };
     });
@@ -225,7 +222,14 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
           </View>
 
           {hasData ? (
-            <View ref={chartRef} collapsable={false} style={[styles.chartContainer, { height: chartHeight, backgroundColor: colors.background }]}>
+            <View
+              ref={chartRef}
+              collapsable={false}
+              style={[
+                styles.chartContainer,
+                { height: chartHeight, backgroundColor: colors.background },
+              ]}
+            >
               <CartesianChart<DataPoint, 'distance', 'elevation'>
                 data={calculatedCurve}
                 xKey="distance"
@@ -281,9 +285,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
         {/* Data Table */}
         <Card style={styles.tableCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Drop Table
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Drop Table</Text>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Distance</Text>
             <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>
@@ -295,41 +297,41 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </Text>
             )}
           </View>
-          {calculatedCurve.filter((_, i) => i % 2 === 0).map((point) => {
-            const actualPoint = actualDataPoints.find(
-              (ap) => Math.abs(ap.distance - point.distance) < 25
-            );
-            return (
-              <View
-                key={point.distance}
-                style={[styles.tableRow, { borderBottomColor: colors.border }]}
-              >
-                <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                  {point.distance} yds
-                </Text>
-                <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                  {point.elevation.toFixed(1)}
-                </Text>
-                {actualDataPoints.length > 0 && (
-                  <Text
-                    style={[
-                      styles.tableCell,
-                      { color: actualPoint ? colors.warning : colors.text.secondary },
-                    ]}
-                  >
-                    {actualPoint ? actualPoint.elevation.toFixed(1) : '-'}
+          {calculatedCurve
+            .filter((_, i) => i % 2 === 0)
+            .map((point) => {
+              const actualPoint = actualDataPoints.find(
+                (ap) => Math.abs(ap.distance - point.distance) < 25
+              );
+              return (
+                <View
+                  key={point.distance}
+                  style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={[styles.tableCell, { color: colors.text.primary }]}>
+                    {point.distance} yds
                   </Text>
-                )}
-              </View>
-            );
-          })}
+                  <Text style={[styles.tableCell, { color: colors.text.primary }]}>
+                    {point.elevation.toFixed(1)}
+                  </Text>
+                  {actualDataPoints.length > 0 && (
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        { color: actualPoint ? colors.warning : colors.text.secondary },
+                      ]}
+                    >
+                      {actualPoint ? actualPoint.elevation.toFixed(1) : '-'}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
         </Card>
 
         {/* Data Summary */}
         <Card style={styles.summaryCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Data Summary
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Summary</Text>
 
           {actualDataPoints.length === 0 ? (
             <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
@@ -369,8 +371,8 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         {/* Info Note */}
         <View style={[styles.infoNote, { backgroundColor: colors.surface }]}>
           <Text style={[styles.infoText, { color: colors.text.secondary }]}>
-            The calculated curve uses standard atmospheric conditions (59°F, 29.92 inHg).
-            Your actual DOPE may vary based on environmental conditions.
+            The calculated curve uses standard atmospheric conditions (59°F, 29.92 inHg). Your
+            actual DOPE may vary based on environmental conditions.
           </Text>
         </View>
       </ScrollView>

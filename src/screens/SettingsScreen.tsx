@@ -4,7 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert, Switch, TextInput, Pressable } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Text,
+  StyleSheet,
+  Alert,
+  Switch,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, Button, SegmentedControl } from '../components';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -295,7 +304,10 @@ export const SettingsScreen: React.FC<Props> = () => {
             {settings.distancePresets.map((preset) => (
               <Pressable
                 key={preset}
-                style={[styles.presetChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[
+                  styles.presetChip,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
                 onLongPress={() => handleRemovePreset(preset)}
               >
                 <Text style={[styles.presetChipText, { color: colors.text.primary }]}>

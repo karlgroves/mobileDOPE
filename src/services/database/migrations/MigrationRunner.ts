@@ -1,10 +1,11 @@
+import * as SQLite from 'expo-sqlite';
 import databaseService from '../DatabaseService';
 
 export interface Migration {
   version: number;
   name: string;
-  up: (db: any) => Promise<void>;
-  down: (db: any) => Promise<void>;
+  up: (db: SQLite.SQLiteDatabase) => Promise<void>;
+  down: (db: SQLite.SQLiteDatabase) => Promise<void>;
 }
 
 class MigrationRunner {
@@ -22,7 +23,6 @@ class MigrationRunner {
    * Run all pending migrations
    */
   async runPendingMigrations(): Promise<void> {
-    const db = databaseService.getDatabase();
     const currentVersion = await databaseService.getDatabaseVersion();
 
     console.log(`Current database version: ${currentVersion}`);
@@ -57,7 +57,6 @@ class MigrationRunner {
    * Rollback to a specific version
    */
   async rollbackTo(targetVersion: number): Promise<void> {
-    const db = databaseService.getDatabase();
     const currentVersion = await databaseService.getDatabaseVersion();
 
     if (targetVersion >= currentVersion) {

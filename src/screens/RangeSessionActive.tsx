@@ -194,26 +194,22 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
 
   // Handle ending session
   const handleEndSession = async () => {
-    Alert.alert(
-      'End Session',
-      'Are you sure you want to end this range session?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End Session',
-          onPress: async () => {
-            if (!session) return;
-            try {
-              await rangeSessionRepository.endSession(session.id!);
-              navigation.navigate('RangeSessionSummary', { sessionId: session.id! });
-            } catch (error) {
-              console.error('Failed to end session:', error);
-              Alert.alert('Error', 'Failed to end session');
-            }
-          },
+    Alert.alert('End Session', 'Are you sure you want to end this range session?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'End Session',
+        onPress: async () => {
+          if (!session) return;
+          try {
+            await rangeSessionRepository.endSession(session.id!);
+            navigation.navigate('RangeSessionSummary', { sessionId: session.id! });
+          } catch (error) {
+            console.error('Failed to end session:', error);
+            Alert.alert('Error', 'Failed to end session');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Handle distance change
@@ -273,7 +269,9 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading session...</Text>
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
+          Loading session...
+        </Text>
       </View>
     );
   }
@@ -297,7 +295,9 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               </Text>
             </View>
             <View style={styles.headerRight}>
-              <Text style={[styles.timerLabel, { color: colors.text.secondary }]}>Session Time</Text>
+              <Text style={[styles.timerLabel, { color: colors.text.secondary }]}>
+                Session Time
+              </Text>
               <Text style={[styles.timerValue, { color: colors.text.primary }]}>
                 {formatTime(elapsedTime)}
               </Text>
@@ -349,7 +349,8 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {elevationAdjustment !== 0 && (
                 <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
-                  {elevationAdjustment > 0 ? '+' : ''}{elevationAdjustment.toFixed(1)}
+                  {elevationAdjustment > 0 ? '+' : ''}
+                  {elevationAdjustment.toFixed(1)}
                 </Text>
               )}
             </View>
@@ -383,7 +384,8 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {windageAdjustment !== 0 && (
                 <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
-                  {windageAdjustment > 0 ? '+' : ''}{windageAdjustment.toFixed(1)}
+                  {windageAdjustment > 0 ? '+' : ''}
+                  {windageAdjustment.toFixed(1)}
                 </Text>
               )}
             </View>
@@ -443,9 +445,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               onPress={handleRecordShot}
               disabled={isRecording}
             >
-              <Text style={styles.recordShotButtonText}>
-                {isRecording ? '...' : 'SHOT'}
-              </Text>
+              <Text style={styles.recordShotButtonText}>{isRecording ? '...' : 'SHOT'}</Text>
             </Pressable>
           </View>
         </Card>
@@ -474,12 +474,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
         )}
 
         {/* End Session Button */}
-        <Button
-          title="End Session"
-          onPress={handleEndSession}
-          variant="danger"
-          size="large"
-        />
+        <Button title="End Session" onPress={handleEndSession} variant="danger" size="large" />
       </ScrollView>
     </View>
   );

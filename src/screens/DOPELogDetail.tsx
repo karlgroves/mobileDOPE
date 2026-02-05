@@ -34,6 +34,7 @@ export function DOPELogDetail({ route, navigation }: Props) {
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [log]);
 
   const handleEdit = () => {
@@ -50,7 +51,7 @@ export function DOPELogDetail({ route, navigation }: Props) {
           try {
             await deleteDopeLog(logId);
             navigation.goBack();
-          } catch (error) {
+          } catch (_error) {
             Alert.alert('Error', 'Failed to delete DOPE log');
           }
         },

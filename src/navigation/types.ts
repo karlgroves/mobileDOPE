@@ -6,6 +6,7 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BallisticSolution } from '../types/ballistic.types';
 
 /**
  * Root Stack Navigator
@@ -81,7 +82,7 @@ export type HistoryStackParamList = {
 export type CalculatorStackParamList = {
   BallisticCalculator: undefined;
   BallisticSolutionResults: {
-    solution: Record<string, unknown>; // BallisticSolution type
+    solution: BallisticSolution;
     rifleId: number;
     ammoId: number;
     distance: number;

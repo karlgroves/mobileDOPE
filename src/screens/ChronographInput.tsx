@@ -195,26 +195,22 @@ export const ChronographInput: React.FC = () => {
   };
 
   const handleClearSession = async () => {
-    Alert.alert(
-      'Clear Session',
-      'Delete all shots from this session?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await shotStringRepository.deleteBySession(ammoId, sessionDate);
-              await loadSessionData();
-            } catch (error) {
-              console.error('Failed to clear session:', error);
-              Alert.alert('Error', 'Failed to clear session.');
-            }
-          },
+    Alert.alert('Clear Session', 'Delete all shots from this session?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await shotStringRepository.deleteBySession(ammoId, sessionDate);
+            await loadSessionData();
+          } catch (error) {
+            console.error('Failed to clear session:', error);
+            Alert.alert('Error', 'Failed to clear session.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleViewHistory = () => {
@@ -286,11 +282,7 @@ export const ChronographInput: React.FC = () => {
               variant="secondary"
             />
             <Button title="View Session History" onPress={handleViewHistory} variant="secondary" />
-            <Button
-              title="Clear This Session"
-              onPress={handleClearSession}
-              variant="danger"
-            />
+            <Button title="Clear This Session" onPress={handleClearSession} variant="danger" />
           </View>
         )}
       </ScrollView>

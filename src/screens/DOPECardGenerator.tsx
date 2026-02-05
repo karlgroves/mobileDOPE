@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -16,6 +16,16 @@ import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+
+interface DOPEDataRow {
+  distance: number;
+  elevation: number;
+  windData: { [key: number]: { elevation: number; windage: number } };
+  velocity: number;
+  energy: number;
+  drop: number;
+  tof: number;
+}
 
 type Props = ProfilesStackScreenProps<'DOPECardGenerator'>;
 
@@ -32,9 +42,9 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>('yards');
   const [cardFormat, setCardFormat] = useState<'detailed' | 'condensed'>('detailed');
   const [colorMode, setColorMode] = useState<'light' | 'nightVision'>('light');
-  const [minDistance, setMinDistance] = useState(100);
-  const [maxDistance, setMaxDistance] = useState(1000);
-  const [increment, setIncrement] = useState(100);
+  const [minDistance] = useState(100);
+  const [maxDistance] = useState(1000);
+  const [increment] = useState(100);
   const [windSpeeds] = useState([5, 10, 15, 20]);
   const [generating, setGenerating] = useState(false);
 
@@ -45,7 +55,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   const dopeData = useMemo(() => {
     if (!rifle || !ammo || !environment) return [];
 
-    const data: any[] = [];
+    const data: DOPEDataRow[] = [];
 
     const rifleConfig = {
       zeroDistance: rifle.zeroDistance,
@@ -460,9 +470,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
           </View>
 
           <View style={styles.setting}>
-            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>
-              Card Format
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>Card Format</Text>
             <SegmentedControl
               options={[
                 { label: 'Detailed', value: 'detailed' },
@@ -474,9 +482,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
           </View>
 
           <View style={styles.setting}>
-            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>
-              Color Mode
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>Color Mode</Text>
             <SegmentedControl
               options={[
                 { label: 'Light', value: 'light' },

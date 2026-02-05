@@ -24,7 +24,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
   const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>();
   const [selectedAmmoId, setSelectedAmmoId] = useState<number | undefined>();
   const [distance, setDistance] = useState<number>(100);
-  const [sessionName, setSessionName] = useState<string>('');
+  const [sessionName] = useState<string>('');
   const [coldBoreShot, setColdBoreShot] = useState<boolean>(true);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -33,6 +33,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
     loadRifles();
     loadAmmoProfiles();
     loadSnapshots(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
@@ -41,6 +42,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
     : [];
 
   // Reset ammo selection when rifle changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const selectedAmmo = ammoProfiles.find((a) => a.id === selectedAmmoId);
     if (selectedRifle && selectedAmmo?.caliber !== selectedRifle.caliber) {
@@ -204,9 +206,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
 
         {/* Profile Selection */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Session Setup
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Session Setup</Text>
           <Picker
             label="Rifle"
             value={selectedRifleId?.toString() || ''}
@@ -235,9 +235,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
 
         {/* Distance Selection */}
         <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Target Distance
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Target Distance</Text>
           <NumberPicker
             label="Distance"
             value={distance}
@@ -255,7 +253,9 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
         <Card style={styles.card}>
           <View style={styles.switchRow}>
             <View style={styles.switchLabel}>
-              <Text style={[styles.switchTitle, { color: colors.text.primary }]}>Cold Bore Shot</Text>
+              <Text style={[styles.switchTitle, { color: colors.text.primary }]}>
+                Cold Bore Shot
+              </Text>
               <Text style={[styles.switchHelp, { color: colors.text.secondary }]}>
                 First shot of the day/session
               </Text>

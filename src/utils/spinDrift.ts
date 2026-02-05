@@ -79,7 +79,7 @@ const CALIBER_DIAMETER_MAP: Record<string, number> = {
   '.45-70': 0.458,
   '.458 Win Mag': 0.458,
   '.458 Lott': 0.458,
-  '.50 BMG': 0.510,
+  '.50 BMG': 0.51,
 };
 
 /**

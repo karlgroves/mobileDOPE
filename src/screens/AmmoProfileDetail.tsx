@@ -81,9 +81,7 @@ export const AmmoProfileDetail: React.FC = () => {
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
             {ammo.manufacturer}
           </Text>
-          <Text style={[styles.caliber, { color: colors.text.secondary }]}>
-            {ammo.caliber}
-          </Text>
+          <Text style={[styles.caliber, { color: colors.text.secondary }]}>{ammo.caliber}</Text>
         </Card>
 
         <Card style={styles.card}>
