@@ -56,7 +56,7 @@ export const AmmoProfileDetail: React.FC = () => {
   };
 
   const handleGenerateDOPECard = () => {
-    if (ammo.id) {
+    if (ammo.id && rifleId) {
       navigation.navigate('DOPECardGenerator', { rifleId, ammoId: ammo.id });
     }
   };

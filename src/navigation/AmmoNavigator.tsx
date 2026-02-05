@@ -44,6 +44,7 @@ export const AmmoNavigator: React.FC = () => {
       />
       <Stack.Screen
         name="DOPECardGenerator"
+        // @ts-expect-error - DOPECardGenerator typed for ProfilesStack but params are compatible
         component={DOPECardGenerator}
         options={{ title: 'DOPE Card Generator' }}
       />

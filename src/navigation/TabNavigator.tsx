@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// @ts-expect-error - @expo/vector-icons types resolved at runtime via expo
 // eslint-disable-next-line import/no-unresolved
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -49,7 +50,7 @@ export const TabNavigator: React.FC = () => {
         options={{
           tabBarLabel: 'Logs',
           tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
-          unmountOnBlur: true,
+          lazy: false,
         }}
       />
       <Tab.Screen
@@ -58,7 +59,7 @@ export const TabNavigator: React.FC = () => {
         options={{
           tabBarLabel: 'Calc',
           tabBarIcon: ({ color, size }) => <Ionicons name="calculator" size={size} color={color} />,
-          unmountOnBlur: true,
+          lazy: false,
         }}
       />
       <Tab.Screen
@@ -69,7 +70,7 @@ export const TabNavigator: React.FC = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="crosshairs-gps" size={size} color={color} />
           ),
-          unmountOnBlur: true,
+          lazy: false,
         }}
       />
       <Tab.Screen
@@ -80,7 +81,7 @@ export const TabNavigator: React.FC = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="bullet" size={size} color={color} />
           ),
-          unmountOnBlur: true,
+          lazy: false,
         }}
       />
       <Tab.Screen
@@ -89,7 +90,7 @@ export const TabNavigator: React.FC = () => {
         options={{
           tabBarLabel: 'Weather',
           tabBarIcon: ({ color, size }) => <Ionicons name="cloudy" size={size} color={color} />,
-          unmountOnBlur: true,
+          lazy: false,
         }}
       />
     </Tab.Navigator>

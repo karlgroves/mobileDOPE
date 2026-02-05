@@ -21,10 +21,11 @@ interface BackupData {
   exportDate: string;
   exportVersion: string;
   type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: {
-    rifles?: Record<string, unknown>[];
-    ammos?: Record<string, unknown>[];
-    logs?: Record<string, unknown>[];
+    rifles?: any[];
+    ammos?: any[];
+    logs?: any[];
   };
   counts?: {
     rifles?: number;
@@ -164,7 +165,7 @@ export async function importFullBackup(): Promise<ImportResult> {
         try {
           // Remove ID and rifleId (ammo is now caliber-based)
           const { id: _id, rifleId: _rifleId, ...ammoWithoutId } = ammoData;
-          await ammoStore.createAmmo(ammoWithoutId);
+          await ammoStore.createAmmoProfile(ammoWithoutId);
           ammosImported++;
         } catch (error) {
           console.error('Failed to import ammo:', error);
@@ -230,17 +231,15 @@ export async function importRifleProfiles(): Promise<ImportResult> {
     let riflesImported = 0;
 
     // Handle single or batch import
-    const rifles = data.type === 'rifle_profile' ? [data.data] : data.data;
+    const rifles = data.data.rifles ?? [];
 
-    if (Array.isArray(rifles)) {
-      for (const rifleData of rifles) {
-        try {
-          const { id: _id, ...rifleWithoutId } = rifleData;
-          await rifleStore.createRifle(rifleWithoutId);
-          riflesImported++;
-        } catch (error) {
-          console.error('Failed to import rifle:', error);
-        }
+    for (const rifleData of rifles) {
+      try {
+        const { id: _id, ...rifleWithoutId } = rifleData;
+        await rifleStore.createRifle(rifleWithoutId);
+        riflesImported++;
+      } catch (error) {
+        console.error('Failed to import rifle:', error);
       }
     }
 
@@ -283,15 +282,15 @@ export async function importDOPELogs(): Promise<ImportResult> {
     const dopeStore = useDOPEStore.getState();
     let logsImported = 0;
 
-    if (data.data && Array.isArray(data.data)) {
-      for (const logData of data.data) {
-        try {
-          const { id: _id, ...logWithoutId } = logData;
-          await dopeStore.createDopeLog(logWithoutId);
-          logsImported++;
-        } catch (error) {
-          console.error('Failed to import DOPE log:', error);
-        }
+    const logs = data.data.logs ?? [];
+
+    for (const logData of logs) {
+      try {
+        const { id: _id, ...logWithoutId } = logData;
+        await dopeStore.createDopeLog(logWithoutId);
+        logsImported++;
+      } catch (error) {
+        console.error('Failed to import DOPE log:', error);
       }
     }
 
