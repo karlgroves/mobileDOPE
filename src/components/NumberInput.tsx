@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, TextInputProps } from './TextInput';
 import { useTheme } from '../contexts/ThemeContext';
 
-export interface NumberInputProps
-  extends Omit<TextInputProps, 'value' | 'onChangeText' | 'keyboardType'> {
+export interface NumberInputProps extends Omit<
+  TextInputProps,
+  'value' | 'onChangeText' | 'keyboardType'
+> {
   value: number | undefined;
   onChangeValue: (value: number | undefined) => void;
   min?: number;
