@@ -69,6 +69,77 @@ export async function pickImportFile(): Promise<{
   }
 }
 
+// Allowed fields for each record type (prevents mass assignment from imported data)
+const RIFLE_ALLOWED_FIELDS = [
+  'name',
+  'caliber',
+  'barrelLength',
+  'twistRate',
+  'zeroDistance',
+  'opticManufacturer',
+  'opticModel',
+  'reticleType',
+  'clickValueType',
+  'clickValue',
+  'scopeHeight',
+  'notes',
+];
+
+const AMMO_ALLOWED_FIELDS = [
+  'name',
+  'manufacturer',
+  'bulletWeight',
+  'bulletType',
+  'ballisticCoefficientG1',
+  'ballisticCoefficientG7',
+  'muzzleVelocity',
+  'powderType',
+  'powderWeight',
+  'lotNumber',
+  'notes',
+];
+
+const DOPE_LOG_ALLOWED_FIELDS = [
+  'rifleId',
+  'ammoId',
+  'environmentId',
+  'distance',
+  'distanceUnit',
+  'distanceYards',
+  'elevationCorrection',
+  'windageCorrection',
+  'correctionUnit',
+  'targetType',
+  'groupSize',
+  'hitCount',
+  'shotCount',
+  'hitPercentage',
+  'notes',
+  'timestamp',
+];
+
+/**
+ * Pick only allowed fields from a record, preventing prototype pollution
+ * and mass assignment of unexpected fields
+ */
+function pickAllowedFields(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  record: any,
+  allowedFields: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+  if (!record || typeof record !== 'object') return {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: Record<string, any> = {};
+  for (const field of allowedFields) {
+    if (Object.prototype.hasOwnProperty.call(record, field) && record[field] !== undefined) {
+      result[field] = record[field];
+    }
+  }
+  return result;
+}
+
 /**
  * Validate backup data structure
  */
@@ -79,8 +150,21 @@ function validateBackupData(data: unknown): data is BackupData {
 
   const record = data as Record<string, unknown>;
 
+  // Reject prototype pollution attempts
+  if (
+    Object.prototype.hasOwnProperty.call(record, '__proto__') ||
+    Object.prototype.hasOwnProperty.call(record, 'prototype')
+  ) {
+    return false;
+  }
+
   // Check required top-level fields
   if (!record.exportVersion || !record.type || !record.data) {
+    return false;
+  }
+
+  // Validate exportVersion is a string
+  if (typeof record.exportVersion !== 'string') {
     return false;
   }
 
@@ -145,13 +229,12 @@ export async function importFullBackup(): Promise<ImportResult> {
     let ammosImported = 0;
     let logsImported = 0;
 
-    // Import rifles
+    // Import rifles (only allowed fields, no ID)
     if (data.data.rifles && Array.isArray(data.data.rifles)) {
       for (const rifleData of data.data.rifles) {
         try {
-          // Remove ID to create new records (avoid conflicts)
-          const { id: _id, ...rifleWithoutId } = rifleData;
-          await rifleStore.createRifle(rifleWithoutId);
+          const sanitizedRifle = pickAllowedFields(rifleData, RIFLE_ALLOWED_FIELDS);
+          await rifleStore.createRifle(sanitizedRifle);
           riflesImported++;
         } catch (error) {
           console.error('Failed to import rifle:', error);
@@ -159,13 +242,12 @@ export async function importFullBackup(): Promise<ImportResult> {
       }
     }
 
-    // Import ammo profiles
+    // Import ammo profiles (only allowed fields, no ID)
     if (data.data.ammos && Array.isArray(data.data.ammos)) {
       for (const ammoData of data.data.ammos) {
         try {
-          // Remove ID and rifleId (ammo is now caliber-based)
-          const { id: _id, rifleId: _rifleId, ...ammoWithoutId } = ammoData;
-          await ammoStore.createAmmoProfile(ammoWithoutId);
+          const sanitizedAmmo = pickAllowedFields(ammoData, AMMO_ALLOWED_FIELDS);
+          await ammoStore.createAmmoProfile(sanitizedAmmo);
           ammosImported++;
         } catch (error) {
           console.error('Failed to import ammo:', error);
@@ -173,13 +255,12 @@ export async function importFullBackup(): Promise<ImportResult> {
       }
     }
 
-    // Import DOPE logs
+    // Import DOPE logs (only allowed fields, no ID)
     if (data.data.logs && Array.isArray(data.data.logs)) {
       for (const logData of data.data.logs) {
         try {
-          // Remove ID to create new records
-          const { id: _id, ...logWithoutId } = logData;
-          await dopeStore.createDopeLog(logWithoutId);
+          const sanitizedLog = pickAllowedFields(logData, DOPE_LOG_ALLOWED_FIELDS);
+          await dopeStore.createDopeLog(sanitizedLog);
           logsImported++;
         } catch (error) {
           console.error('Failed to import DOPE log:', error);
@@ -235,8 +316,8 @@ export async function importRifleProfiles(): Promise<ImportResult> {
 
     for (const rifleData of rifles) {
       try {
-        const { id: _id, ...rifleWithoutId } = rifleData;
-        await rifleStore.createRifle(rifleWithoutId);
+        const sanitizedRifle = pickAllowedFields(rifleData, RIFLE_ALLOWED_FIELDS);
+        await rifleStore.createRifle(sanitizedRifle);
         riflesImported++;
       } catch (error) {
         console.error('Failed to import rifle:', error);
@@ -286,8 +367,8 @@ export async function importDOPELogs(): Promise<ImportResult> {
 
     for (const logData of logs) {
       try {
-        const { id: _id, ...logWithoutId } = logData;
-        await dopeStore.createDopeLog(logWithoutId);
+        const sanitizedLog = pickAllowedFields(logData, DOPE_LOG_ALLOWED_FIELDS);
+        await dopeStore.createDopeLog(sanitizedLog);
         logsImported++;
       } catch (error) {
         console.error('Failed to import DOPE log:', error);

@@ -130,8 +130,12 @@ class DatabaseService {
 
   /**
    * Drop all tables (use with caution!)
+   * Requires explicit confirmation string to prevent accidental data loss.
    */
-  async dropAllTables(): Promise<void> {
+  async dropAllTables(confirm: string = ''): Promise<void> {
+    if (confirm !== 'CONFIRM_DROP_ALL_TABLES') {
+      throw new Error('dropAllTables requires confirmation string "CONFIRM_DROP_ALL_TABLES"');
+    }
     if (!this.db) return;
 
     try {
@@ -145,7 +149,9 @@ class DatabaseService {
         DROP TABLE IF EXISTS rifle_profiles;
         DROP TABLE IF EXISTS app_settings;
       `);
-      console.log('All tables dropped');
+      if (__DEV__) {
+        console.log('All tables dropped');
+      }
     } catch (error) {
       console.error('Failed to drop tables:', error);
       throw error;
@@ -154,12 +160,18 @@ class DatabaseService {
 
   /**
    * Reset database (drop and recreate)
+   * Requires explicit confirmation string to prevent accidental data loss.
    */
-  async reset(): Promise<void> {
-    await this.dropAllTables();
+  async reset(confirm: string = ''): Promise<void> {
+    if (confirm !== 'CONFIRM_RESET_DATABASE') {
+      throw new Error('reset requires confirmation string "CONFIRM_RESET_DATABASE"');
+    }
+    await this.dropAllTables('CONFIRM_DROP_ALL_TABLES');
     await this.createTables();
     await this.createIndexes();
-    console.log('Database reset complete');
+    if (__DEV__) {
+      console.log('Database reset complete');
+    }
   }
 
   /**

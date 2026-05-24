@@ -67,7 +67,7 @@
     "jest-expo": "^54.0.17",
     "jscpd": "^4.0.8",
     "lint-staged": "^16.2.7",
-    "markdownlint-cli": "^0.47.0",
+    "markdownlint-cli": "^0.48.0",
     "prettier": "^3.8.1",
     "ts-jest": "^29.4.6",
     "typescript": "~5.9.2"

@@ -83,11 +83,13 @@ export class DOPELogRepository {
     const db = databaseService.getDatabase();
 
     let sql = 'SELECT * FROM dope_logs ORDER BY timestamp DESC';
+    const params: any[] = [];
     if (limit) {
-      sql += ` LIMIT ${limit}`;
+      sql += ' LIMIT ?';
+      params.push(Math.max(1, Math.floor(Number(limit))));
     }
 
-    const rows = await db.getAllAsync<DOPELogRow>(sql);
+    const rows = await db.getAllAsync<DOPELogRow>(sql, params);
 
     return rows.map((row) => DOPELog.fromRow(row));
   }

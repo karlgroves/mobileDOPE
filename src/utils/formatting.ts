@@ -128,3 +128,15 @@ export const formatEnergy = (value: number, decimals: number = 0): string => {
 export const formatTimeOfFlight = (value: number, decimals: number = 2): string => {
   return `${value.toFixed(decimals)} s`;
 };
+
+/**
+ * Escape HTML entities to prevent XSS in generated HTML documents (PDF, DOPE cards)
+ */
+export const escapeHtml = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};

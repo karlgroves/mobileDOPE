@@ -13,6 +13,33 @@ import type { RangeSession } from '../models/RangeSession';
 import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
 import type { BallisticSolution } from '../types/ballistic.types';
 
+/**
+ * Escape HTML entities to prevent injection in generated HTML documents
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Sanitize a CSV cell value to prevent formula injection
+ */
+function sanitizeCsvCell(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) return '';
+  const str = String(value);
+  // Wrap in quotes and escape internal quotes
+  const escaped = str.replace(/"/g, '""');
+  // Prefix formula-triggering characters
+  if (/^[=+\-@\t\r]/.test(escaped)) {
+    return `"'${escaped}"`;
+  }
+  return `"${escaped}"`;
+}
+
 export interface ExportResult {
   success: boolean;
   uri?: string;
@@ -165,23 +192,23 @@ function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfi
 
   const rows = logs.map((log) => {
     return [
-      log.timestamp ? new Date(log.timestamp).toISOString() : '',
-      getRifleName(log.rifleId),
-      getAmmoName(log.ammoId),
-      log.distance,
-      log.elevationCorrection,
-      log.windageCorrection,
-      log.correctionUnit,
-      log.hitCount || log.shotCount ? 'Yes' : 'No',
-      log.targetType || '',
-      log.groupSize || '',
-      '', // temperature - would need environment lookup
-      '', // humidity - would need environment lookup
-      '', // pressure - would need environment lookup
-      '', // windSpeed - would need environment lookup
-      '', // windDirection - would need environment lookup
-      '', // altitude - would need environment lookup
-      log.notes ? `"${log.notes.replace(/"/g, '""')}"` : '',
+      sanitizeCsvCell(log.timestamp ? new Date(log.timestamp).toISOString() : ''),
+      sanitizeCsvCell(getRifleName(log.rifleId)),
+      sanitizeCsvCell(getAmmoName(log.ammoId)),
+      sanitizeCsvCell(log.distance),
+      sanitizeCsvCell(log.elevationCorrection),
+      sanitizeCsvCell(log.windageCorrection),
+      sanitizeCsvCell(log.correctionUnit),
+      sanitizeCsvCell(log.hitCount || log.shotCount ? 'Yes' : 'No'),
+      sanitizeCsvCell(log.targetType),
+      sanitizeCsvCell(log.groupSize),
+      sanitizeCsvCell(''), // temperature
+      sanitizeCsvCell(''), // humidity
+      sanitizeCsvCell(''), // pressure
+      sanitizeCsvCell(''), // windSpeed
+      sanitizeCsvCell(''), // windDirection
+      sanitizeCsvCell(''), // altitude
+      sanitizeCsvCell(log.notes),
     ];
   });
 
@@ -309,13 +336,13 @@ function generateDOPELogsPDFHtml(
         .map(
           (log) => `
         <tr>
-          <td>${formatDate(log.timestamp)}</td>
-          <td>${log.distance || 'N/A'}</td>
-          <td class="correction">${log.elevationCorrection?.toFixed(1) || '--'}</td>
-          <td class="correction">${log.windageCorrection?.toFixed(1) || '--'}</td>
-          <td>${log.correctionUnit || 'MIL'}</td>
-          <td>${getAmmoName(log.ammoId)}</td>
-          <td>${log.notes || ''}</td>
+          <td>${escapeHtml(formatDate(log.timestamp))}</td>
+          <td>${escapeHtml(String(log.distance || 'N/A'))}</td>
+          <td class="correction">${escapeHtml(log.elevationCorrection?.toFixed(1) || '--')}</td>
+          <td class="correction">${escapeHtml(log.windageCorrection?.toFixed(1) || '--')}</td>
+          <td>${escapeHtml(log.correctionUnit || 'MIL')}</td>
+          <td>${escapeHtml(getAmmoName(log.ammoId))}</td>
+          <td>${escapeHtml(log.notes || '')}</td>
         </tr>
       `
         )
@@ -323,7 +350,7 @@ function generateDOPELogsPDFHtml(
 
       return `
         <tr class="rifle-header">
-          <td colspan="7">${rifleName} (${rifleLogs.length} logs)</td>
+          <td colspan="7">${escapeHtml(rifleName)} (${rifleLogs.length} logs)</td>
         </tr>
         ${rows}
       `;
