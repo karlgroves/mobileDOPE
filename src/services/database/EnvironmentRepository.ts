@@ -53,11 +53,13 @@ export class EnvironmentRepository {
     const db = databaseService.getDatabase();
 
     let sql = 'SELECT * FROM environment_snapshots ORDER BY timestamp DESC';
+    const params: any[] = [];
     if (limit) {
-      sql += ` LIMIT ${limit}`;
+      sql += ' LIMIT ?';
+      params.push(Math.max(1, Math.floor(Number(limit))));
     }
 
-    const rows = await db.getAllAsync<EnvironmentSnapshotRow>(sql);
+    const rows = await db.getAllAsync<EnvironmentSnapshotRow>(sql, params);
 
     return rows.map((row) => EnvironmentSnapshot.fromRow(row));
   }
@@ -124,15 +126,20 @@ export class EnvironmentRepository {
   async deleteOlderThan(days: number): Promise<number> {
     const db = databaseService.getDatabase();
 
+    // Compute the cutoff date in JS to avoid string interpolation in SQL
+    const cutoff = new Date(
+      Date.now() - Math.max(1, Math.floor(Number(days))) * 86400000
+    ).toISOString();
+
     const result = await db.runAsync(
       `DELETE FROM environment_snapshots
-       WHERE timestamp < datetime('now', '-${days} days')
+       WHERE timestamp < ?
        AND id NOT IN (
          SELECT DISTINCT environment_id FROM dope_logs
          UNION
          SELECT DISTINCT environment_id FROM range_sessions
        )`,
-      []
+      [cutoff]
     );
 
     return result.changes;

@@ -16,6 +16,7 @@ import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { escapeHtml } from '../utils/formatting';
 
 interface DOPEDataRow {
   distance: number;
@@ -225,8 +226,8 @@ export function DOPECardGenerator({ route, navigation }: Props) {
 </head>
 <body>
   <div class="header">
-    <div class="title">${rifle.name}</div>
-    <div class="subtitle">${ammo.name} (${ammo.bulletWeight}gr) | Zero: ${rifle.zeroDistance}${distanceUnit === 'yards' ? 'yd' : 'm'}</div>
+    <div class="title">${escapeHtml(rifle.name)}</div>
+    <div class="subtitle">${escapeHtml(ammo.name)} (${ammo.bulletWeight}gr) | Zero: ${rifle.zeroDistance}${distanceUnit === 'yards' ? 'yd' : 'm'}</div>
   </div>
 
   <div class="dope-grid">
@@ -317,8 +318,8 @@ export function DOPECardGenerator({ route, navigation }: Props) {
 <body>
   <div class="header">
     <div class="title">DOPE CARD</div>
-    <div class="subtitle">${rifle.name} - ${rifle.caliber}</div>
-    <div class="subtitle">${ammo.name} (${ammo.bulletWeight}gr ${ammo.bulletType})</div>
+    <div class="subtitle">${escapeHtml(rifle.name)} - ${escapeHtml(rifle.caliber)}</div>
+    <div class="subtitle">${escapeHtml(ammo.name)} (${ammo.bulletWeight}gr ${escapeHtml(ammo.bulletType || '')})</div>
     <div class="subtitle">Zero: ${rifle.zeroDistance}${distanceUnit === 'yards' ? 'yd' : 'm'} | MV: ${ammo.muzzleVelocity}fps | ${today}</div>
   </div>
 
