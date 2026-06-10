@@ -18,6 +18,19 @@ import { calculateCoriolisComplete } from './coriolis';
 
 const GRAVITY = 32.174; // ft/s²
 
+// Sea-level standard air density (slug/ft³), ICAO standard atmosphere.
+// Non-standard density is handled separately via adjustedBC(), so the drag
+// constant below is anchored to standard density.
+const STANDARD_AIR_DENSITY_SLUG = 0.0023769;
+
+// Drag deceleration constant for the standard (G1/G7) point-mass model:
+//   a = DRAG_CONSTANT · Cd(M) · V² / BC   [ft/s²]
+// Derived from a = ρ₀·π·g/(8·144) · Cd · V² / BC, where the 8·144 folds the
+// projectile cross-sectional-area / sectional-density unit conversions
+// (in² → ft²) that connect the dimensionless drag coefficient to the imperial
+// ballistic coefficient (BC in lb/in²). Evaluates to ≈ 2.0855e-4.
+const DRAG_CONSTANT = (STANDARD_AIR_DENSITY_SLUG * Math.PI * GRAVITY) / (8 * 144);
+
 /**
  * Calculate ballistic coefficient adjusted for actual atmospheric conditions
  */
@@ -49,19 +62,12 @@ function calculateRetardation(
 
   const cd = getDragCoefficient(velocity, dragModel, speedOfSound);
 
-  // Standard ballistic formula for retardation
-  // The drag function Cd is already dimensionless from the tables
-  // BC in US units has dimensions that make this formula work out to ft/s²
-  // Formula: a = -(v² * Cd * ρ) / (2 * BC * ρ₀)
-  // Since BC already accounts for density ratio, simplified to:
-  // a = (GRAVITY * v² * Cd) / (2 * BC * v₀²)
-  // Where v₀ is a reference velocity
-
-  // Standard point-mass ballistic formula
-  // For G1/G7 drag functions with BC in lb/in²:
-  // a = v² * Cd(M) / BC_std
-  // Scaling factor empirically determined for imperial units
-  const retardation = (velocity * velocity * cd) / (bc * 3200);
+  // Physically-grounded point-mass drag deceleration (ft/s²):
+  //   a = DRAG_CONSTANT · Cd(M) · v² / BC
+  // Cd(M) is the dimensionless standard-projectile drag coefficient from the
+  // G1/G7 tables; BC (lb/in²) carries the form factor and sectional density.
+  // See DRAG_CONSTANT for the unit-conversion derivation.
+  const retardation = (DRAG_CONSTANT * velocity * velocity * cd) / bc;
 
   return isFinite(retardation) ? retardation : 0;
 }
