@@ -1,0 +1,7 @@
+# If the lockfile changed during a merge/pull, reinstall and audit.
+changed=$(git diff-tree -r --name-only --no-commit-id HEAD@{1} HEAD 2>/dev/null)
+if echo "$changed" | grep -q "package-lock.json"; then
+  echo "ℹ package-lock.json changed — installing and auditing dependencies..."
+  npm install
+  npm audit --omit=dev --audit-level=high || true
+fi

@@ -3,9 +3,9 @@
  * Handles data import from various formats (JSON backups)
  */
 
-import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
+import { useRifleStore } from '../store/useRifleStore';
 
 export interface ImportResult {
   success: boolean;
@@ -57,7 +57,7 @@ export async function pickImportFile(): Promise<{
 
     const response = await fetch(result.assets[0].uri);
     const content = await response.text();
-    const data: BackupData = JSON.parse(content);
+    const data = JSON.parse(content) as BackupData;
 
     return { success: true, data };
   } catch (error) {

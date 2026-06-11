@@ -190,7 +190,7 @@ Input validation is critical - ensure all ballistic coefficients, velocities, an
 
 ### Test Organization
 
-```
+```text
 __tests__/
 ├── unit/           # Unit tests for utilities, models, calculations
 ├── integration/    # Integration tests for repositories, services

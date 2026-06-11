@@ -17,7 +17,7 @@ React Native mobile application for the DOPE (motorsports/racing) platform, buil
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (version pinned in `.nvmrc` / `.node-version`)
 - Expo CLI
 - iOS Simulator (macOS) or Android Emulator
 
@@ -35,7 +35,7 @@ npx expo start
 
 ## Project Structure
 
-```
+```text
 src/
 ├── components/     # Reusable UI components
 ├── constants/      # Theme and configuration constants
@@ -55,3 +55,63 @@ src/
 - Offline queue processing
 - Analytics integration
 - Error boundary handling
+
+## Scripts
+
+| Script                                           | Purpose                                                 |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `npm start`                                      | Start the Expo dev server                               |
+| `npm run ios` / `npm run android`                | Run on a simulator/emulator                             |
+| `npm run lint` / `npm run lint:fix`              | ESLint (legacy config via `eslint-config-expo`)         |
+| `npm run format` / `npm run format:check`        | Prettier                                                |
+| `npm run type-check`                             | TypeScript `tsc --noEmit`                               |
+| `npm run markdownlint`                           | Lint Markdown with `markdownlint-cli2`                  |
+| `npm run dupes`                                  | Duplication check (`jscpd`)                             |
+| `npm test` / `npm run test:coverage`             | Jest unit/integration tests                             |
+| `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes |
+| `npm run check:all`                              | Full gate: `check` + format check + tests               |
+| `npm run security:audit`                         | `npm audit` (high severity, prod deps)                  |
+| `npm run security:osv` / `:semgrep` / `:secrets` | Binary-backed scans (see Tooling)                       |
+| `npm run license:check`                          | License allowlist compliance                            |
+
+## Code Quality & Tooling
+
+Quality is enforced **locally** through Husky hooks rather than additional CI
+(see [ADR-011](./docs/adr/011-local-gate-first-no-new-actions.md)):
+
+- **pre-commit** — `lint-staged` (ESLint + Prettier on staged files), `tsc-files`
+  type-check of staged TS, and an optional `gitleaks` secret scan.
+- **commit-msg** — Conventional Commits via commitlint.
+- **pre-push** — the full `npm run check` gate plus optional `gitleaks`.
+- **post-merge** — re-installs and audits when `package-lock.json` changes.
+
+The binary-backed scanners (`gitleaks`, `osv-scanner`, `semgrep`, `lychee`) are
+optional; the hooks skip them gracefully when absent. Install them with:
+
+```bash
+bash scripts/bootstrap.sh
+```
+
+The standardized tooling adoption and the decisions about what was kept, deferred, or
+skipped for this React Native app are documented in
+[`docs/adr/`](./docs/adr/) (ADR-007 through ADR-011).
+
+## Testing
+
+This project follows Test-Driven Development (see
+[ADR-006](./docs/adr/006-test-driven-development.md)).
+
+```bash
+npm test
+npm run test:coverage
+```
+
+## Contributing
+
+This project uses **Git Flow** and **Conventional Commits**. Branch from `develop`,
+run `npm run check` before pushing, and open a pull request back into `develop`. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+## License
+
+MIT

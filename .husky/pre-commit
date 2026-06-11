@@ -1,1 +1,12 @@
+# Format/lint staged files (ESLint runs in legacy-config mode via lint-staged).
 npx lint-staged
+
+# Type-check only the staged TypeScript files (fast incremental safety net).
+npx tsc-files --noEmit || exit 1
+
+# Optional: gitleaks. Skips gracefully when the binary is not installed.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner
+else
+  echo "ℹ gitleaks not installed — skipping secret scan (run scripts/bootstrap.sh to enable)"
+fi

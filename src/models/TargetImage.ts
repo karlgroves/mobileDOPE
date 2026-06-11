@@ -87,7 +87,7 @@ export class TargetImage {
       rangeSessionId: row.range_session_id,
       imageUri: row.image_uri,
       targetType: row.target_type,
-      poiMarkers: JSON.parse(row.poi_markers),
+      poiMarkers: JSON.parse(row.poi_markers) as POIMarker[],
       groupSize: row.group_size,
       createdAt: row.created_at,
     });

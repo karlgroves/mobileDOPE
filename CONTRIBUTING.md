@@ -76,6 +76,7 @@ Thank you for your interest in contributing to Mobile DOPE! This document provid
    ```
 
 6. **Run tests:**
+
    ```bash
    npm test
    ```
@@ -103,7 +104,7 @@ git checkout -b feature/your-feature-name
 ### 3. Make Changes
 
 - Write code following [Coding Standards](#coding-standards)
-- Follow [Test-Driven Development](#test-driven-development)
+- Follow [Test-Driven Development](#test-driven-development-tdd)
 - Update documentation as needed
 - Test thoroughly on both iOS and Android (if possible)
 
@@ -243,7 +244,7 @@ calculateElevation.ts
 
 ### File Organization
 
-```
+```text
 src/
 ├── components/        # Reusable UI components
 │   ├── Button.tsx
@@ -346,7 +347,7 @@ describe('yardsToMeters', () => {
 
 ### Test Structure
 
-```
+```text
 __tests__/
 ├── unit/              # Unit tests (isolated functions)
 │   ├── ballistics/
@@ -363,7 +364,7 @@ __tests__/
 
 ### Commit Message Format
 
-```
+```text
 <type>(<scope>): <subject>
 
 <body>
@@ -385,7 +386,7 @@ __tests__/
 
 **Good:**
 
-```
+```text
 feat(ballistics): add Coriolis effect calculation
 
 Implement Coriolis effect for long-range shooting based on
@@ -395,7 +396,7 @@ ranges up to 2000 yards.
 Closes #123
 ```
 
-```
+```text
 fix(dope-log): correct timestamp formatting in exports
 
 Fix timezone offset issue causing incorrect timestamps in
@@ -404,7 +405,7 @@ exported CSV files. Now uses UTC consistently.
 Fixes #456
 ```
 
-```
+```text
 docs(adr): create ADR for state management decision
 
 Document decision to use Zustand over Redux, including
@@ -413,7 +414,7 @@ rationale, alternatives considered, and consequences.
 
 **Bad:**
 
-```
+```text
 Fixed stuff                    # ❌ Not descriptive
 Updated code                   # ❌ Too vague
 WIP                           # ❌ Work in progress (shouldn't commit)
