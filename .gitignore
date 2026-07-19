@@ -41,6 +41,7 @@ yarn-error.*
 
 # reports
 reports/
+coverage/
 
 # database
 *.db

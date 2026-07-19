@@ -29,7 +29,7 @@ We will use **Test-Driven Development (TDD)** as the primary development methodo
 
 ### TDD Cycle (Red-Green-Refactor)
 
-```
+```text
 1. RED    → Write a failing test
 2. GREEN  → Write minimal code to pass
 3. REFACTOR → Improve code while keeping tests green
@@ -97,7 +97,7 @@ it('should calculate elevation correction for 600 yards', () => {
 
 ### Benefits Realized
 
-**1. Correctness from Design**
+#### 1. Correctness from Design
 
 Tests written first ensure we think about:
 
@@ -105,7 +105,7 @@ Tests written first ensure we think about:
 - Expected inputs and outputs
 - Error conditions
 
-**2. Living Documentation**
+#### 2. Living Documentation
 
 ```typescript
 describe('Atmospheric calculations', () => {
@@ -130,7 +130,7 @@ Tests document:
 - Expected behavior
 - Edge cases handled
 
-**3. Refactoring Confidence**
+#### 3. Refactoring Confidence
 
 With 119 passing tests:
 
@@ -138,7 +138,7 @@ With 119 passing tests:
 - Optimize without breaking behavior
 - Change implementation details safely
 
-**4. Faster Debugging**
+#### 4. Faster Debugging
 
 When a test fails:
 
@@ -150,7 +150,7 @@ When a test fails:
 
 ### Test Structure
 
-```
+```text
 __tests__/
 ├── unit/
 │   ├── ballistics/
@@ -184,7 +184,7 @@ __tests__/
 
 **Requirement:** "Calculate air density given temperature, pressure, and altitude"
 
-**Step 1: Write Test (RED)**
+#### Step 1: Write Test (RED)
 
 ```typescript
 // __tests__/unit/ballistics/AtmosphericModel.test.ts
@@ -201,7 +201,7 @@ describe('calculateAirDensity', () => {
 
 Run test: **FAILS** (function doesn't exist)
 
-**Step 2: Minimal Implementation (GREEN)**
+#### Step 2: Minimal Implementation (GREEN)
 
 ```typescript
 // src/services/ballistics/AtmosphericModel.ts
@@ -227,7 +227,7 @@ export function calculateAirDensity(
 
 Run test: **PASSES** ✓
 
-**Step 3: Add More Tests (RED)**
+#### Step 3: Add More Tests (RED)
 
 ```typescript
 it('should decrease density with increasing altitude', () => {
@@ -243,7 +243,7 @@ it('should decrease density with increasing temperature', () => {
 });
 ```
 
-**Step 4: Refactor (if needed)**
+#### Step 4: Refactor (if needed)
 
 ```typescript
 // Extract constants
@@ -270,7 +270,7 @@ All tests still pass ✓
 
 ### Current Coverage (as of implementation)
 
-```
+```text
 Ballistic Engine Tests:
 - Atmospheric model: 20 tests ✓
 - Drag model (G1): 11 tests ✓

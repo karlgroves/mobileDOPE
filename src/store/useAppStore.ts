@@ -3,8 +3,9 @@
  * Manages app-level state including settings, theme, and initialization
  */
 
-import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+
 import type { ThemeMode } from '../constants/colors';
 
 interface AppSettings {
@@ -77,7 +78,7 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
   try {
     const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
     if (stored) {
-      return { ...defaultSettings, ...JSON.parse(stored) };
+      return { ...defaultSettings, ...(JSON.parse(stored) as Partial<AppSettings>) };
     }
     return defaultSettings;
   } catch (error) {

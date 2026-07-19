@@ -1,6 +1,19 @@
+// Legacy ESLint config (eslintrc) for the Mobile DOPE app.
+//
+// This is a REACT NATIVE / Expo project. It deliberately stays on the legacy
+// `.eslintrc` format (run via `ESLINT_USE_FLAT_CONFIG=false`) because
+// `eslint-config-expo` is consumed here and the Expo toolchain assumes it
+// (see docs/adr/007). The standardization plugin set from issue #17 is layered
+// in "pragmatically" (see docs/adr/010): the safe, framework-agnostic plugins
+// are enabled, but noisy/subjective rules are `warn` so the gate stays green and
+// can be tightened in follow-ups.
+//
+// Web/backend-only plugins from issue #17 are intentionally omitted (see
+// docs/adr/009): jsx-a11y (RN has no DOM), eslint-plugin-security and
+// eslint-plugin-n (Node/Express-specific), stylelint (no CSS).
 module.exports = {
   root: true,
-  ignorePatterns: ['reports/', 'coverage/', 'dist/', 'build/'],
+  ignorePatterns: ['reports/', 'coverage/', 'dist/', 'build/', 'android/', 'ios/'],
   extends: [
     'expo',
     'plugin:@typescript-eslint/recommended',
@@ -16,7 +29,32 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: ['@typescript-eslint', 'react', 'react-hooks', 'prettier'],
+  plugins: [
+    '@typescript-eslint',
+    'react',
+    'react-hooks',
+    'prettier',
+    // Standardization plugin set (issue #17). Rules are cherry-picked below
+    // rather than via each plugin's shared config to stay compatible with the
+    // legacy eslintrc format.
+    'sonarjs',
+    'unicorn',
+    'promise',
+    'jsdoc',
+    'no-secrets',
+    'import',
+    // React Native accessibility. `jsx-a11y` targets the DOM and does not apply
+    // here, but RN's own `accessible*` props are lintable (see docs/adr/009).
+    'react-native-a11y',
+  ],
+  settings: {
+    react: {
+      version: 'detect',
+    },
+    jsdoc: {
+      mode: 'typescript',
+    },
+  },
   rules: {
     'prettier/prettier': 'error',
     '@typescript-eslint/no-unused-vars': [
@@ -35,10 +73,87 @@ module.exports = {
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
 
-    // Security
+    // --- Security (plain, non-type-aware) ---
     'no-eval': 'error',
     'no-implied-eval': 'error',
     'no-new-func': 'error',
+    'no-secrets/no-secrets': [
+      'error',
+      { tolerance: 4.5, ignoreContent: ['https?://', 'data:image/'] },
+    ],
+
+    // --- Promise correctness (safe => error) ---
+    'promise/no-return-wrap': 'error',
+    'promise/param-names': 'error',
+    'promise/no-nesting': 'warn',
+
+    // --- Imports (TypeScript resolves modules, so no-unresolved stays off) ---
+    'import/no-unresolved': 'off',
+    'import/no-self-import': 'error',
+    'import/no-duplicates': 'error',
+    'import/no-useless-path-segments': 'error',
+    // Ordering is auto-fixable but reorders existing files broadly; surfaced as a
+    // warning so it does not block the gate or force a large churn diff.
+    'import/order': [
+      'warn',
+      {
+        groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'type'],
+        'newlines-between': 'always',
+        alphabetize: { order: 'asc', caseInsensitive: true },
+      },
+    ],
+
+    // --- Code quality (noisy/subjective => warn) ---
+    'sonarjs/cognitive-complexity': ['warn', 15],
+    'sonarjs/no-duplicate-string': ['warn', { threshold: 4 }],
+    'sonarjs/no-identical-functions': 'warn',
+    'max-lines': ['warn', { max: 300, skipBlankLines: true, skipComments: true }],
+    'max-lines-per-function': ['warn', { max: 75, skipBlankLines: true, skipComments: true }],
+    complexity: ['warn', { max: 10 }],
+    'max-depth': ['warn', 4],
+
+    // --- Unicorn (modern JS; opinionated rules disabled) ---
+    'unicorn/prevent-abbreviations': 'off',
+    'unicorn/no-null': 'off',
+    'unicorn/no-array-for-each': 'off',
+    'unicorn/prefer-top-level-await': 'off',
+    'unicorn/prefer-module': 'off',
+    // Disabled: the app mixes PascalCase components, camelCase utilities, and
+    // numbered migration files (e.g. 001_initial_schema.ts). Enforcing a single
+    // case here would be large, out-of-scope churn (see docs/adr/010).
+    'unicorn/filename-case': 'off',
+
+    // --- JSDoc / TSDoc (documentation; warn so it does not block) ---
+    'jsdoc/require-jsdoc': [
+      'warn',
+      {
+        // Do NOT auto-insert empty `/** */` stubs (lint-staged runs --fix).
+        enableFixer: false,
+        contexts: [
+          'ExportNamedDeclaration > FunctionDeclaration',
+          'TSInterfaceDeclaration',
+          'TSTypeAliasDeclaration',
+        ],
+        checkConstructors: false,
+      },
+    ],
+    'jsdoc/require-description': 'warn',
+    'jsdoc/no-undefined-types': 'off',
+    'jsdoc/check-tag-names': ['warn', { definedTags: ['remarks', 'public', 'internal', 'beta'] }],
+
+    // --- React Native accessibility (see docs/adr/009) ---
+    // Malformed a11y props are always wrong => error. Missing labels/hints on
+    // existing components are a real backlog, so they start as warnings and get
+    // ratcheted to error as screens are remediated (same approach as ADR-010).
+    'react-native-a11y/has-valid-accessibility-actions': 'error',
+    'react-native-a11y/has-valid-accessibility-role': 'error',
+    'react-native-a11y/has-valid-accessibility-state': 'error',
+    'react-native-a11y/has-valid-accessibility-value': 'error',
+    'react-native-a11y/has-valid-accessibility-live-region': 'error',
+    'react-native-a11y/has-valid-accessibility-ignores-invert-colors': 'error',
+    'react-native-a11y/no-nested-touchables': 'error',
+    'react-native-a11y/has-valid-accessibility-descriptors': 'warn',
+    'react-native-a11y/has-accessibility-hint': 'warn',
   },
   overrides: [
     {
@@ -48,12 +163,13 @@ module.exports = {
       },
       rules: {
         '@typescript-eslint/no-require-imports': 'off',
+        // Test files: relax documentation/size/duplication rules.
+        'max-lines': 'off',
+        'max-lines-per-function': 'off',
+        'sonarjs/no-duplicate-string': 'off',
+        'sonarjs/cognitive-complexity': 'off',
+        'jsdoc/require-jsdoc': 'off',
       },
     },
   ],
-  settings: {
-    react: {
-      version: 'detect',
-    },
-  },
 };

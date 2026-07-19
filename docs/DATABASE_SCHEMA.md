@@ -233,7 +233,7 @@ The migration runner ensures:
 
 ## Data Relationships
 
-```
+```text
 rifle_profiles (1) ──── (N) dope_logs
                               │
 ammo_profiles (1) ─────── (N) │

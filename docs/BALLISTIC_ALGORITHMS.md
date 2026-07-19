@@ -66,7 +66,7 @@ function rk4Step(
 
 The BC relates a projectile's drag to a standard reference projectile:
 
-```
+```text
 BC = (bullet_weight / 7000) / (bullet_diameter² * i)
 ```
 
@@ -166,7 +166,7 @@ function findZeroAngle(
 
 **Adjustment:**
 
-```
+```text
 adjustment = atan(error_inches / (zeroDistance_inches)) * dampingFactor
 θ_new = θ_old - adjustment
 ```

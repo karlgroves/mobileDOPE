@@ -53,6 +53,11 @@ What becomes easier or more difficult to do because of this change?
 4. [ADR-004: Caliber-Based Ammunition Architecture](./004-caliber-based-ammo.md)
 5. [ADR-005: TypeScript Ballistic Engine](./005-typescript-ballistic-engine.md)
 6. [ADR-006: Test-Driven Development](./006-test-driven-development.md)
+7. [ADR-007: Keep the legacy ESLint config and `eslint-config-expo`](./007-keep-legacy-eslint-expo.md)
+8. [ADR-008: Keep Jest instead of switching to Vitest](./008-keep-jest-over-vitest.md)
+9. [ADR-009: Web/DOM-only tooling is out of scope for this React Native app](./009-rn-scope-web-tools-na.md)
+10. [ADR-010: Pragmatic adoption — noisy rules start as warnings](./010-pragmatic-quality-adoption.md)
+11. [ADR-011: Local-gate-first; no new GitHub Actions, Dependabot, or CodeQL](./011-local-gate-first-no-new-actions.md)
 
 ## Contributing
 
