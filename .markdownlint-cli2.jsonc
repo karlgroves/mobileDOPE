@@ -13,7 +13,11 @@
     "MD041": true,
     "MD046": { "style": "fenced" },
     "MD048": { "style": "backtick" },
-    "MD049": { "style": "asterisk" },
+    // Emphasis style must match what Prettier emits, or the two gates fight over
+    // every italic: Prettier normalises `*em*` to `_em_`, while `**strong**` stays
+    // asterisks. Asking markdownlint for asterisk emphasis made any italic text
+    // unformattable (prettier --write and markdownlint --fix would undo each other).
+    "MD049": { "style": "underscore" },
     "MD050": { "style": "asterisk" },
     // MD060 (table-column-style) is newer than this config's source and overly
     // pedantic about table pipe spacing; disabled to avoid reformatting tables.

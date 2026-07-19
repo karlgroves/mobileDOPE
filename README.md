@@ -17,7 +17,7 @@ React Native mobile application for the DOPE (motorsports/racing) platform, buil
 
 ### Prerequisites
 
-- Node.js 22.12+ (version pinned in `.nvmrc` / `.node-version`; CI reads the same file)
+- Node.js 24.15+ and npm 11+ (pinned in `.nvmrc` / `.node-version`; CI reads the same file)
 - Expo CLI
 - iOS Simulator (macOS) or Android Emulator
 
