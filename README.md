@@ -17,7 +17,7 @@ React Native mobile application for the DOPE (motorsports/racing) platform, buil
 
 ### Prerequisites
 
-- Node.js 20+ (version pinned in `.nvmrc` / `.node-version`)
+- Node.js 22.12+ (version pinned in `.nvmrc` / `.node-version`; CI reads the same file)
 - Expo CLI
 - iOS Simulator (macOS) or Android Emulator
 
@@ -70,17 +70,21 @@ src/
 | `npm test` / `npm run test:coverage`             | Jest unit/integration tests                             |
 | `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes |
 | `npm run check:all`                              | Full gate: `check` + format check + tests               |
-| `npm run security:audit`                         | `npm audit` (high severity, prod deps)                  |
+| `npm run security:audit`                         | `npm audit` (high severity, prod deps) — advisory\*     |
 | `npm run security:osv` / `:semgrep` / `:secrets` | Binary-backed scans (see Tooling)                       |
 | `npm run license:check`                          | License allowlist compliance                            |
+
+\* `security:audit` currently exits non-zero on high-severity advisories in Expo's
+transitive dependencies, which have no upstream fix yet. It is informational for now —
+the `post-merge` hook does not fail on it — and should be re-checked on each Expo bump.
 
 ## Code Quality & Tooling
 
 Quality is enforced **locally** through Husky hooks rather than additional CI
 (see [ADR-011](./docs/adr/011-local-gate-first-no-new-actions.md)):
 
-- **pre-commit** — `lint-staged` (ESLint + Prettier on staged files), `tsc-files`
-  type-check of staged TS, and an optional `gitleaks` secret scan.
+- **pre-commit** — `lint-staged`, which runs ESLint + Prettier and a `tsc-files`
+  type-check over the staged files, plus an optional `gitleaks` secret scan.
 - **commit-msg** — Conventional Commits via commitlint.
 - **pre-push** — the full `npm run check` gate plus optional `gitleaks`.
 - **post-merge** — re-installs and audits when `package-lock.json` changes.
@@ -105,6 +109,14 @@ This project follows Test-Driven Development (see
 npm test
 npm run test:coverage
 ```
+
+Accessibility is linted via `eslint-plugin-react-native-a11y` (malformed a11y props are
+errors; missing labels/hints are warnings pending remediation) — see
+[ADR-009](./docs/adr/009-rn-scope-web-tools-na.md).
+
+`jest.config.js` declares a 70% coverage threshold, but actual coverage is well below
+that today, so `npm run test:coverage` fails. The threshold is a ratchet target, not a
+gate; see [ADR-010](./docs/adr/010-pragmatic-quality-adoption.md).
 
 ## Contributing
 

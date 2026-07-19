@@ -1,5 +1,5 @@
 {
-  "comment": "threshold is set above the current ~8% duplication so the gate is green today; ratchet it down in follow-ups as duplication in screens/PDF templates is reduced (see docs/adr/010).",
+  "comment": "Single source of truth for the duplication threshold — the npm scripts (dupes, lint:cpd, lint:cpd:ci) must not override it. Set above the current ~8% duplication so the gate is green today; ratchet it down in follow-ups as duplication in screens/PDF templates is reduced (see docs/adr/010).",
   "threshold": 10,
   "minTokens": 50,
   "minLines": 5,

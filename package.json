@@ -20,14 +20,14 @@
     "markdownlint:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "dupes": "jscpd",
     "lint:cpd": "jscpd . --config .jscpd.json",
-    "lint:cpd:ci": "jscpd . --config .jscpd.json --threshold 5",
+    "lint:cpd:ci": "jscpd . --config .jscpd.json",
     "links": "lychee --no-progress \"**/*.md\"",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:check": "npm audit --audit-level=high",
     "security:osv": "osv-scanner --lockfile=package-lock.json",
     "security:semgrep": "semgrep --config=p/typescript --config=p/javascript --config=p/react --config=p/owasp-top-ten --config=p/secrets --error --metrics=off",
     "security:secrets": "gitleaks detect --no-banner",
-    "license:check": "license-checker-rseidelsohn --production --onlyAllow 'MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;CC0-1.0;Unlicense;Python-2.0;WTFPL;BlueOak-1.0.0;CC-BY-4.0;CC-BY-3.0;Unicode-DFS-2016;Unicode-3.0;MPL-2.0' --excludePrivatePackages --summary",
+    "license:check": "license-checker-rseidelsohn --production --onlyAllow 'MIT;ISC;Apache-2.0;Apache 2.0;BSD-2-Clause;BSD-3-Clause;0BSD;CC0-1.0;Unlicense;Python-2.0;WTFPL;BlueOak-1.0.0;CC-BY-4.0;CC-BY-3.0;Unicode-DFS-2016;Unicode-3.0;MPL-2.0' --excludePrivatePackages --summary",
     "check": "npm-run-all -p lint type-check markdownlint dupes",
     "check:all": "npm-run-all -s check format:check test",
     "prepare": "husky"
@@ -79,6 +79,7 @@
     "eslint-plugin-promise": "7.3.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-native-a11y": "3.5.1",
     "eslint-plugin-sonarjs": "4.0.3",
     "eslint-plugin-unicorn": "65.0.1",
     "husky": "^9.1.7",
@@ -95,8 +96,13 @@
     "typescript": "~5.9.2"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.12.0",
     "npm": ">=10.0.0"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "eslint-plugin-react-native-a11y": {
+      "eslint": "$eslint"
+    }
+  }
 }

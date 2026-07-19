@@ -43,6 +43,9 @@ module.exports = {
     'jsdoc',
     'no-secrets',
     'import',
+    // React Native accessibility. `jsx-a11y` targets the DOM and does not apply
+    // here, but RN's own `accessible*` props are lintable (see docs/adr/009).
+    'react-native-a11y',
   ],
   settings: {
     react: {
@@ -137,6 +140,20 @@ module.exports = {
     'jsdoc/require-description': 'warn',
     'jsdoc/no-undefined-types': 'off',
     'jsdoc/check-tag-names': ['warn', { definedTags: ['remarks', 'public', 'internal', 'beta'] }],
+
+    // --- React Native accessibility (see docs/adr/009) ---
+    // Malformed a11y props are always wrong => error. Missing labels/hints on
+    // existing components are a real backlog, so they start as warnings and get
+    // ratcheted to error as screens are remediated (same approach as ADR-010).
+    'react-native-a11y/has-valid-accessibility-actions': 'error',
+    'react-native-a11y/has-valid-accessibility-role': 'error',
+    'react-native-a11y/has-valid-accessibility-state': 'error',
+    'react-native-a11y/has-valid-accessibility-value': 'error',
+    'react-native-a11y/has-valid-accessibility-live-region': 'error',
+    'react-native-a11y/has-valid-accessibility-ignores-invert-colors': 'error',
+    'react-native-a11y/no-nested-touchables': 'error',
+    'react-native-a11y/has-valid-accessibility-descriptors': 'warn',
+    'react-native-a11y/has-accessibility-hint': 'warn',
   },
   overrides: [
     {

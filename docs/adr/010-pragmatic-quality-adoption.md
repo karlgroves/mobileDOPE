@@ -37,6 +37,17 @@ gate is real (errors block) without forcing bulk edits:
   `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are **deferred** to avoid
   widespread type churn. `@total-typescript/ts-reset` is added via `src/reset.d.ts`; the
   handful of `unknown`-from-`JSON.parse` sites it surfaced were typed explicitly.
+- **Test coverage** — issue #17 asks for an enforced 80% threshold. `jest.config.js`
+  already declares 70%, but actual coverage is **18.85%** statements / 16.66% branches,
+  so `npm run test:coverage` fails today and did so before this change. Raising the
+  number to 80% would make an already-failing gate fail harder without adding a single
+  test. The existing 70% declaration is left as the ratchet target and **enforcement is
+  deferred** to a dedicated test-backfill effort; `npm run check` deliberately does not
+  run coverage, so this does not mask a regression in the day-to-day gate.
+- **`react-native-a11y`** — structural rules (malformed `accessibilityRole`/`State`/
+  `Value`/`actions`, nested touchables) are `error`; the "missing label/hint" rules
+  (`has-valid-accessibility-descriptors`, `has-accessibility-hint`) are `warn`, tracking
+  a real remediation backlog of ~84 findings. See ADR-009.
 
 ## Consequences
 
@@ -52,5 +63,6 @@ gate is real (errors block) without forcing bulk edits:
 
 ### Risks
 
-- Deferred `tsconfig` flags and the `jscpd` threshold need follow-up issues to ratchet
-  them toward the issue's stricter targets.
+- Deferred `tsconfig` flags, the `jscpd` threshold, the a11y warn-level rules, and
+  coverage enforcement all need follow-up issues to ratchet them toward the issue's
+  stricter targets. Coverage is the largest gap by far (18.85% vs. a 70% declaration).

@@ -29,8 +29,14 @@ Honour the maintainer's decision and the issue's stated preference:
 - Keep the binary-backed scanners (`semgrep`, `osv-scanner`, `gitleaks`, `lychee`)
   available as opt-in `npm run security:*` / `links` scripts, installed via
   `scripts/bootstrap.sh`. The hooks degrade gracefully when the binaries are absent.
-- Leave the existing `.github/workflows/*` (`ci.yml`, `eas-build.yml`, `pr-check.yml`,
-  `security.yml`) untouched.
+- Add no new workflow files, but **keep the existing `.github/workflows/*` (`ci.yml`,
+  `eas-build.yml`, `pr-check.yml`, `security.yml`) in sync** with changes made here.
+  "No new Actions" is not "leave the existing ones to rot": renaming an npm script or
+  raising the Node floor must be reflected in the workflows that consume them, or the
+  remaining server-side safety net silently breaks. Concretely, this change bumped
+  `ci.yml`/`eas-build.yml` to read the Node version from `.nvmrc` (the new
+  `@commitlint/cli` requires Node >= 22.12 and `engine-strict=true` makes a mismatch a
+  hard `npm ci` failure) and repointed `ci.yml` at the renamed `markdownlint` script.
 
 ## Consequences
 
