@@ -118,6 +118,13 @@ errors; missing labels/hints are warnings pending remediation) — see
 that today, so `npm run test:coverage` fails. The threshold is a ratchet target, not a
 gate; see [ADR-010](./docs/adr/010-pragmatic-quality-adoption.md).
 
+## Releases
+
+Version history is in [CHANGELOG.md](./CHANGELOG.md). The user-facing version lives in
+`package.json` only; `app.config.ts` reads it from there, so `npm version` propagates to
+the built app. iOS `buildNumber` / Android `versionCode` are managed by EAS
+(`cli.appVersionSource: "remote"`, `autoIncrement` on the production profile).
+
 ## Contributing
 
 This project uses **Git Flow** and **Conventional Commits**. Branch from `develop`,
