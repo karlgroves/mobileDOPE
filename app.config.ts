@@ -1,5 +1,9 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+// Single source of truth for the user-facing version: `npm version` bumps
+// package.json, and the app picks it up here automatically (see CHANGELOG.md).
+import { version } from './package.json';
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env.APP_ENV || 'development';
 
@@ -7,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: env === 'production' ? 'Mobile DOPE' : `Mobile DOPE (${env})`,
     slug: 'mobiledope',
-    version: '1.0.0',
+    version,
     orientation: 'default',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
