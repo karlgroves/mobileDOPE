@@ -9,6 +9,7 @@ Mobile DOPE App is a mobile application for precision shooters to record DOPE (D
 **Target Platforms:** iOS (latest 2 versions) and Android 10+
 
 **Technology Stack (Planned):**
+
 - React Native or Flutter for cross-platform mobile development
 - SQLite for local data storage
 - Rust or C++ module for high-performance ballistic engine
@@ -60,6 +61,7 @@ The app centers around four main entities:
 ### Key Features to Implement
 
 **MVP Priority:**
+
 - Rifle and ammunition profile management
 - Environmental data entry (manual and sensor-based)
 - Ballistic solver core (elevation/windage corrections)
@@ -69,6 +71,7 @@ The app centers around four main entities:
 - Offline-first architecture
 
 **Phase 2:**
+
 - External device integration (Kestrel weather meter, chronograph Bluetooth)
 - Advanced ballistics (spin drift, Coriolis effect)
 - Cloud sync (iCloud, Google Drive, Dropbox)
@@ -84,11 +87,80 @@ The app centers around four main entities:
 
 ## Development Commands
 
-(These will be populated once the project structure is established. Common commands will include building for iOS/Android, running tests, linting, and starting the development server.)
+### Running the App
+
+```bash
+npm start              # Start Expo development server
+npm run android        # Run on Android device/emulator
+npm run ios            # Run on iOS device/simulator
+npm run web            # Run in web browser
+```
+
+### Code Quality
+
+```bash
+npm run lint           # Run ESLint
+npm run lint:fix       # Fix ESLint issues automatically
+npm run format         # Format code with Prettier
+npm run format:check   # Check code formatting
+npm run type-check     # Run TypeScript type checking
+npm test               # Run tests (placeholder for now)
+```
+
+### Building
+
+```bash
+# Development build
+APP_ENV=development eas build --profile development
+
+# Staging build
+APP_ENV=staging eas build --profile staging
+
+# Production build
+APP_ENV=production eas build --profile production
+```
+
+### Installed Dependencies
+
+**Core:**
+
+- React Native with Expo
+- TypeScript with strict mode
+- React Navigation (stack and tab navigators)
+- Zustand (state management)
+
+**Database & Storage:**
+
+- expo-sqlite (local database)
+- @react-native-async-storage/async-storage (settings storage)
+
+**Data & Utilities:**
+
+- date-fns (date/time utilities)
+- victory-native (charting for ballistic curves)
+
+**File Operations:**
+
+- expo-print (PDF generation)
+- expo-file-system (file operations)
+- expo-sharing (share files)
+
+**Device Features:**
+
+- expo-image-picker (camera and photo library)
+- expo-location (GPS, altitude)
+- expo-sensors (accelerometer, barometer, etc.)
+
+**Development:**
+
+- ESLint + Prettier (code quality)
+- TypeScript (type safety)
+- GitHub Actions (CI/CD)
 
 ## Ballistic Engine Notes
 
 The ballistic solver is performance-critical and should be implemented as a native module. It must calculate:
+
 - Elevation/windage corrections in MIL or MOA
 - Time of flight, velocity decay, energy at target
 - Wind tables for variable conditions
@@ -96,6 +168,50 @@ The ballistic solver is performance-critical and should be implemented as a nati
 - Optional: spin drift, Coriolis effect, subsonic transitions
 
 Input validation is critical - ensure all ballistic coefficients, velocities, and environmental parameters are within realistic ranges before calculations.
+
+## Development Methodology
+
+**This project uses Test-Driven Development (TDD) for all new code.**
+
+### TDD Workflow
+
+1. **Write the test first** - Before implementing any new feature or function, write the test that defines the expected behavior
+2. **Run the test and watch it fail** - Ensure the test fails for the right reason
+3. **Write minimal code to pass** - Implement just enough code to make the test pass
+4. **Refactor** - Improve the code while keeping tests green
+5. **Repeat** - Continue the cycle for each new piece of functionality
+
+### Testing Guidelines
+
+- **Unit Tests**: Test individual functions, classes, and modules in isolation
+- **Integration Tests**: Test interactions between modules (e.g., database operations, repository methods)
+- **Component Tests**: Test React components with React Native Testing Library
+- **Coverage Target**: Aim for >80% code coverage
+
+### Test Organization
+
+```text
+__tests__/
+├── unit/           # Unit tests for utilities, models, calculations
+├── integration/    # Integration tests for repositories, services
+└── components/     # Component tests for React components
+```
+
+### Running Tests
+
+```bash
+npm test                    # Run all tests
+npm test -- --watch        # Run tests in watch mode
+npm test -- --coverage     # Run tests with coverage report
+npm test -- <filename>     # Run specific test file
+```
+
+When implementing new features:
+
+1. Create the test file first (e.g., `MyComponent.test.tsx` or `myFunction.test.ts`)
+2. Write test cases that define the expected behavior
+3. Implement the code to satisfy the tests
+4. Ensure all tests pass before committing
 
 ## Data Privacy
 

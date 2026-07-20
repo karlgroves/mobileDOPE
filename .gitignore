@@ -32,9 +32,19 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env.development
+.env.staging
+.env.production
 
 # typescript
 *.tsbuildinfo
+
+# reports
+reports/
+coverage/
+
+# database
+*.db
 
 # generated native folders
 /ios

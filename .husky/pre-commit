@@ -1,0 +1,11 @@
+# Format/lint staged files, and type-check the staged TypeScript files.
+# All three run via lint-staged so the staged filenames are actually passed to
+# each tool — `tsc-files` with no file arguments silently checks nothing.
+npx lint-staged
+
+# Optional: gitleaks. Skips gracefully when the binary is not installed.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner
+else
+  echo "ℹ gitleaks not installed — skipping secret scan (run scripts/bootstrap.sh to enable)"
+fi

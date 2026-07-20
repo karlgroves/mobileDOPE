@@ -1,0 +1,10 @@
+{
+  "*.{js,jsx}": ["sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix \"$@\"' --", "prettier --write"],
+  "*.{ts,tsx}": [
+    "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix \"$@\"' --",
+    "prettier --write",
+    "tsc-files --noEmit"
+  ],
+  "*.md": ["markdownlint-cli2 --fix", "prettier --write"],
+  "*.{json,yml,yaml}": ["prettier --write"]
+}
