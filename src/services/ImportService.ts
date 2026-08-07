@@ -88,6 +88,11 @@ const RIFLE_ALLOWED_FIELDS = [
 const AMMO_ALLOWED_FIELDS = [
   'name',
   'manufacturer',
+  // `caliber` is required by AmmoProfile's validate() and is how ammo is matched to rifles
+  // (see ADR-004). Omitting it here meant every ammo profile in a backup failed to
+  // construct on import, and the per-record try/catch swallowed the error -- so restoring a
+  // backup silently produced zero ammo profiles while still reporting success.
+  'caliber',
   'bulletWeight',
   'bulletType',
   'ballisticCoefficientG1',

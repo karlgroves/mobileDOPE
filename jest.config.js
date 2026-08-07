@@ -61,11 +61,11 @@ module.exports = {
   //
   // Ratcheted by #28 phase 2 as the services suites landed:
   //
-  //   metric       phase 1   3 repos   all 7 repos   floor
-  //   lines        16.71%    20.12%    24.25%        23
-  //   statements   14.18%    17.13%    20.79%        20
-  //   branches     11.09%    13.14%    15.37%        14
-  //   functions    10.77%    13.96%    19.09%        18
+  //   metric       phase 1   3 repos   all 7 repos   + export/import   floor
+  //   lines        16.71%    20.12%    24.25%        27.00%            26
+  //   statements   14.18%    17.13%    20.79%        23.47%            22
+  //   branches     11.09%    13.14%    15.37%        16.68%            16
+  //   functions    10.77%    13.96%    19.09%        20.93%            20
   //
   // Measure with a clean `coverage/` directory (`rm -rf coverage` first). A stale one left
   // behind by a `--selectProjects` run reports a lower figure, which would set the floors
@@ -76,20 +76,20 @@ module.exports = {
   // floor keeps >= 0.9pp of slack so landing a feature slightly ahead of its tests does not
   // break the build, while a real regression does.
   //
-  // ONLY EVER RAISE THESE. All 7 repositories are now at 98-100% statements, putting
-  // src/services/database/ at ~75%, but the wider services layer is not done:
-  // DatabaseService (21%), MigrationRunner (0%), ExportService and ImportService (0%)
-  // remain, and each should raise these floors again.
+  // ONLY EVER RAISE THESE. All 7 repositories sit at 98-100% statements and ImportService
+  // is at ~59%, but the layer is not done: ExportService is still ~9% (only the JSON
+  // full-backup path is covered; the CSV, Markdown and PDF exporters are not),
+  // DatabaseService is 21%, and MigrationRunner is 0%.
   //
   // Note the percentages are not comparable to pre-#35 figures (18.8%/19.01%): the `unit`
   // and `components` projects instrument differently and report different denominators for
   // the same source, so the baseline was re-measured once both were wired up.
   coverageThreshold: {
     global: {
-      branches: 14,
-      functions: 18,
-      lines: 23,
-      statements: 20,
+      branches: 16,
+      functions: 20,
+      lines: 26,
+      statements: 22,
     },
   },
 };
