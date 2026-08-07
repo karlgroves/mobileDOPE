@@ -56,11 +56,16 @@ jobs:
   # `security-events: write` permission above is still required by the
   # upload-sarif step in owasp-dependency-check below.
 
-  # OWASP Dependency Check (comprehensive - weekly only)
+  # OWASP Dependency Check (comprehensive - manual only)
+  #
+  # Manual-only by design: `819bb51` removed this workflow's `schedule:` trigger and
+  # ADR-011 rules out re-adding scheduled scans. The `github.event_name == 'schedule'`
+  # half of the old condition was therefore unreachable and has been dropped -- run
+  # this from the Actions tab ("Run workflow") when a comprehensive scan is wanted.
   owasp-dependency-check:
     name: OWASP Dependency Check
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
 
@@ -97,11 +102,12 @@ jobs:
           sarif_file: reports/dependency-check-report.sarif
         if: always()
 
-  # License compliance check
+  # License compliance check (manual only -- same reasoning as owasp-dependency-check
+  # above; there is also an opt-in local equivalent, `npm run license:check`)
   license-check:
     name: License Compliance
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
 
