@@ -1,5 +1,6 @@
-import { Migration } from './MigrationRunner';
 import { DB_SCHEMA, DB_INDEXES } from '../../../types/database.types';
+
+import { Migration } from './MigrationRunner';
 
 /**
  * Initial database schema migration

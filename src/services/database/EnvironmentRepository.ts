@@ -1,5 +1,6 @@
 import { EnvironmentSnapshot, EnvironmentSnapshotData } from '../../models/EnvironmentSnapshot';
 import { EnvironmentSnapshotRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class EnvironmentRepository {
@@ -11,10 +12,13 @@ export class EnvironmentRepository {
     const db = databaseService.getDatabase();
 
     const result = await db.runAsync(
+      // See DOPELogRepository.create: COALESCE preserves a supplied capture time while
+      // keeping the schema default for ordinary creates. Without this, a restored backup
+      // stamped every snapshot with the import time, losing when the reading was taken.
       `INSERT INTO environment_snapshots (
         temperature, humidity, pressure, altitude, density_altitude,
-        wind_speed, wind_direction, latitude, longitude
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        wind_speed, wind_direction, latitude, longitude, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
       [
         snapshot.temperature,
         snapshot.humidity,
@@ -25,6 +29,7 @@ export class EnvironmentRepository {
         snapshot.windDirection,
         snapshot.latitude || null,
         snapshot.longitude || null,
+        snapshot.timestamp ?? null,
       ]
     );
 

@@ -1,5 +1,6 @@
 import { RangeSession, RangeSessionData } from '../../models/RangeSession';
 import { RangeSessionRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class RangeSessionRepository {

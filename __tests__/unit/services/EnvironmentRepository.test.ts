@@ -22,19 +22,9 @@ describe('EnvironmentRepository', () => {
     await uninstallTestDatabase();
   });
 
-  /**
-   * Creates a snapshot and back-dates it.
-   *
-   * `EnvironmentRepository.create` omits `timestamp` from its INSERT column list, so the
-   * schema's `DEFAULT (datetime('now'))` always wins and a caller-supplied timestamp is
-   * discarded. Ordering and age-based queries therefore have to be set up with SQL.
-   */
+  /** Creates a snapshot back-dated by `days`, for ordering and age-based queries. */
   const createAged = async (days: number, altitude: number): Promise<void> => {
-    const created = await environmentRepository.create(validEnvironment({ altitude }));
-    await db.runAsync('UPDATE environment_snapshots SET timestamp = ? WHERE id = ?', [
-      daysAgo(days),
-      created.id as number,
-    ]);
+    await environmentRepository.create(validEnvironment({ altitude, timestamp: daysAgo(days) }));
   };
 
   describe('create', () => {
@@ -101,6 +91,32 @@ describe('EnvironmentRepository', () => {
         longitude: -104.9903,
         densityAltitude: 7200,
       });
+    });
+  });
+
+  describe('timestamp handling', () => {
+    it('preserves a caller-supplied capture time', async () => {
+      const captured = '2026-03-14T15:09:26.000Z';
+
+      const created = await environmentRepository.create(validEnvironment({ timestamp: captured }));
+
+      const row = await db.getFirstAsync<{ timestamp: string }>(
+        'SELECT timestamp FROM environment_snapshots WHERE id = ?',
+        [created.id]
+      );
+      expect(row?.timestamp).toBe(captured);
+      expect((await environmentRepository.getById(created.id as number))?.timestamp).toBe(captured);
+    });
+
+    it('falls back to the schema default when no timestamp is given', async () => {
+      const created = await environmentRepository.create(validEnvironment());
+
+      const row = await db.getFirstAsync<{ timestamp: string | null }>(
+        'SELECT timestamp FROM environment_snapshots WHERE id = ?',
+        [created.id]
+      );
+      expect(row?.timestamp).toEqual(expect.any(String));
+      expect(Number.isNaN(Date.parse(row?.timestamp as string))).toBe(false);
     });
   });
 

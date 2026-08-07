@@ -254,6 +254,36 @@ describe('Export/Import round trip', () => {
       expect(logs.map((l) => l.distance).sort((a, b) => a - b)).toEqual([500, 800]);
     });
 
+    it('preserves the original engagement and capture times', async () => {
+      // A restored backup must keep WHEN each shot was taken. Previously create() dropped
+      // `timestamp`, so every restored log and snapshot was re-dated to the import moment.
+      const rifleId = (await rifleProfileRepository.create(validRifle())).id as number;
+      const ammoId = (await ammoProfileRepository.create(validAmmo())).id as number;
+      const environmentId = (
+        await environmentRepository.create(
+          validEnvironment({ timestamp: '2026-04-02T08:15:00.000Z' })
+        )
+      ).id as number;
+      await dopeLogRepository.create(
+        validDopeLog(
+          { rifleId, ammoId, environmentId },
+          { distance: 650, timestamp: '2026-04-02T09:30:00.000Z' }
+        )
+      );
+
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+
+      const [restoredLog] = await dopeLogRepository.getAll();
+      const [restoredEnvironment] = await environmentRepository.getAll();
+
+      expect(restoredLog.timestamp).toBe('2026-04-02T09:30:00.000Z');
+      expect(restoredEnvironment.timestamp).toBe('2026-04-02T08:15:00.000Z');
+    });
+
     it('relinks restored logs to the NEW parent ids, not the ids in the file', async () => {
       await seed();
       const exported = await exportEverything();

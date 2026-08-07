@@ -1,5 +1,6 @@
 import { AmmoProfile, AmmoProfileData } from '../../models/AmmoProfile';
 import { AmmoProfileRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class AmmoProfileRepository {

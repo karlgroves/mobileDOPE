@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+
 import databaseService from '../DatabaseService';
 
 export interface Migration {

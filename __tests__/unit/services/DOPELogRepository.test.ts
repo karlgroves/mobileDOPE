@@ -87,6 +87,46 @@ describe('DOPELogRepository', () => {
     });
   });
 
+  describe('timestamp handling', () => {
+    it('preserves a caller-supplied engagement time', async () => {
+      const engaged = '2026-05-20T13:45:00.000Z';
+
+      const created = await dopeLogRepository.create(validDopeLog(ids(), { timestamp: engaged }));
+
+      const row = await db.getFirstAsync<{ timestamp: string }>(
+        'SELECT timestamp FROM dope_logs WHERE id = ?',
+        [created.id]
+      );
+      expect(row?.timestamp).toBe(engaged);
+      expect((await dopeLogRepository.getById(created.id as number))?.timestamp).toBe(engaged);
+    });
+
+    it('falls back to the schema default when no timestamp is given', async () => {
+      const created = await dopeLogRepository.create(validDopeLog(ids()));
+
+      const row = await db.getFirstAsync<{ timestamp: string | null }>(
+        'SELECT timestamp FROM dope_logs WHERE id = ?',
+        [created.id]
+      );
+      expect(row?.timestamp).toEqual(expect.any(String));
+      expect(Number.isNaN(Date.parse(row?.timestamp as string))).toBe(false);
+    });
+
+    it('orders history by the supplied timestamps, newest first', async () => {
+      await dopeLogRepository.create(
+        validDopeLog(ids(), { distance: 100, timestamp: '2026-01-01T00:00:00.000Z' })
+      );
+      await dopeLogRepository.create(
+        validDopeLog(ids(), { distance: 900, timestamp: '2026-06-01T00:00:00.000Z' })
+      );
+      await dopeLogRepository.create(
+        validDopeLog(ids(), { distance: 500, timestamp: '2026-03-01T00:00:00.000Z' })
+      );
+
+      expect((await dopeLogRepository.getAll()).map((l) => l.distance)).toEqual([900, 500, 100]);
+    });
+  });
+
   describe('foreign key cascade', () => {
     it('deletes a rifle’s logs when the rifle is deleted (ON DELETE CASCADE)', async () => {
       await dopeLogRepository.create(validDopeLog(ids()));
