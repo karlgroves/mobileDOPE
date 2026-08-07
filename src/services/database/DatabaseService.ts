@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+
 import { DB_SCHEMA, DB_INDEXES } from '../../types/database.types';
 
 const DATABASE_NAME = 'mobiledope.db';

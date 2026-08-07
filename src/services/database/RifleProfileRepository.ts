@@ -1,5 +1,6 @@
 import { RifleProfile, RifleProfileData } from '../../models/RifleProfile';
 import { RifleProfileRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class RifleProfileRepository {

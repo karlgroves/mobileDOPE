@@ -1,5 +1,6 @@
 import { DOPELog, DOPELogData } from '../../models/DOPELog';
 import { DOPELogRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class DOPELogRepository {
@@ -11,11 +12,16 @@ export class DOPELogRepository {
     const db = databaseService.getDatabase();
 
     const result = await db.runAsync(
+      // `timestamp` is bound through COALESCE so an explicitly supplied value is preserved
+      // while omitting it still falls back to the schema's datetime('now'). A DOPE log's
+      // timestamp IS the engagement date, so dropping it (as this INSERT previously did)
+      // re-dated every restored log to the moment of import and scrambled history ordering,
+      // which is sorted by timestamp.
       `INSERT INTO dope_logs (
         rifle_id, ammo_id, environment_id, distance, distance_unit,
         elevation_correction, windage_correction, correction_unit,
-        target_type, group_size, hit_count, shot_count, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_type, group_size, hit_count, shot_count, notes, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
       [
         log.rifleId,
         log.ammoId,
@@ -30,6 +36,7 @@ export class DOPELogRepository {
         log.hitCount || null,
         log.shotCount || null,
         log.notes || null,
+        log.timestamp ?? null,
       ]
     );
 
