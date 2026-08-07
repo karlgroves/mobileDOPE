@@ -1,6 +1,9 @@
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import React from 'react';
+import { StyleSheet } from 'react-native';
+
 import { TextInput } from '../../src/components/TextInput';
+import { theme } from '../../src/constants/theme';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
 // Wrapper component to provide theme context
@@ -81,11 +84,13 @@ describe('TextInput Component', () => {
     );
 
     const input = getByPlaceholderText('Enter name');
-    expect(input.props.style).toMatchObject(
-      expect.objectContaining({
-        borderColor: expect.any(String),
-      })
-    );
+    // React Native passes `style` through as an array of style objects, so flatten to
+    // the effective style before asserting. Asserting the error colour specifically
+    // (rather than `expect.any(String)`) is what makes this test able to fail: every
+    // state of this input sets *some* borderColor.
+    expect(StyleSheet.flatten(input.props.style)).toMatchObject({
+      borderColor: theme.colors.error,
+    });
   });
 
   it('should render with helper text', () => {
@@ -217,11 +222,10 @@ describe('TextInput Component', () => {
     );
 
     const input = getByPlaceholderText('Enter name');
-    // Minimum touch target should be 44pt (per accessibility guidelines)
-    expect(input.props.style).toMatchObject(
-      expect.objectContaining({
-        minHeight: expect.any(Number),
-      })
-    );
+    // Minimum touch target should be 44pt (per accessibility guidelines).
+    // `style` arrives as an array, so flatten first. Assert the actual guarantee rather
+    // than `expect.any(Number)`, which would pass for a 1pt-tall input.
+    const { minHeight } = StyleSheet.flatten(input.props.style);
+    expect(minHeight).toBeGreaterThanOrEqual(theme.touchTargets.min);
   });
 });

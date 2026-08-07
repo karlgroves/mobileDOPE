@@ -214,6 +214,17 @@ module.exports = {
         'sonarjs/no-duplicate-string': 'off',
         'sonarjs/cognitive-complexity': 'off',
         'jsdoc/require-jsdoc': 'off',
+        // Test fixtures are not shipped UI, and the descriptor rule's autofixer is
+        // actively harmful here: because lint-staged runs `eslint --fix` on staged
+        // files, it silently inserted placeholder `accessibilityLabel="Text input
+        // field"` props into all 15 `<TextInput>` fixtures in TextInput.test.tsx --
+        // altering the components under test and merely converting 15 "missing
+        // descriptor" warnings into 15 "missing hint" warnings. This is the same
+        // hazard `jsdoc/require-jsdoc` carries `enableFixer: false` for above.
+        // Real accessibility remediation happens in `src/` (issue #30, which flagged
+        // this exact decision); linting test fixtures for it buys nothing.
+        'react-native-a11y/has-valid-accessibility-descriptors': 'off',
+        'react-native-a11y/has-accessibility-hint': 'off',
       },
     },
   ],
