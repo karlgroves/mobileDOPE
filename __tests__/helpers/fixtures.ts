@@ -1,7 +1,10 @@
 import type { AmmoProfileData } from '../../src/models/AmmoProfile';
 import type { DOPELogData } from '../../src/models/DOPELog';
 import type { EnvironmentSnapshotData } from '../../src/models/EnvironmentSnapshot';
+import type { RangeSessionData } from '../../src/models/RangeSession';
 import type { RifleProfileData } from '../../src/models/RifleProfile';
+import type { ShotStringData } from '../../src/models/ShotString';
+import type { TargetImageData } from '../../src/models/TargetImage';
 
 /**
  * Valid-by-default entity builders for service-layer tests.
@@ -64,5 +67,42 @@ export const validDopeLog = (
   windageCorrection: 0.5,
   correctionUnit: 'MIL',
   targetType: 'steel',
+  ...overrides,
+});
+
+/** Shot strings are FK-constrained to an ammo profile. */
+export const validShotString = (
+  ammoId: number,
+  overrides: Partial<ShotStringData> = {}
+): ShotStringData => ({
+  ammoId,
+  sessionDate: '2026-08-01',
+  shotNumber: 1,
+  velocity: 2600,
+  temperature: 59,
+  ...overrides,
+});
+
+/** Range sessions are FK-constrained to a rifle, ammo and environment row. */
+export const validRangeSession = (
+  ids: { rifleId: number; ammoId: number; environmentId: number },
+  overrides: Partial<RangeSessionData> = {}
+): RangeSessionData => ({
+  ...ids,
+  startTime: '2026-08-01T09:00:00.000Z',
+  distance: 500,
+  shotCount: 0,
+  coldBoreShot: false,
+  ...overrides,
+});
+
+/**
+ * Target images attach to a DOPE log and/or a range session; both columns are nullable, so
+ * callers pass whichever linkage the test needs.
+ */
+export const validTargetImage = (overrides: Partial<TargetImageData> = {}): TargetImageData => ({
+  imageUri: 'file:///targets/group-1.jpg',
+  targetType: 'paper',
+  poiMarkers: [{ x: 10, y: 20, shotNumber: 1 }],
   ...overrides,
 });

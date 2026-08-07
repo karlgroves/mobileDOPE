@@ -59,32 +59,37 @@ module.exports = {
   // which nothing came close to -- the gate was fiction, so it could not be run in CI and
   // caught nothing.
   //
-  // Ratcheted by #28 phase 2 (services layer). Measured after adding the repository suites:
+  // Ratcheted by #28 phase 2 as the services suites landed:
   //
-  //   metric       phase 1    now      floor
-  //   lines        16.71%     20.12%   19
-  //   statements   14.18%     17.13%   16
-  //   branches     11.09%     13.14%   12
-  //   functions    10.77%     13.96%   13
+  //   metric       phase 1   3 repos   all 7 repos   floor
+  //   lines        16.71%    20.12%    24.25%        23
+  //   statements   14.18%    17.13%    20.79%        20
+  //   branches     11.09%    13.14%    15.37%        14
+  //   functions    10.77%    13.96%    19.09%        18
+  //
+  // Measure with a clean `coverage/` directory (`rm -rf coverage` first). A stale one left
+  // behind by a `--selectProjects` run reports a lower figure, which would set the floors
+  // too loose and let real regressions through.
   //
   // Rule for each floor (unchanged from phase 1): the integer below actual, dropped one
   // further when that would leave under ~0.5pp of headroom -- which is all four here. Every
   // floor keeps >= 0.9pp of slack so landing a feature slightly ahead of its tests does not
   // break the build, while a real regression does.
   //
-  // ONLY EVER RAISE THESE. Services work is not finished: 4 of 7 repositories, plus
-  // MigrationRunner, ExportService and ImportService, are still largely uncovered, so the
-  // remainder of phase 2 should raise these again.
+  // ONLY EVER RAISE THESE. All 7 repositories are now at 98-100% statements, putting
+  // src/services/database/ at ~75%, but the wider services layer is not done:
+  // DatabaseService (21%), MigrationRunner (0%), ExportService and ImportService (0%)
+  // remain, and each should raise these floors again.
   //
   // Note the percentages are not comparable to pre-#35 figures (18.8%/19.01%): the `unit`
   // and `components` projects instrument differently and report different denominators for
   // the same source, so the baseline was re-measured once both were wired up.
   coverageThreshold: {
     global: {
-      branches: 12,
-      functions: 13,
-      lines: 19,
-      statements: 16,
+      branches: 14,
+      functions: 18,
+      lines: 23,
+      statements: 20,
     },
   },
 };
