@@ -14,13 +14,9 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Card, Button, SegmentedControl } from '../components';
-import type { RootStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useDOPEStore } from '../store/useDOPEStore';
-import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -29,6 +25,13 @@ import {
   exportDOPELogsPDF,
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
+import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+
+import type { RootStackScreenProps } from '../navigation/types';
 
 type Props = RootStackScreenProps<'Settings'>;
 
@@ -40,6 +43,7 @@ export const SettingsScreen: React.FC<Props> = () => {
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
   const { dopeLogs } = useDOPEStore();
+  const { loadSnapshots } = useEnvironmentStore();
 
   // Distance preset customization state
   const [newPresetValue, setNewPresetValue] = useState<string>('');
@@ -110,11 +114,16 @@ export const SettingsScreen: React.FC<Props> = () => {
         {
           text: 'Full Backup (All Data)',
           onPress: async () => {
-            const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs);
+            // Load every snapshot, not just the recent ones already in the store: a DOPE log
+            // whose environment is missing from the backup cannot be restored (issue #39).
+            await loadSnapshots();
+            const allEnvironments = useEnvironmentStore.getState().snapshots;
+            const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs, allEnvironments);
             if (result.success) {
               Alert.alert(
                 'Success',
-                `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, and ${dopeLogs.length} DOPE logs.`
+                `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, ` +
+                  `${allEnvironments.length} environment snapshots, and ${dopeLogs.length} DOPE logs.`
               );
             } else {
               Alert.alert('Error', result.error || 'Export failed');
@@ -293,7 +302,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               Distance Presets
             </Text>
-            <Pressable onPress={handleResetPresets}>
+            <Pressable accessibilityRole="button" onPress={handleResetPresets}>
               <Text style={[styles.resetLink, { color: colors.primary }]}>Reset</Text>
             </Pressable>
           </View>
@@ -303,6 +312,7 @@ export const SettingsScreen: React.FC<Props> = () => {
           <View style={styles.presetsContainer}>
             {settings.distancePresets.map((preset) => (
               <Pressable
+                accessibilityRole="button"
                 key={preset}
                 style={[
                   styles.presetChip,
@@ -314,6 +324,7 @@ export const SettingsScreen: React.FC<Props> = () => {
                   {preset}
                 </Text>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => handleRemovePreset(preset)}
                   style={styles.presetRemoveButton}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -325,6 +336,7 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
           <View style={styles.addPresetRow}>
             <TextInput
+              accessibilityLabel="Text input field"
               style={[
                 styles.presetInput,
                 {

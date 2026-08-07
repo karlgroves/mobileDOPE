@@ -34,8 +34,8 @@ interface BackupFile {
   exportDate: string;
   exportVersion: string;
   type: string;
-  data: { rifles: unknown[]; ammos: unknown[]; logs: unknown[] };
-  counts: { rifles: number; ammos: number; logs: number };
+  data: { rifles: unknown[]; ammos: unknown[]; environments: unknown[]; logs: unknown[] };
+  counts: { rifles: number; ammos: number; environments: number; logs: number };
 }
 
 const parseBackup = (raw: string): BackupFile => JSON.parse(raw) as BackupFile;
@@ -83,15 +83,20 @@ describe('Export/Import round trip', () => {
     return ids;
   };
 
+  /** Exports everything currently in the database, environments included. */
+  const exportEverything = async () =>
+    exportFullBackup(
+      await rifleProfileRepository.getAll(),
+      await ammoProfileRepository.getAll(),
+      await dopeLogRepository.getAll(),
+      await environmentRepository.getAll()
+    );
+
   describe('exportFullBackup', () => {
     it('writes a backup file and reports its uri', async () => {
       await seed();
 
-      const result = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const result = await exportEverything();
 
       expect(result.success).toBe(true);
       expect(result.uri).toMatch(/mobiledope_backup_\d+\.json$/);
@@ -101,16 +106,12 @@ describe('Export/Import round trip', () => {
     it('records counts that match the payload', async () => {
       await seed();
 
-      const result = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const result = await exportEverything();
 
       const backup = parseBackup(readWritten(result.uri as string) as string);
       expect(backup.type).toBe('full_backup');
-      expect(backup.exportVersion).toBe('1.0');
-      expect(backup.counts).toEqual({ rifles: 1, ammos: 1, logs: 2 });
+      expect(backup.exportVersion).toBe('1.1');
+      expect(backup.counts).toEqual({ rifles: 1, ammos: 1, environments: 1, logs: 2 });
       expect(backup.data.rifles).toHaveLength(1);
       expect(backup.data.ammos).toHaveLength(1);
       expect(backup.data.logs).toHaveLength(2);
@@ -119,11 +120,7 @@ describe('Export/Import round trip', () => {
     it('offers the file to the share sheet when sharing is available', async () => {
       await seed();
 
-      const result = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const result = await exportEverything();
 
       expect(Sharing.shareAsync).toHaveBeenCalledWith(
         result.uri,
@@ -145,17 +142,13 @@ describe('Export/Import round trip', () => {
       const result = await exportFullBackup([], [], []);
 
       const backup = parseBackup(readWritten(result.uri as string) as string);
-      expect(backup.counts).toEqual({ rifles: 0, ammos: 0, logs: 0 });
+      expect(backup.counts).toEqual({ rifles: 0, ammos: 0, environments: 0, logs: 0 });
     });
 
     it('serialises coldBoreShot-style booleans consistently (regression for #38)', async () => {
       await seed();
 
-      const result = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const result = await exportEverything();
 
       // Every exported value must be JSON-native: no 1/0 standing in for a boolean field.
       const raw = readWritten(result.uri as string) as string;
@@ -168,11 +161,7 @@ describe('Export/Import round trip', () => {
     it('restores rifles and ammo into an empty database', async () => {
       await seed();
       const before = await snapshotDatabase();
-      const exported = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const exported = await exportEverything();
 
       // Fresh database, same backup file.
       await installTestDatabase();
@@ -190,11 +179,7 @@ describe('Export/Import round trip', () => {
 
     it('does not re-use the ids from the backup file', async () => {
       await seed();
-      const exported = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const exported = await exportEverything();
 
       // Import into a database that already holds a rifle, so ids cannot line up.
       await installTestDatabase();
@@ -249,34 +234,123 @@ describe('Export/Import round trip', () => {
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
 
-    /**
-     * Documents issue #39. These assertions describe behaviour that is WRONG: a full backup
-     * cannot restore DOPE logs, because environments are never exported and foreign keys are
-     * not remapped when parents are re-keyed on import. They are here so the defect is
-     * visible and measured rather than invisible; when #39 is fixed these will fail and
-     * should be rewritten to assert that logs come back.
-     */
-    it('KNOWN DEFECT (#39): silently restores no DOPE logs', async () => {
+    it('restores DOPE logs, remapping their foreign keys (#39)', async () => {
       await seed();
-      const exported = await exportFullBackup(
-        await rifleProfileRepository.getAll(),
-        await ammoProfileRepository.getAll(),
-        await dopeLogRepository.getAll()
-      );
+      const exported = await exportEverything();
 
       const backup = parseBackup(readWritten(exported.uri as string) as string);
-      // Cause 1: environments are absent from the payload entirely.
-      expect(backup.data).not.toHaveProperty('environments');
-      expect(backup.counts).not.toHaveProperty('environments');
+      // Environments are in the payload now -- without them logs are unrestorable.
+      expect(backup.data.environments).toHaveLength(1);
 
       await installTestDatabase();
       await stageImportFile(exported.uri as string);
       const result = await importFullBackup();
 
-      // Cause 2: each log still references the original rifle/ammo/environment ids, so the
-      // insert violates the foreign key -- and the per-record catch hides it.
       expect(result.success).toBe(true);
+      expect(result.imported).toMatchObject({ rifles: 1, ammos: 1, environments: 1, logs: 2 });
+      expect(result.skipped?.logs).toBe(0);
+
+      const logs = await dopeLogRepository.getAll();
+      expect(logs.map((l) => l.distance).sort((a, b) => a - b)).toEqual([500, 800]);
+    });
+
+    it('relinks restored logs to the NEW parent ids, not the ids in the file', async () => {
+      await seed();
+      const exported = await exportEverything();
+
+      // Pre-populate so the fresh ids cannot coincidentally match the backup's ids.
+      await installTestDatabase();
+      const decoyRifleId = (await rifleProfileRepository.create(validRifle({ name: 'Decoy' })))
+        .id as number;
+
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+
+      const restoredRifle = (await rifleProfileRepository.getAll()).find(
+        (r) => r.name === 'Tikka T3x'
+      );
+      const logs = await dopeLogRepository.getAll();
+
+      expect(logs).toHaveLength(2);
+      // Every log points at the newly created rifle, not the decoy that took the old id.
+      for (const log of logs) {
+        expect(log.rifleId).toBe(restoredRifle?.id);
+        expect(log.rifleId).not.toBe(decoyRifleId);
+      }
+    });
+
+    it('skips logs whose parents are missing instead of failing silently', async () => {
+      const { File } = await import('expo-file-system');
+      // A log referencing rifle/ammo/environment ids that are not in the file at all.
+      await new File('file:///test-documents', 'orphan.json').write(
+        JSON.stringify({
+          exportVersion: '1.1',
+          type: 'full_backup',
+          data: {
+            rifles: [],
+            ammos: [],
+            environments: [],
+            logs: [{ id: 1, rifleId: 99, ammoId: 99, environmentId: 99, distance: 400 }],
+          },
+        })
+      );
+
+      await stageImportFile('file:///test-documents/orphan.json');
+      const result = await importFullBackup();
+
+      expect(result.success).toBe(true);
+      expect(result.imported?.logs).toBe(0);
+      expect(result.skipped?.logs).toBe(1);
+      expect(result.warnings?.join(' ')).toMatch(/skipped/i);
       expect(await dopeLogRepository.count()).toBe(0);
+    });
+
+    it('warns that a legacy 1.0 backup cannot restore its logs', async () => {
+      const { File } = await import('expo-file-system');
+      await new File('file:///test-documents', 'legacy.json').write(
+        JSON.stringify({
+          exportVersion: '1.0',
+          type: 'full_backup',
+          data: {
+            rifles: [{ id: 1, ...validRifle() }],
+            ammos: [{ id: 1, ...validAmmo() }],
+            logs: [{ id: 1, rifleId: 1, ammoId: 1, environmentId: 1, distance: 400 }],
+          },
+        })
+      );
+
+      await stageImportFile('file:///test-documents/legacy.json');
+      const result = await importFullBackup();
+
+      // Rifles and ammo still come back; the logs are reported rather than lost in silence.
+      expect(result.imported).toMatchObject({ rifles: 1, ammos: 1, logs: 0 });
+      expect(result.skipped?.logs).toBe(1);
+      expect(result.warnings?.join(' ')).toMatch(/no environment snapshots/i);
+    });
+
+    it('counts a rifle that fails validation as skipped, and skips its logs', async () => {
+      const { File } = await import('expo-file-system');
+      await new File('file:///test-documents', 'bad-rifle.json').write(
+        JSON.stringify({
+          exportVersion: '1.1',
+          type: 'full_backup',
+          data: {
+            // Missing every required field, so RifleProfile.validate() throws.
+            rifles: [{ id: 1, name: '' }],
+            ammos: [],
+            environments: [{ id: 1, ...validEnvironment() }],
+            logs: [{ id: 1, rifleId: 1, ammoId: 1, environmentId: 1, distance: 400 }],
+          },
+        })
+      );
+
+      await stageImportFile('file:///test-documents/bad-rifle.json');
+      const result = await importFullBackup();
+
+      expect(result.success).toBe(true);
+      expect(result.imported).toMatchObject({ rifles: 0, environments: 1, logs: 0 });
+      expect(result.skipped).toMatchObject({ rifles: 1, logs: 1 });
+      expect(await rifleProfileRepository.count()).toBe(0);
     });
 
     it('reports cancellation rather than throwing', async () => {
