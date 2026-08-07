@@ -54,38 +54,37 @@ module.exports = {
     '!src/**/*.types.ts',
     '!src/**/__tests__/**',
   ],
-  // A RATCHET, not a target (#28 phase 1). These are floors just below actual coverage,
-  // so `npm run test:coverage` passes today and any regression fails. Previously this
-  // declared 70%, which nothing came close to -- the gate was fiction, so it could not be
-  // run in CI and caught nothing.
+  // A RATCHET, not a target (#28 phases 1-2). These are floors just below actual coverage,
+  // so `npm run test:coverage` passes today and any regression fails. It once declared 70%,
+  // which nothing came close to -- the gate was fiction, so it could not be run in CI and
+  // caught nothing.
   //
-  // Measured on develop @ 973885c, and verified identical across three consecutive runs:
+  // Ratcheted by #28 phase 2 (services layer). Measured after adding the repository suites:
   //
-  //   lines      16.71%  (929/5559)   -> floor 16
-  //   statements 14.18%  (999/7044)   -> floor 13
-  //   branches   11.09%  (397/3577)   -> floor 10
-  //   functions  10.77%  (170/1577)   -> floor 10
+  //   metric       phase 1    now      floor
+  //   lines        16.71%     20.12%   19
+  //   statements   14.18%     17.13%   16
+  //   branches     11.09%     13.14%   12
+  //   functions    10.77%     13.96%   13
   //
-  // Rule for picking each floor: the integer below actual, dropped one further when that
-  // would leave under ~0.5pp of headroom (statements and branches). Every floor therefore
-  // has >= 0.7pp of slack -- roughly 300 lines of new uncovered source -- so landing a
-  // feature slightly ahead of its tests does not break the build, while a real regression
-  // does.
+  // Rule for each floor (unchanged from phase 1): the integer below actual, dropped one
+  // further when that would leave under ~0.5pp of headroom -- which is all four here. Every
+  // floor keeps >= 0.9pp of slack so landing a feature slightly ahead of its tests does not
+  // break the build, while a real regression does.
   //
-  // ONLY EVER RAISE THESE. Phases 2-4 of #28 (services, stores, models) should each
-  // ratchet them up as they land. The >80% goal in CLAUDE.md is the destination, not a
-  // number to declare before it is true.
+  // ONLY EVER RAISE THESE. Services work is not finished: 4 of 7 repositories, plus
+  // MigrationRunner, ExportService and ImportService, are still largely uncovered, so the
+  // remainder of phase 2 should raise these again.
   //
-  // Note the percentages are not comparable to the pre-#35 figures (18.8%/19.01%): the
-  // `unit` and `components` projects instrument differently and report different
-  // denominators for the same source (7044 statements merged vs 4807 under ts-jest
-  // alone), so this baseline was re-measured after both projects were wired up.
+  // Note the percentages are not comparable to pre-#35 figures (18.8%/19.01%): the `unit`
+  // and `components` projects instrument differently and report different denominators for
+  // the same source, so the baseline was re-measured once both were wired up.
   coverageThreshold: {
     global: {
-      branches: 10,
-      functions: 10,
-      lines: 16,
-      statements: 13,
+      branches: 12,
+      functions: 13,
+      lines: 19,
+      statements: 16,
     },
   },
 };
