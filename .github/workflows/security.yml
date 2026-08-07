@@ -42,23 +42,19 @@ jobs:
           path: npm-audit-results.json
           retention-days: 30
 
-  # CodeQL Analysis (SAST)
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript-typescript
-          queries: security-and-quality
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: '/language:javascript-typescript'
+  # CodeQL was intentionally removed (see docs/adr/011). Do not re-add it here.
+  #
+  # It previously ran as a `codeql` job on every push and PR to main/develop. Two
+  # earlier commits claimed to disable it -- `ffa8c86` ("Disable CodeQL and
+  # Dependabot") and `819bb51` ("chore(ci): disable CodeQL, Dependabot, scheduled
+  # actions") -- but neither touched this job: `ffa8c86` only deleted
+  # .github/dependabot.yml, and `819bb51` only removed this workflow's `schedule:`
+  # cron. So it kept running for months after it was believed to be off.
+  #
+  # SAST coverage is provided locally instead by `npm run security:semgrep`
+  # (opt-in, per ADR-011's local-gate-first approach). Note the
+  # `security-events: write` permission above is still required by the
+  # upload-sarif step in owasp-dependency-check below.
 
   # OWASP Dependency Check (comprehensive - weekly only)
   owasp-dependency-check:

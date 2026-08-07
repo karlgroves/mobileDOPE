@@ -17,6 +17,32 @@ lightweight `pr-check.yml` was kept in their place. Issue #17 also states a pref
 "Prefer local gates (Husky hooks) over GitHub Actions where possible to shorten the
 feedback loop and reduce Actions minutes."
 
+### Correction (2026-08-06): CodeQL was never actually disabled
+
+The paragraph above took those two commit messages at face value. Their diffs do not
+match their subjects, and this ADR propagated the error:
+
+- `ffa8c86` "Disable CodeQL and Dependabot" deleted **only** `.github/dependabot.yml`
+  (1 file, 36 deletions). It changed nothing CodeQL-related.
+- `819bb51` "chore(ci): disable CodeQL, Dependabot, scheduled actions" removed **only**
+  the weekly `schedule:` cron from `security.yml`. Its `codeql` job, and that
+  workflow's `push`/`pull_request` triggers on `main`/`develop`, were left intact.
+
+There was never a standalone `codeql.yml`; CodeQL existed only as a job inside
+`security.yml`, which this ADR simultaneously listed among the workflows to keep — an
+internal contradiction with "do not re-enable CodeQL" below. GitHub-side default-setup
+code scanning was separately confirmed `not-configured`, so the workflow job was the
+only source.
+
+Consequence: CodeQL ran on every push and PR to `main`/`develop` from its introduction
+in `148d16b` until 2026-08-06, consuming the Actions minutes this ADR was written to
+conserve. The `codeql` job has now been removed from `security.yml`, making the
+repository's state match this ADR's intent. SAST remains available locally and opt-in
+via `npm run security:semgrep`.
+
+Lesson for future ADRs: verify claims about repository state against diffs, not commit
+subjects.
+
 ## Decision
 
 Honour the maintainer's decision and the issue's stated preference:
