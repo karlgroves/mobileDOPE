@@ -68,6 +68,51 @@ module.exports = {
     ],
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
+
+    // --- Naming conventions (issue #19) ---
+    // The baseline config suggested in issue #19 produces 289 errors here, none of
+    // which are real naming drift: they are SQLite column names, caliber data keys,
+    // RN Navigation route names, dynamically-looked-up StyleSheet keys, and
+    // function-declared React components. The carve-outs below are what make the
+    // rule enforce casing where it is meaningful without flagging load-bearing
+    // names. Each exists for a measured reason — see the comments before relaxing.
+    '@typescript-eslint/naming-convention': [
+      'error',
+      { selector: 'default', format: ['camelCase'], leadingUnderscore: 'allow' },
+      {
+        selector: 'variable',
+        format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
+        leadingUnderscore: 'allow',
+      },
+      // React components are declared as functions, so the `variable` selector
+      // above never reaches them; without this they fall through to `default`
+      // and every component (DOPELogList, WindTable, ...) errors.
+      { selector: 'function', format: ['camelCase', 'PascalCase'] },
+      { selector: 'parameter', format: ['camelCase'], leadingUnderscore: 'allow' },
+      { selector: 'typeLike', format: ['PascalCase'] },
+      { selector: 'enumMember', format: ['PascalCase', 'UPPER_CASE'] },
+      { selector: 'import', format: ['camelCase', 'PascalCase'] },
+      // snake_case: SQLite row shapes in src/types/database.types.ts mirror the
+      // schema columns. PascalCase: RN Navigation route-name maps.
+      { selector: 'typeProperty', format: ['camelCase', 'snake_case', 'PascalCase'] },
+      // Quoted keys that are not valid identifiers ('.223 Rem' in spinDrift.ts,
+      // '2xl'/'3xl' design-token scales) cannot match any format. The explicit
+      // `format: null` is required: a `filter` alone only removes them from this
+      // entry, after which they fall through to `default` and still error.
+      {
+        selector: ['objectLiteralProperty', 'typeProperty'],
+        format: null,
+        filter: { regex: '^[A-Za-z_$][A-Za-z0-9_$]*$', match: false },
+      },
+      // snake_case here covers StyleSheet keys read via dynamic lookup, e.g.
+      // `styles[\`button_${variant}\`]` in src/components/Button.tsx — renaming
+      // those to camelCase would break the lookup.
+      {
+        selector: 'objectLiteralProperty',
+        format: ['camelCase', 'snake_case', 'PascalCase', 'UPPER_CASE'],
+      },
+    ],
+
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off',
     'react-hooks/rules-of-hooks': 'error',
