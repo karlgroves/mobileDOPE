@@ -3,10 +3,10 @@
  * Define all navigation routes and their parameters
  */
 
+import type { BallisticSolution } from '../types/ballistic.types';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BallisticSolution } from '../types/ballistic.types';
 
 /**
  * Root Stack Navigator
@@ -139,14 +139,28 @@ export type HistoryStackScreenProps<T extends keyof HistoryStackParamList> = Com
   MainTabScreenProps<keyof MainTabParamList>
 >;
 
-// Legacy type aliases for backward compatibility
+// Legacy type aliases from the Profiles->Rifles / Range->Session / Logs->History rename.
+//
+// These are NOT all dead. The three aliases below are still consumed by live, mounted
+// screens, so removing them would break the build:
+//
+//   ProfilesStackParamList   -> AmmoProfileList, AmmoProfileDetail, AmmoProfileForm,
+//                               RifleProfileDetail
+//   ProfilesStackScreenProps -> DOPECardGenerator
+//   LogsStackScreenProps     -> DOPELogList, DOPELogDetail, DOPELogEntry
+//
+// The other three (RangeStackParamList, RangeStackScreenProps, LogsStackParamList) were
+// referenced only by the orphaned LogsNavigator/RangeNavigator/ProfilesNavigator and
+// RangeScreen/LogsScreen, and were removed along with them.
+//
+// Migrating the screens above onto the current names (RiflesStack*/HistoryStack*) so these
+// aliases can go too is deliberately left as follow-up work — it touches eight live screens
+// and is unrelated to deleting dead files.
 export type ProfilesStackParamList = RiflesStackParamList;
 export type ProfilesStackScreenProps<T extends keyof ProfilesStackParamList> =
   RiflesStackScreenProps<T>;
-export type RangeStackParamList = SessionStackParamList;
-export type RangeStackScreenProps<T extends keyof RangeStackParamList> = SessionStackScreenProps<T>;
-export type LogsStackParamList = HistoryStackParamList;
-export type LogsStackScreenProps<T extends keyof LogsStackParamList> = HistoryStackScreenProps<T>;
+export type LogsStackScreenProps<T extends keyof HistoryStackParamList> =
+  HistoryStackScreenProps<T>;
 
 // Declare global navigation types for type-safe navigation
 declare global {
