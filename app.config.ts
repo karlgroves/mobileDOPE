@@ -41,6 +41,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       isStaging: env === 'staging',
       isProduction: env === 'production',
     },
-    plugins: ['expo-sqlite'],
+    // expo-sharing became a required config plugin in SDK 55; `expo install --fix`
+    // reports it as missing because this config is dynamic (app.config.ts) and cannot
+    // be written automatically.
+    plugins: ['expo-sqlite', 'expo-sharing'],
   };
 };

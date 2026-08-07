@@ -58,6 +58,7 @@ What becomes easier or more difficult to do because of this change?
 9. [ADR-009: Web/DOM-only tooling is out of scope for this React Native app](./009-rn-scope-web-tools-na.md)
 10. [ADR-010: Pragmatic adoption — noisy rules start as warnings](./010-pragmatic-quality-adoption.md)
 11. [ADR-011: Local-gate-first; no new GitHub Actions, Dependabot, or CodeQL](./011-local-gate-first-no-new-actions.md)
+12. [ADR-012: Upgrade to Expo SDK 55 rather than reverting to SDK 54](./012-target-expo-sdk-55.md)
 
 ## Contributing
 
