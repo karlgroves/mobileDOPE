@@ -4,13 +4,14 @@
  */
 
 import { Paths, File } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
-import type { RifleProfile } from '../models/RifleProfile';
+import * as Sharing from 'expo-sharing';
+
 import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
-import type { RangeSession } from '../models/RangeSession';
 import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import type { RangeSession } from '../models/RangeSession';
+import type { RifleProfile } from '../models/RifleProfile';
 import type { BallisticSolution } from '../types/ballistic.types';
 
 /**
@@ -542,7 +543,8 @@ export async function exportDOPELogsPDF(
 export async function exportFullBackup(
   rifles: RifleProfile[],
   ammos: AmmoProfile[],
-  logs: DOPELog[]
+  logs: DOPELog[],
+  environments: EnvironmentSnapshot[] = []
 ): Promise<ExportResult> {
   try {
     const filename = `mobiledope_backup_${Date.now()}.json`;
@@ -550,16 +552,22 @@ export async function exportFullBackup(
 
     const data = {
       exportDate: new Date().toISOString(),
-      exportVersion: '1.0',
+      // 1.1 added `environments`. Without them a restored DOPE log has no environment row to
+      // reference, and since environment_id is NOT NULL with a foreign key, every log failed
+      // to import -- see issue #39. Importers must keep reading 1.0 files, but cannot
+      // recover logs from them.
+      exportVersion: '1.1',
       type: 'full_backup',
       data: {
         rifles: rifles.map((r) => r.toJSON()),
         ammos: ammos.map((a) => a.toJSON()),
+        environments: environments.map((e) => e.toJSON()),
         logs: logs.map((l) => l.toJSON()),
       },
       counts: {
         rifles: rifles.length,
         ammos: ammos.length,
+        environments: environments.length,
         logs: logs.length,
       },
     };

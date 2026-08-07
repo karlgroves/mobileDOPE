@@ -5,6 +5,7 @@
 
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 
 export interface ImportResult {
@@ -12,8 +13,21 @@ export interface ImportResult {
   imported?: {
     rifles?: number;
     ammos?: number;
+    environments?: number;
     logs?: number;
   };
+  /**
+   * Records present in the file that could not be imported. Previously these were swallowed
+   * with only a `console.error`, so a total failure looked identical to success (issue #39).
+   */
+  skipped?: {
+    rifles?: number;
+    ammos?: number;
+    environments?: number;
+    logs?: number;
+  };
+  /** Human-readable explanations for skipped records, for surfacing in the UI. */
+  warnings?: string[];
   error?: string;
 }
 
@@ -25,11 +39,13 @@ interface BackupData {
   data: {
     rifles?: any[];
     ammos?: any[];
+    environments?: any[];
     logs?: any[];
   };
   counts?: {
     rifles?: number;
     ammos?: number;
+    environments?: number;
     logs?: number;
   };
 }
@@ -102,6 +118,19 @@ const AMMO_ALLOWED_FIELDS = [
   'powderWeight',
   'lotNumber',
   'notes',
+];
+
+const ENVIRONMENT_ALLOWED_FIELDS = [
+  'temperature',
+  'humidity',
+  'pressure',
+  'altitude',
+  'densityAltitude',
+  'windSpeed',
+  'windDirection',
+  'latitude',
+  'longitude',
+  'timestamp',
 ];
 
 const DOPE_LOG_ALLOWED_FIELDS = [
@@ -228,21 +257,51 @@ export async function importFullBackup(): Promise<ImportResult> {
     // Get stores
     const rifleStore = useRifleStore.getState();
     const ammoStore = useAmmoStore.getState();
+    const environmentStore = useEnvironmentStore.getState();
     const dopeStore = useDOPEStore.getState();
 
     let riflesImported = 0;
     let ammosImported = 0;
+    let environmentsImported = 0;
     let logsImported = 0;
+    let riflesSkipped = 0;
+    let ammosSkipped = 0;
+    let environmentsSkipped = 0;
+    let logsSkipped = 0;
+    const warnings: string[] = [];
+
+    /**
+     * Old id -> new id, per entity type.
+     *
+     * `id` is deliberately stripped from every record before insert (mass-assignment
+     * hardening), so parents receive fresh AUTOINCREMENT ids. DOPE logs reference their
+     * parents by id, so those references have to be translated or every insert violates a
+     * foreign key -- which is exactly what issue #39 was. Reading `record.id` here is safe:
+     * it is used only as a lookup key and never assigned to a new row.
+     */
+    const rifleIdMap = new Map<number, number>();
+    const ammoIdMap = new Map<number, number>();
+    const environmentIdMap = new Map<number, number>();
+
+    const originalId = (record: unknown): number | undefined => {
+      const id = (record as { id?: unknown })?.id;
+      return typeof id === 'number' ? id : undefined;
+    };
 
     // Import rifles (only allowed fields, no ID)
     if (data.data.rifles && Array.isArray(data.data.rifles)) {
       for (const rifleData of data.data.rifles) {
         try {
           const sanitizedRifle = pickAllowedFields(rifleData, RIFLE_ALLOWED_FIELDS);
-          await rifleStore.createRifle(sanitizedRifle);
+          const created = await rifleStore.createRifle(sanitizedRifle);
+          const oldId = originalId(rifleData);
+          if (oldId !== undefined && created.id !== undefined) {
+            rifleIdMap.set(oldId, created.id);
+          }
           riflesImported++;
         } catch (error) {
           console.error('Failed to import rifle:', error);
+          riflesSkipped++;
         }
       }
     }
@@ -252,12 +311,42 @@ export async function importFullBackup(): Promise<ImportResult> {
       for (const ammoData of data.data.ammos) {
         try {
           const sanitizedAmmo = pickAllowedFields(ammoData, AMMO_ALLOWED_FIELDS);
-          await ammoStore.createAmmoProfile(sanitizedAmmo);
+          const created = await ammoStore.createAmmoProfile(sanitizedAmmo);
+          const oldId = originalId(ammoData);
+          if (oldId !== undefined && created.id !== undefined) {
+            ammoIdMap.set(oldId, created.id);
+          }
           ammosImported++;
         } catch (error) {
           console.error('Failed to import ammo:', error);
+          ammosSkipped++;
         }
       }
+    }
+
+    // Import environment snapshots. Added to the backup format in exportVersion 1.1; a 1.0
+    // file has none, which is why its logs cannot be restored.
+    if (data.data.environments && Array.isArray(data.data.environments)) {
+      for (const environmentData of data.data.environments) {
+        try {
+          const sanitized = pickAllowedFields(environmentData, ENVIRONMENT_ALLOWED_FIELDS);
+          const created = await environmentStore.createSnapshot(sanitized);
+          const oldId = originalId(environmentData);
+          if (oldId !== undefined && created.id !== undefined) {
+            environmentIdMap.set(oldId, created.id);
+          }
+          environmentsImported++;
+        } catch (error) {
+          console.error('Failed to import environment snapshot:', error);
+          environmentsSkipped++;
+        }
+      }
+    } else if (data.data.logs && Array.isArray(data.data.logs) && data.data.logs.length > 0) {
+      warnings.push(
+        `This backup (exportVersion ${data.exportVersion}) contains no environment snapshots, ` +
+          'so its DOPE logs cannot be restored. Re-export from a current version of the app ' +
+          'to produce a restorable backup.'
+      );
     }
 
     // Import DOPE logs (only allowed fields, no ID)
@@ -265,12 +354,34 @@ export async function importFullBackup(): Promise<ImportResult> {
       for (const logData of data.data.logs) {
         try {
           const sanitizedLog = pickAllowedFields(logData, DOPE_LOG_ALLOWED_FIELDS);
-          await dopeStore.createDopeLog(sanitizedLog);
+
+          // Translate the backup's ids to the ids the parents were just given.
+          const rifleId = rifleIdMap.get(sanitizedLog.rifleId);
+          const ammoId = ammoIdMap.get(sanitizedLog.ammoId);
+          const environmentId = environmentIdMap.get(sanitizedLog.environmentId);
+
+          if (rifleId === undefined || ammoId === undefined || environmentId === undefined) {
+            // A parent is missing from the file (or failed to import). Inserting anyway would
+            // either violate a foreign key or, worse, silently attach the log to an unrelated
+            // rifle whose id happens to collide.
+            logsSkipped++;
+            continue;
+          }
+
+          await dopeStore.createDopeLog({ ...sanitizedLog, rifleId, ammoId, environmentId });
           logsImported++;
         } catch (error) {
           console.error('Failed to import DOPE log:', error);
+          logsSkipped++;
         }
       }
+    }
+
+    if (logsSkipped > 0 && warnings.length === 0) {
+      warnings.push(
+        `${logsSkipped} DOPE log(s) were skipped because the rifle, ammo or environment they ` +
+          'reference is missing from the backup file.'
+      );
     }
 
     return {
@@ -278,8 +389,16 @@ export async function importFullBackup(): Promise<ImportResult> {
       imported: {
         rifles: riflesImported,
         ammos: ammosImported,
+        environments: environmentsImported,
         logs: logsImported,
       },
+      skipped: {
+        rifles: riflesSkipped,
+        ammos: ammosSkipped,
+        environments: environmentsSkipped,
+        logs: logsSkipped,
+      },
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
   } catch (error) {
     console.error('Error importing full backup:', error);

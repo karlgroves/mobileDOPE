@@ -61,11 +61,11 @@ module.exports = {
   //
   // Ratcheted by #28 phase 2 as the services suites landed:
   //
-  //   metric       phase 1   3 repos   all 7 repos   + export/import   floor
-  //   lines        16.71%    20.12%    24.25%        27.00%            26
-  //   statements   14.18%    17.13%    20.79%        23.47%            22
-  //   branches     11.09%    13.14%    15.37%        16.68%            16
-  //   functions    10.77%    13.96%    19.09%        20.93%            20
+  //   metric       phase 1   3 repos   all 7 repos   export/import   + #39 fix   floor
+  //   lines        16.71%    20.12%    24.25%        27.00%          28.11%      27
+  //   statements   14.18%    17.13%    20.79%        23.47%          24.60%      24
+  //   branches     11.09%    13.14%    15.37%        16.68%          17.97%      17
+  //   functions    10.77%    13.96%    19.09%        20.93%          21.87%      21
   //
   // Measure with a clean `coverage/` directory (`rm -rf coverage` first). A stale one left
   // behind by a `--selectProjects` run reports a lower figure, which would set the floors
@@ -77,7 +77,7 @@ module.exports = {
   // break the build, while a real regression does.
   //
   // ONLY EVER RAISE THESE. All 7 repositories sit at 98-100% statements and ImportService
-  // is at ~59%, but the layer is not done: ExportService is still ~9% (only the JSON
+  // is at ~70%, but the layer is not done: ExportService is still ~9% (only the JSON
   // full-backup path is covered; the CSV, Markdown and PDF exporters are not),
   // DatabaseService is 21%, and MigrationRunner is 0%.
   //
@@ -86,10 +86,10 @@ module.exports = {
   // the same source, so the baseline was re-measured once both were wired up.
   coverageThreshold: {
     global: {
-      branches: 16,
-      functions: 20,
-      lines: 26,
-      statements: 22,
+      branches: 17,
+      functions: 21,
+      lines: 27,
+      statements: 24,
     },
   },
 };
