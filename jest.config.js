@@ -54,14 +54,38 @@ module.exports = {
     '!src/**/*.types.ts',
     '!src/**/__tests__/**',
   ],
-  // NOTE: still the aspirational 70%, which `npm run test:coverage` does not meet.
-  // Making this threshold honest is #28 phase 1 and is intentionally not changed here.
+  // A RATCHET, not a target (#28 phase 1). These are floors just below actual coverage,
+  // so `npm run test:coverage` passes today and any regression fails. Previously this
+  // declared 70%, which nothing came close to -- the gate was fiction, so it could not be
+  // run in CI and caught nothing.
+  //
+  // Measured on develop @ 973885c, and verified identical across three consecutive runs:
+  //
+  //   lines      16.71%  (929/5559)   -> floor 16
+  //   statements 14.18%  (999/7044)   -> floor 13
+  //   branches   11.09%  (397/3577)   -> floor 10
+  //   functions  10.77%  (170/1577)   -> floor 10
+  //
+  // Rule for picking each floor: the integer below actual, dropped one further when that
+  // would leave under ~0.5pp of headroom (statements and branches). Every floor therefore
+  // has >= 0.7pp of slack -- roughly 300 lines of new uncovered source -- so landing a
+  // feature slightly ahead of its tests does not break the build, while a real regression
+  // does.
+  //
+  // ONLY EVER RAISE THESE. Phases 2-4 of #28 (services, stores, models) should each
+  // ratchet them up as they land. The >80% goal in CLAUDE.md is the destination, not a
+  // number to declare before it is true.
+  //
+  // Note the percentages are not comparable to the pre-#35 figures (18.8%/19.01%): the
+  // `unit` and `components` projects instrument differently and report different
+  // denominators for the same source (7044 statements merged vs 4807 under ts-jest
+  // alone), so this baseline was re-measured after both projects were wired up.
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
+      branches: 10,
+      functions: 10,
+      lines: 16,
+      statements: 13,
     },
   },
 };
