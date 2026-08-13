@@ -7,9 +7,12 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+# No `security-events: write`. GitHub Advanced Security / code scanning is not used
+# in this project, so nothing here may upload SARIF to the Security tab. Any scanner
+# added later must keep its output as a build artifact and gate on it in-workflow
+# instead of uploading it.
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   # Quick scan on every push/PR
@@ -28,6 +31,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      # KNOWN NON-GATE, left deliberately non-blocking for now.
+      #
+      # `npm audit` currently reports 38 advisories for this lockfile (2 low,
+      # 10 moderate, 24 high, 2 critical), most of them transitive through
+      # react-native / metro / expo and not fixable without an SDK bump. Removing
+      # `continue-on-error` today would red every PR on debt that predates the PR.
+      #
+      # This is the only gate in this repo that still cannot fail, and it should not
+      # stay that way. The fix is an allowlist-gated audit (fail on anything new,
+      # waive existing advisories individually with a reason and a tracking issue)
+      # rather than a blanket skip. Tracked separately — do not quietly widen this.
       - name: Run npm audit
         run: npm audit --audit-level=high
         continue-on-error: true
@@ -52,55 +66,40 @@ jobs:
   # cron. So it kept running for months after it was believed to be off.
   #
   # SAST coverage is provided locally instead by `npm run security:semgrep`
-  # (opt-in, per ADR-011's local-gate-first approach). Note the
-  # `security-events: write` permission above is still required by the
-  # upload-sarif step in owasp-dependency-check below.
+  # (opt-in, per ADR-011's local-gate-first approach).
 
-  # OWASP Dependency Check (comprehensive - manual only)
+  # OWASP Dependency-Check was REMOVED. Do not re-add it in this form.
   #
-  # Manual-only by design: `819bb51` removed this workflow's `schedule:` trigger and
-  # ADR-011 rules out re-adding scheduled scans. The `github.event_name == 'schedule'`
-  # half of the old condition was therefore unreachable and has been dropped -- run
-  # this from the Actions tab ("Run workflow") when a comprehensive scan is wanted.
-  owasp-dependency-check:
-    name: OWASP Dependency Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 'lts/*'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: ${{ github.repository }}
-          path: '.'
-          format: 'HTML,JSON,SARIF'
-          args: >
-            --enableExperimental
-            --nodeAuditAnalyzer
-            --nodePackageSkipDevDependencies false
-
-      - name: Upload OWASP results
-        uses: actions/upload-artifact@v6
-        with:
-          name: owasp-dependency-check-report
-          path: reports/
-          retention-days: 90
-
-      - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: reports/dependency-check-report.sarif
-        if: always()
+  # It ran as a manual-only `owasp-dependency-check` job using
+  # `dependency-check/Dependency-Check_Action`. Every part of that setup was broken
+  # in a way that produced a green, authoritative-looking report while scanning
+  # effectively nothing. Verified directly against the action's source:
+  #
+  #   1. `--noupdate` is HARDCODED in the action's own argument list, at every
+  #      revision. dependency-check therefore never populates or refreshes the NVD
+  #      database, so it has little or no vulnerability data to match against. A
+  #      clean report means "nothing was known", not "nothing was found".
+  #   2. The scanner image is ALWAYS floating. At tag 1.1.0 the action is
+  #      `image: docker://owasp/dependency-check-action:latest`; on `main` it builds
+  #      from a Dockerfile whose first line is `FROM owasp/dependency-check-action:latest`.
+  #      Pinning the action to a SHA would not have pinned what actually executes.
+  #   3. We pinned it to `@main` — a moving default branch — for a third-party
+  #      action that ran in a job holding `security-events: write`.
+  #   4. Pinning to the only tagged release (1.1.0) would have been WORSE, not
+  #      better: that revision declares only `project`/`path`/`format`/`others`, so
+  #      our `out:` and `args:` inputs would have been silently dropped and
+  #      `--enableExperimental --nodeAuditAnalyzer --nodePackageSkipDevDependencies false`
+  #      would never have reached the scanner at all.
+  #   5. It was gated on `github.event_name == 'workflow_dispatch'`, so it only ever
+  #      ran when someone clicked it — which, combined with the above, means this
+  #      repo has never had meaningful dependency-vulnerability coverage from it.
+  #
+  # Its `upload-sarif` step was the only reason this workflow requested
+  # `security-events: write`; both are gone, and GitHub code scanning stays off.
+  #
+  # Real coverage instead: the `npm-audit` job above runs on every push and PR, and
+  # `npm run security:osv` (osv-scanner) is available locally per ADR-011. Wiring
+  # osv-scanner into CI as a genuine replacement is tracked separately.
 
   # License compliance check (manual only -- same reasoning as owasp-dependency-check
   # above; there is also an opt-in local equivalent, `npm run license:check`)
@@ -128,10 +127,13 @@ jobs:
           license-checker --json --out licenses.json
           license-checker --summary
 
+      # No `|| echo` here. This step used to end with `|| echo "Review licenses above"`,
+      # which discarded `--failOn`'s exit code and made the gate incapable of failing —
+      # a licence check that always passes is worse than none, because it looks like
+      # coverage. If this now fails, that is the gate working; fix or waive the licence
+      # deliberately rather than restoring the swallow.
       - name: Check for problematic licenses
-        run: |
-          # Fail if GPL, AGPL, or unknown licenses found (customize as needed)
-          license-checker --failOn 'GPL;AGPL;UNKNOWN' || echo "Review licenses above"
+        run: license-checker --failOn 'GPL;AGPL;UNKNOWN'
 
       - name: Upload license report
         uses: actions/upload-artifact@v6

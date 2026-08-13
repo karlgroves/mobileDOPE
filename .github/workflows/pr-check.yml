@@ -47,42 +47,14 @@ jobs:
 
           echo "All workflow files are valid"
 
-  ci-check:
-    name: CI Readiness Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Detect project type
-        id: detect
-        run: |
-          if [ -f "package.json" ]; then
-            echo "type=node" >> $GITHUB_OUTPUT
-          elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
-            echo "type=python" >> $GITHUB_OUTPUT
-          else
-            echo "type=other" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup Node.js
-        if: steps.detect.outputs.type == 'node'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-          cache: 'npm'
-
-      - name: Install dependencies
-        if: steps.detect.outputs.type == 'node'
-        run: npm ci --ignore-scripts
-        continue-on-error: true
-
-      - name: Run lint check
-        if: steps.detect.outputs.type == 'node'
-        run: npm run lint --if-present
-        continue-on-error: true
-
-      - name: Run tests
-        if: steps.detect.outputs.type == 'node'
-        run: npm test --if-present
-        continue-on-error: true
+  # The `ci-check` job was REMOVED.
+  #
+  # It ran `npm ci --ignore-scripts`, `npm run lint` and `npm test` with
+  # `continue-on-error: true` on every single step, so the job could not fail no
+  # matter what it found — it rendered a green check that meant nothing. Worse, it
+  # duplicated work `ci.yml` already does for real (lint, type-check, test with
+  # coverage), so it spent Actions minutes to produce a misleading signal.
+  #
+  # Deleting it loses no coverage: `ci.yml` runs the same checks on the same
+  # `pull_request` trigger and those runs can actually fail. The `validate-workflows`
+  # job above is kept because it is genuinely additive and does gate (`exit 1`).
