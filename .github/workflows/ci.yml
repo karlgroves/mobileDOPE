@@ -37,13 +37,18 @@ jobs:
       - name: Run TypeScript type checking
         run: npm run type-check
 
+      # No `continue-on-error`. Verified passing at 0 errors across 29 files when
+      # this gate was made real, so enabling it breaks nothing today and stops the
+      # count drifting up unnoticed.
       - name: Lint Markdown
         run: npm run markdownlint
-        continue-on-error: true
 
+      # No `continue-on-error`. Verified exiting 0 against the thresholds in
+      # .jscpd.json when this gate was made real. It reports 115 clones today, which
+      # is within the configured budget — the point of gating is that exceeding that
+      # budget now fails instead of scrolling past in a green log.
       - name: Check for code duplication (jscpd)
         run: npm run lint:cpd:ci
-        continue-on-error: true
 
       - name: Upload duplication report
         uses: actions/upload-artifact@v6
