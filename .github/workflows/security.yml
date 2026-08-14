@@ -25,7 +25,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          # .nvmrc, matching ci.yml and eas-build.yml. `lts/*` floats onto
+          # whatever major is current LTS, and package.json declares
+          # engines.node ">=24.15.0" with engine-strict=true in .npmrc — so the
+          # day `lts/*` resolves to an older major, `npm ci` fails outright here
+          # while the rest of CI stays green.
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -101,42 +106,56 @@ jobs:
   # `npm run security:osv` (osv-scanner) is available locally per ADR-011. Wiring
   # osv-scanner into CI as a genuine replacement is tracked separately.
 
-  # License compliance check (manual only -- same reasoning as owasp-dependency-check
-  # above; there is also an opt-in local equivalent, `npm run license:check`)
+  # License compliance.
+  #
+  # Runs on every push and pull request. It was previously gated on
+  # `if: github.event_name == 'workflow_dispatch'`, which is the same dead-gate
+  # shape this PR removed elsewhere: with nothing scheduled and nobody clicking
+  # the button, the job never ran, while still appearing in the workflow as a
+  # configured check.
+  #
+  # It also runs the repository's own `license:check` script rather than
+  # redefining the policy here. The previous CI-local definition was
+  # `license-checker --failOn 'GPL;AGPL;UNKNOWN'`, which could not fail on GPL.
+  # Verified against a fixture tree containing a `GPL-3.0` package and a
+  # `(BSD-3-Clause OR GPL-2.0)` package:
+  #
+  #   license-checker --failOn 'GPL;AGPL;UNKNOWN'          -> exit 0
+  #   license-checker-rseidelsohn --onlyAllow '<allowlist>' -> exit 1
+  #
+  # `--failOn` matches the licence string exactly, so `GPL` never matches
+  # `GPL-3.0`. Removing the `|| echo` swallow made the step's exit code count
+  # again, but the command underneath it still could not fail on the one thing it
+  # named. An allowlist also fails closed on a licence nobody anticipated, which a
+  # deny-list by construction cannot.
   license-check:
     name: License Compliance
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Install license-checker
-        run: npm install -g license-checker
+      # No `npm install -g license-checker`: that pulled an unpinned global
+      # package at build time. license-checker-rseidelsohn is already a
+      # devDependency, pinned in the lockfile, and installed by the step above.
+      - name: Check production licences against the allowlist (blocking)
+        run: npm run license:check
 
-      - name: Check licenses
-        run: |
-          license-checker --json --out licenses.json
-          license-checker --summary
-
-      # No `|| echo` here. This step used to end with `|| echo "Review licenses above"`,
-      # which discarded `--failOn`'s exit code and made the gate incapable of failing —
-      # a licence check that always passes is worse than none, because it looks like
-      # coverage. If this now fails, that is the gate working; fix or waive the licence
-      # deliberately rather than restoring the swallow.
-      - name: Check for problematic licenses
-        run: license-checker --failOn 'GPL;AGPL;UNKNOWN'
+      - name: Generate licence report
+        if: always()
+        run: npx license-checker-rseidelsohn --production --json --out licenses.json
 
       - name: Upload license report
         uses: actions/upload-artifact@v6
+        if: always()
         with:
           name: license-report
           path: licenses.json
