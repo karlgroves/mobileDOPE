@@ -34,6 +34,11 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   const { colors } = theme;
   const [inputText, setInputText] = useState<string>('');
 
+  // Ballistic controls are only usable by ear if the announcement carries the unit
+  // and the axis: "Increase elevation correction, mils" rather than "plus". `label`
+  // supplies the axis and `unit` the dimension, so both step buttons name them.
+  const subject = [rest.label, unit].filter(Boolean).join(', ');
+
   const formatValue = (num: number | undefined): string => {
     if (num === undefined || num === null || isNaN(num)) {
       return '';
@@ -140,6 +145,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onPress={handleDecrement}
               style={[styles.button, { backgroundColor: colors.surface }]}
               disabled={min !== undefined && (value ?? 0) <= min}
+              accessibilityRole="button"
+              accessibilityLabel={`Decrease ${subject}`}
+              accessibilityHint={`Subtracts ${step} from the current value`}
+              accessibilityState={{ disabled: min !== undefined && (value ?? 0) <= min }}
             >
               <Text style={[styles.buttonText, { color: colors.text.primary }]}>−</Text>
             </TouchableOpacity>
@@ -148,6 +157,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onPress={handleIncrement}
               style={[styles.button, { backgroundColor: colors.surface }]}
               disabled={max !== undefined && (value ?? 0) >= max}
+              accessibilityRole="button"
+              accessibilityLabel={`Increase ${subject}`}
+              accessibilityHint={`Adds ${step} to the current value`}
+              accessibilityState={{ disabled: max !== undefined && (value ?? 0) >= max }}
             >
               <Text style={[styles.buttonText, { color: colors.text.primary }]}>+</Text>
             </TouchableOpacity>

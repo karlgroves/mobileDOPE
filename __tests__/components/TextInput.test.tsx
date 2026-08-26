@@ -228,4 +228,62 @@ describe('TextInput Component', () => {
     const { minHeight } = StyleSheet.flatten(input.props.style);
     expect(minHeight).toBeGreaterThanOrEqual(theme.touchTargets.min);
   });
+
+  describe('accessible name', () => {
+    // React Native does not link the visible label to the field, so without an
+    // explicit name the input announces as "text field". See issue #30.
+    it('names the field from its visible label', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Muzzle Velocity" value="" onChangeText={jest.fn()} />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Muzzle Velocity')).toBeTruthy();
+    });
+
+    it('announces that a required field is required', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Ammo Name" value="" onChangeText={jest.fn()} required />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Ammo Name, required')).toBeTruthy();
+    });
+
+    it('prefers an explicit accessibilityLabel over the visible label', () => {
+      // The quality bar for this app: a terse visible label needs a spoken form
+      // that carries the unit and the axis.
+      const { getByLabelText } = render(
+        <TextInput
+          label="MV"
+          accessibilityLabel="Muzzle velocity, feet per second"
+          value=""
+          onChangeText={jest.fn()}
+        />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Muzzle velocity, feet per second')).toBeTruthy();
+    });
+
+    it('reads the error out with the field rather than as a stray sibling', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Ammo Name" value="" onChangeText={jest.fn()} error="Name is required" />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Ammo Name').props.accessibilityHint).toBe('Name is required');
+    });
+
+    it('falls back to helper text for the hint when there is no error', () => {
+      const { getByLabelText } = render(
+        <TextInput
+          label="Lot Number"
+          value=""
+          onChangeText={jest.fn()}
+          helperText="Optional: manufacturer lot number"
+        />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Lot Number').props.accessibilityHint).toBe(
+        'Optional: manufacturer lot number'
+      );
+    });
+  });
 });

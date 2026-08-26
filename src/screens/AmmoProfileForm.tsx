@@ -153,6 +153,8 @@ export const AmmoProfileForm: React.FC = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <TextInput
           label="Ammo Name"
+          accessibilityLabel="Ammunition name"
+          accessibilityHint="For example, Hornady 168 grain E L D Match"
           value={name}
           onChangeText={setName}
           placeholder="e.g., Hornady 168gr ELD-M"
@@ -162,6 +164,8 @@ export const AmmoProfileForm: React.FC = () => {
 
         <TextInput
           label="Manufacturer"
+          accessibilityLabel="Manufacturer"
+          accessibilityHint="For example, Hornady, Federal or Winchester"
           value={manufacturer}
           onChangeText={setManufacturer}
           placeholder="e.g., Hornady, Federal, Winchester"
@@ -194,6 +198,8 @@ export const AmmoProfileForm: React.FC = () => {
 
         <TextInput
           label="Bullet Type"
+          accessibilityLabel="Bullet type, for example hollow point boat tail"
+          accessibilityHint="For example, H P B T, E L D Match or E L D X"
           value={bulletType}
           onChangeText={setBulletType}
           placeholder="e.g., HPBT, ELD-M, ELD-X, SPCE"
@@ -241,6 +247,8 @@ export const AmmoProfileForm: React.FC = () => {
 
         <TextInput
           label="Powder Type"
+          accessibilityLabel="Powder type"
+          accessibilityHint="Optional. For example, H4350, Varget or I M R 4064"
           value={powderType}
           onChangeText={setPowderType}
           placeholder="e.g., H4350, Varget, IMR 4064"
@@ -262,6 +270,8 @@ export const AmmoProfileForm: React.FC = () => {
 
         <TextInput
           label="Lot Number"
+          accessibilityLabel="Manufacturer lot number"
+          accessibilityHint="Optional. Lets you trace performance back to a specific lot"
           value={lotNumber}
           onChangeText={setLotNumber}
           placeholder="e.g., LOT 2024-001"
@@ -271,6 +281,8 @@ export const AmmoProfileForm: React.FC = () => {
 
         <TextInput
           label="Notes"
+          accessibilityLabel="Notes about this ammunition"
+          accessibilityHint="Optional free text, for example load development notes"
           value={notes}
           onChangeText={setNotes}
           placeholder="Additional notes about this ammunition"

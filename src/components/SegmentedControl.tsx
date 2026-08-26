@@ -61,9 +61,12 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             ]}
             onPress={() => !disabled && onValueChange(option.value)}
             disabled={disabled}
-            accessibilityRole="button"
+            // `radio` rather than `button`: these are mutually exclusive choices,
+            // and the role is what tells a screen reader to announce "1 of 3".
+            accessibilityRole="radio"
             accessibilityState={{ selected: isSelected, disabled }}
             accessibilityLabel={option.label}
+            accessibilityHint={`Selects ${option.label}, option ${index + 1} of ${options.length}`}
           >
             <Text
               style={[

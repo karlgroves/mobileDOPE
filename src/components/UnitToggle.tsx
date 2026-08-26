@@ -101,9 +101,12 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
             ]}
             onPress={() => !disabled && onValueChange(option.value)}
             disabled={disabled}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{ selected: isSelected, disabled }}
             accessibilityLabel={`${type} unit: ${option.label}`}
+            // The consequence is what matters here: switching MIL to MOA rewrites
+            // every correction on screen, and that is not obvious from the label.
+            accessibilityHint={`Shows all ${type} values in ${option.label}`}
           >
             <Text
               style={[

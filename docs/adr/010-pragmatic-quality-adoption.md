@@ -45,9 +45,10 @@ gate is real (errors block) without forcing bulk edits:
   deferred** to a dedicated test-backfill effort; `npm run check` deliberately does not
   run coverage, so this does not mask a regression in the day-to-day gate.
 - **`react-native-a11y`** — structural rules (malformed `accessibilityRole`/`State`/
-  `Value`/`actions`, nested touchables) are `error`; the "missing label/hint" rules
-  (`has-valid-accessibility-descriptors`, `has-accessibility-hint`) are `warn`, tracking
-  a real remediation backlog of ~84 findings. See ADR-009.
+  `Value`/`actions`, nested touchables) are `error`. The "missing label/hint" rules
+  (`has-valid-accessibility-descriptors`, `has-accessibility-hint`) started as `warn`
+  against a backlog originally estimated at ~84 findings. **This deferral is now
+  closed** — see the addendum below. See ADR-009.
 
 ## Consequences
 
@@ -66,3 +67,52 @@ gate is real (errors block) without forcing bulk edits:
 - Deferred `tsconfig` flags, the `jscpd` threshold, the a11y warn-level rules, and
   coverage enforcement all need follow-up issues to ratchet them toward the issue's
   stricter targets. Coverage is the largest gap by far (18.85% vs. a 70% declaration).
+
+## Addendum (2026-08-26): the a11y warn-level deferral is closed
+
+Both "missing label/hint" rules are now **`error`** in `.eslintrc.js`. Issue #30
+remediated the backlog and this ADR's deferral no longer applies to them. Everything
+else recorded above — the deferred `tsconfig` flags, the `jscpd` threshold, the
+coverage posture — is unchanged.
+
+### What the backlog actually was
+
+The original "~84 findings" over-counted. 15 were in `__tests__/components/TextInput.test.tsx`
+rather than production code and were scoped out in #35, for a reason worth repeating:
+lint-staged runs `eslint --fix` on staged files, and the descriptor rule's autofixer
+silently inserted placeholder `accessibilityLabel="Text input field"` props into all 15
+`<TextInput>` fixtures — modifying the components under test and converting 15 "missing
+descriptor" warnings into 15 "missing hint" warnings, with no accessibility benefit.
+
+One further finding disappeared with `RangeScreen.tsx` in #33. The real production
+backlog measured **65 findings across 20 files** when remediation began: 50
+`has-valid-accessibility-descriptors` and 15 `has-accessibility-hint`.
+
+### Why the rules can now be errors
+
+Fixing the eight shared components (`TextInput`, `NumberInput`, `NumberPicker`,
+`Picker`, `Modal`, `ListItem`, `IconButton`, `SegmentedControl`, `UnitToggle`) removed
+13 findings directly and, more importantly, moved the accessible-name responsibility
+into the components themselves. `TextInput` in particular had **no** accessible name at
+all: React Native does not associate a sibling `<Text>` label with a field the way a web
+`<label for>` does, so every text field in the app announced as "text field" and nothing
+else. That was the single largest real defect behind the warning count, and it was
+invisible in the per-file tallies.
+
+`IconButton.accessibilityLabel` is now **required** rather than optional. An icon button
+is a bare glyph; without a name it is unusable by ear. TypeScript found every call site.
+
+### The standard new code is held to
+
+Labels must disambiguate **units and axis**, per the field-use constraints in CLAUDE.md.
+A ballistic correction rendered as `↑ 2.34` must announce as "elevation 2.34 mils", not
+"up 2.34"; a windage control showing `R 1.2` must say "1.2 mils right". Generic labels
+that merely satisfy the rule are a regression dressed as a fix, and the autofixer
+produces exactly those — do not use `eslint --fix` for these two rules.
+
+### Out of scope, still manual
+
+Per ADR-009: screen-reader behaviour (VoiceOver/TalkBack), focus order, colour contrast
+and dynamic-type scaling remain manual. The linter cannot see them, and nothing here
+should be read as claiming the app is accessible — only that this class of defect is now
+gated.
