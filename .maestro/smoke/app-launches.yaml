@@ -1,0 +1,29 @@
+# Smoke: the app starts and the dashboard renders.
+#
+# Deliberately the smallest useful flow. If this fails, nothing else in the suite
+# is worth reading -- it means the build, the bundler or the database migration
+# is broken, not that a feature regressed.
+#
+# Transcribed from docs/use-cases/dashboard/empty-state.uc.yaml (partial: this
+# asserts arrival, not the empty-state copy).
+appId: com.mobiledope.app.development
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: false
+
+# The database opens and migrations run before the first screen paints. A failure
+# here surfaces as a hang rather than a crash, so give it room.
+- extendedWaitUntil:
+    visible: 'Mobile DOPE'
+    timeout: 30000
+
+# The six mounted tab stacks, from src/navigation/TabNavigator.tsx. A missing tab
+# means a navigator failed to mount, which the app otherwise swallows.
+- assertVisible: 'Dashboard'
+- assertVisible: 'Session'
+- assertVisible: 'Calculator'
+- assertVisible: 'Rifles'
+- assertVisible: 'Ammo'
+- assertVisible: 'History'

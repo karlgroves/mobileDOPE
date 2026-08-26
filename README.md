@@ -68,6 +68,7 @@ src/
 | `npm run markdownlint`                           | Lint Markdown with `markdownlint-cli2`                  |
 | `npm run dupes`                                  | Duplication check (`jscpd`)                             |
 | `npm test` / `npm run test:coverage`             | Jest unit/integration tests                             |
+| `npm run test:e2e`                               | Maestro E2E flows on a simulator (see below)            |
 | `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes |
 | `npm run check:all`                              | Full gate: `check` + format check + tests               |
 | `npm run security:audit`                         | `npm audit` (high severity, prod deps) — advisory\*     |
@@ -77,6 +78,30 @@ src/
 \* `security:audit` currently exits non-zero on high-severity advisories in Expo's
 transitive dependencies, which have no upstream fix yet. It is informational for now —
 the `post-merge` hook does not fail on it — and should be re-checked on each Expo bump.
+
+## End-to-end tests
+
+Maestro drives the built app on a simulator. Flows live in `.maestro/`; full setup,
+prerequisites and the CI decision are in
+[`docs/E2E_TESTING.md`](./docs/E2E_TESTING.md).
+
+```bash
+npx expo prebuild --platform ios   # generate the native project (not committed)
+npx expo run:ios                   # build and install
+npm run test:e2e                   # run the suite
+```
+
+The expensive part is the build, not the flows: this is a managed Expo workflow, so
+there is no `ios/` or `android/` directory in the repository and one has to be
+generated first. `scripts/e2e.sh` checks every prerequisite up front and names the
+missing one.
+
+The suite is **not** wired into GitHub Actions, per
+[ADR-011](./docs/adr/011-local-gate-first-no-new-actions.md); `docs/E2E_TESTING.md`
+records when to run it locally instead.
+
+Flows are validated structurally inside the ordinary `npm test` gate, so a malformed
+flow fails in seconds rather than minutes into a device run.
 
 ## Code Quality & Tooling
 

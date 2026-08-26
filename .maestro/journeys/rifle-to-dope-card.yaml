@@ -1,0 +1,130 @@
+# Critical journey: an empty install through to a DOPE card.
+#
+# This is the app's core loop and the one the issue names: create a rifle, create
+# a matching load, produce a card. It touches the form layer, the SQLite
+# repositories, the ballistic solver and the PDF exporter in a single pass -- the
+# four things that have to work together and that unit tests exercise separately.
+#
+# Transcribed from:
+#   docs/use-cases/rifles/create-profile.uc.yaml
+#   docs/use-cases/ammo/create-profile.uc.yaml
+#   docs/use-cases/ammo/dope-card.uc.yaml
+#
+# Tagged destructive because it starts from a cleared state.
+appId: com.mobiledope.app.development
+tags:
+  - journey
+  - destructive
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: 'Mobile DOPE'
+    timeout: 30000
+
+# --- Rifle -----------------------------------------------------------------
+- tapOn: 'Rifles'
+- tapOn:
+    id: 'create-rifle-button'
+
+- tapOn: 'Rifle name'
+- inputText: 'Tikka T3x'
+- hideKeyboard
+
+- tapOn: 'Caliber'
+- inputText: '.308 Win'
+- hideKeyboard
+
+- tapOn: 'Barrel Length'
+- inputText: '24'
+- hideKeyboard
+
+- tapOn: 'Barrel twist rate, inches per turn'
+- inputText: '8'
+- hideKeyboard
+
+- tapOn: 'Zero Distance'
+- inputText: '100'
+- hideKeyboard
+
+- tapOn: 'Scope Height'
+- inputText: '1.5'
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: 'Save'
+    direction: DOWN
+- tapOn: 'Save'
+
+# Persisted, not merely accepted. The list is read back from SQLite.
+- assertVisible: 'Tikka T3x'
+
+# --- Ammunition ------------------------------------------------------------
+- tapOn: 'Ammo'
+- tapOn:
+    id: 'create-ammo-button'
+
+- tapOn: 'Ammunition name'
+- inputText: '175gr SMK'
+- hideKeyboard
+
+- tapOn: 'Manufacturer'
+- inputText: 'Sierra'
+- hideKeyboard
+
+- tapOn: 'Caliber'
+- inputText: '.308 Win'
+- hideKeyboard
+
+- tapOn: 'Bullet Weight'
+- inputText: '175'
+- hideKeyboard
+
+- tapOn: 'Bullet type, for example hollow point boat tail'
+- inputText: 'HPBT'
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: 'Ballistic Coefficient (G7)'
+    direction: DOWN
+- tapOn: 'Ballistic Coefficient (G7)'
+- inputText: '0.243'
+- hideKeyboard
+
+- tapOn: 'Muzzle Velocity'
+- inputText: '2650'
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: 'Save'
+    direction: DOWN
+- tapOn: 'Save'
+
+- assertVisible: '175gr SMK'
+
+# The BC must survive the round trip at full precision: a value silently rounded
+# to 0.24 changes the drop at distance, and nothing on screen would say so.
+- tapOn: '175gr SMK'
+- assertVisible: '0.243'
+
+# --- DOPE card -------------------------------------------------------------
+- scrollUntilVisible:
+    element: 'DOPE Card'
+    direction: DOWN
+- tapOn: 'DOPE Card'
+
+- tapOn: 'Start distance, yards'
+- inputText: '100'
+- hideKeyboard
+
+- tapOn: 'End distance, yards'
+- inputText: '1000'
+- hideKeyboard
+
+- tapOn: 'Generate DOPE card'
+
+# PDF generation goes through expo-print, which is slow on a cold simulator.
+- extendedWaitUntil:
+    visible: 'DOPE card generated'
+    timeout: 60000

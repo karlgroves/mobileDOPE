@@ -33,6 +33,16 @@ else
   brew install semgrep 2>/dev/null || pip install --user semgrep 2>/dev/null || echo "  ! install semgrep manually: https://semgrep.dev/docs/getting-started/"
 fi
 
+# maestro — mobile E2E runner (npm run test:e2e)
+if have maestro; then
+  echo "✓ maestro present"
+else
+  echo "… installing maestro"
+  curl -Ls https://get.maestro.mobile.dev | bash 2>/dev/null \
+    || brew install maestro 2>/dev/null \
+    || echo "  ! install maestro manually: https://maestro.dev/docs/getting-started/installing-maestro"
+fi
+
 # lychee — Markdown link checker (npm run links)
 if have lychee; then
   echo "✓ lychee present"
