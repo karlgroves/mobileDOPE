@@ -8,6 +8,8 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 
+import { exceedsMaxDepth, exceedsMaxSize, oversizedMessage } from './importGuards';
+
 export interface ImportResult {
   success: boolean;
   imported?: {
@@ -73,7 +75,23 @@ export async function pickImportFile(): Promise<{
 
     const response = await fetch(result.assets[0].uri);
     const content = await response.text();
+
+    // Bound the input before parsing it. The file comes from a document picker, so
+    // it is chosen by the user but not produced by this app -- it may have come from
+    // anywhere. `JSON.parse` on an unbounded string is a memory exhaustion primitive.
+    // See security/tests/import.security.spec.ts. (Issue #45 item 8.)
+    if (exceedsMaxSize(content)) {
+      return { success: false, error: oversizedMessage() };
+    }
+
     const data = JSON.parse(content) as BackupData;
+
+    // Depth-bound the parsed structure. `JSON.parse` itself tolerates deep nesting,
+    // but the recursive walks downstream of it do not, and a stack overflow here
+    // takes the app down rather than rejecting the file.
+    if (exceedsMaxDepth(data)) {
+      return { success: false, error: 'That file is nested too deeply to import.' };
+    }
 
     return { success: true, data };
   } catch (error) {

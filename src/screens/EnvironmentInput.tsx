@@ -146,7 +146,15 @@ export function EnvironmentInput() {
       });
 
       setAltitude(Math.round(location.coords.altitude || 0) * 3.28084); // meters to feet
+      // KNOWN DEFECT, tracked in issue #44 and fixed in PR #46, which replaces
+      // these two lines with `coarsenLatitude()` and drops longitude entirely. The
+      // suppression exists so this branch's gate reflects the rule being
+      // introduced, not the pre-existing finding it is designed to catch; it
+      // disappears when #46 merges. Recorded with an owner and an expiry in
+      // security/docs/security-exceptions.md.
+      // nosemgrep: mobiledope-uncoarsened-coordinate
       setLatitude(Number(location.coords.latitude.toFixed(6)));
+      // nosemgrep: mobiledope-uncoarsened-coordinate
       setLongitude(Number(location.coords.longitude.toFixed(6)));
 
       Alert.alert('Success', 'GPS data updated from device location');

@@ -17,7 +17,13 @@ const unit = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: ['**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)'],
+  // `security/tests/` runs in this project too: the security regression suite is
+  // plain TypeScript with no renderer, and keeping it inside `npm test` is what
+  // makes it a gate rather than an opt-in script. See issue #45 item 8.
+  testMatch: [
+    '**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)',
+    '**/security/tests/**/*.(test|spec).(ts|tsx)',
+  ],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
   transform: {
     '^.+\\.tsx?$': [

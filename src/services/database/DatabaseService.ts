@@ -91,6 +91,10 @@ class DatabaseService {
     if (!this.db) return;
 
     try {
+      // SQLite does not accept bound parameters in a PRAGMA statement, and
+      // DATABASE_VERSION is a module-level numeric constant, never input.
+      // See security/docs/security-exceptions.md.
+      // nosemgrep: mobiledope-sql-string-interpolation
       await this.db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
     } catch (error) {
       console.error('Failed to set database version:', error);
