@@ -17,8 +17,8 @@ export class EnvironmentRepository {
       // stamped every snapshot with the import time, losing when the reading was taken.
       `INSERT INTO environment_snapshots (
         temperature, humidity, pressure, altitude, density_altitude,
-        wind_speed, wind_direction, latitude, longitude, timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
+        wind_speed, wind_direction, latitude, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
       [
         snapshot.temperature,
         snapshot.humidity,
@@ -27,8 +27,7 @@ export class EnvironmentRepository {
         snapshot.densityAltitude,
         snapshot.windSpeed,
         snapshot.windDirection,
-        snapshot.latitude || null,
-        snapshot.longitude || null,
+        snapshot.latitude ?? null,
         snapshot.timestamp ?? null,
       ]
     );
@@ -95,7 +94,7 @@ export class EnvironmentRepository {
       `UPDATE environment_snapshots SET
         temperature = ?, humidity = ?, pressure = ?, altitude = ?,
         density_altitude = ?, wind_speed = ?, wind_direction = ?,
-        latitude = ?, longitude = ?
+        latitude = ?
       WHERE id = ?`,
       [
         updated.temperature,
@@ -105,8 +104,7 @@ export class EnvironmentRepository {
         updated.densityAltitude,
         updated.windSpeed,
         updated.windDirection,
-        updated.latitude || null,
-        updated.longitude || null,
+        updated.latitude ?? null,
         id,
       ]
     );
@@ -161,6 +159,26 @@ export class EnvironmentRepository {
     );
 
     return result?.count || 0;
+  }
+
+  /**
+   * Null the latitude on every stored snapshot.
+   *
+   * Backs the "delete stored location data" action in Settings. Deliberately does
+   * not delete the snapshots themselves: the temperature, pressure and wind
+   * readings are the user's shooting history and are not the sensitive part. Only
+   * the coordinate is removed. See issue #44.
+   *
+   * @returns The number of snapshots that actually held a coordinate.
+   */
+  async clearStoredCoordinates(): Promise<number> {
+    const db = databaseService.getDatabase();
+
+    const result = await db.runAsync(
+      'UPDATE environment_snapshots SET latitude = NULL WHERE latitude IS NOT NULL'
+    );
+
+    return result.changes;
   }
 
   /**

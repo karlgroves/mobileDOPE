@@ -537,6 +537,19 @@ export async function exportDOPELogsPDF(
   }
 }
 
+/** Options for {@link exportFullBackup}. */
+export interface FullBackupOptions {
+  /**
+   * Whether to include the latitude recorded with each environment snapshot.
+   *
+   * A backup is the only path by which data leaves the device, and latitude says
+   * where the user shoots. It is coarsened to ~11 km at capture, but that is still
+   * a location, so the export flow asks before including it. Defaults to `true` so
+   * a backup taken for restore purposes stays complete. See issue #44.
+   */
+  includeCoordinates?: boolean;
+}
+
 /**
  * Export full database backup (all data)
  */
@@ -544,8 +557,10 @@ export async function exportFullBackup(
   rifles: RifleProfile[],
   ammos: AmmoProfile[],
   logs: DOPELog[],
-  environments: EnvironmentSnapshot[] = []
+  environments: EnvironmentSnapshot[] = [],
+  options: FullBackupOptions = {}
 ): Promise<ExportResult> {
+  const { includeCoordinates = true } = options;
   try {
     const filename = `mobiledope_backup_${Date.now()}.json`;
     const file = new File(Paths.document, filename);
@@ -561,7 +576,13 @@ export async function exportFullBackup(
       data: {
         rifles: rifles.map((r) => r.toJSON()),
         ammos: ammos.map((a) => a.toJSON()),
-        environments: environments.map((e) => e.toJSON()),
+        environments: environments.map((e) => {
+          const json = e.toJSON();
+          if (includeCoordinates) return json;
+          // `id` must survive: DOPE logs reference it on restore (issue #39).
+          const { latitude: _latitude, ...withoutCoordinates } = json;
+          return withoutCoordinates;
+        }),
         logs: logs.map((l) => l.toJSON()),
       },
       counts: {

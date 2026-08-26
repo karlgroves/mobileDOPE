@@ -129,7 +129,6 @@ const ENVIRONMENT_ALLOWED_FIELDS = [
   'windSpeed',
   'windDirection',
   'latitude',
-  'longitude',
   'timestamp',
 ];
 

@@ -97,14 +97,6 @@ export const isValidLatitude = (latitude: number): boolean => {
 };
 
 /**
- * Validate longitude
- * Valid range: -180 to 180 degrees
- */
-export const isValidLongitude = (longitude: number): boolean => {
-  return longitude >= -180 && longitude <= 180;
-};
-
-/**
  * Validate barrel length (inches)
  * Valid range: > 0 and <= 50 inches
  */

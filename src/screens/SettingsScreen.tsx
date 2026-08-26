@@ -17,6 +17,7 @@ import {
 
 import { Card, Button, SegmentedControl } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
+import { environmentRepository } from '../services/database/EnvironmentRepository';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -35,7 +36,10 @@ import type { RootStackScreenProps } from '../navigation/types';
 
 type Props = RootStackScreenProps<'Settings'>;
 
-export const SettingsScreen: React.FC<Props> = () => {
+/** Message shown when an export returns no error of its own. */
+const EXPORT_FAILED = 'Export failed';
+
+export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, setThemeMode } = useTheme();
   const { settings, updateSettings } = useAppStore();
   const { colors } = theme;
@@ -106,6 +110,93 @@ export const SettingsScreen: React.FC<Props> = () => {
     );
   };
 
+  /**
+   * Write a full backup, asking first whether to include stored coordinates.
+   *
+   * A backup is the only route by which data leaves the device, and it carries the
+   * approximate latitude of every place the user has shot. The choice is offered at
+   * the point of sharing rather than buried in settings, because that is the moment
+   * it matters. See issue #44.
+   */
+  const runFullBackup = async () => {
+    // Load every snapshot, not just the recent ones already in the store: a DOPE log
+    // whose environment is missing from the backup cannot be restored (issue #39).
+    await loadSnapshots();
+    const allEnvironments = useEnvironmentStore.getState().snapshots;
+    const withCoordinates = allEnvironments.filter((s) => s.latitude !== undefined).length;
+
+    const write = async (includeCoordinates: boolean) => {
+      const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs, allEnvironments, {
+        includeCoordinates,
+      });
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, ` +
+            `${allEnvironments.length} environment snapshots, and ${dopeLogs.length} DOPE logs.` +
+            (includeCoordinates ? '' : '\n\nLocation data was left out.')
+        );
+      } else {
+        Alert.alert('Error', result.error || EXPORT_FAILED);
+      }
+    };
+
+    if (withCoordinates === 0) {
+      await write(true);
+      return;
+    }
+
+    Alert.alert(
+      'This backup contains location data',
+      `${withCoordinates} of your ${allEnvironments.length} environment snapshots include ` +
+        'an approximate latitude (rounded to about 11 km) for where the reading was taken. ' +
+        'Anyone you share this file with can read it.\n\n' +
+        'A backup without it still restores completely.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave Location Out', onPress: () => void write(false) },
+        { text: 'Include Location', onPress: () => void write(true) },
+      ]
+    );
+  };
+
+  /**
+   * Remove the stored latitude from every environment snapshot, keeping the
+   * ballistic readings. Backs the retention commitment in the privacy policy.
+   */
+  const handleDeleteLocationData = () => {
+    Alert.alert(
+      'Delete Stored Location Data',
+      'This removes the approximate latitude from every environment snapshot. ' +
+        'Temperature, pressure, wind and altitude readings are kept, and no DOPE logs ' +
+        'are affected.\n\nThis cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const cleared = await environmentRepository.clearStoredCoordinates();
+              await loadSnapshots();
+              Alert.alert(
+                'Location Data Deleted',
+                cleared === 0
+                  ? 'No stored coordinates were found.'
+                  : `Cleared coordinates from ${cleared} snapshot${cleared === 1 ? '' : 's'}.`
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete location data'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleExportData = () => {
     Alert.alert(
       'Export Data',
@@ -113,21 +204,8 @@ export const SettingsScreen: React.FC<Props> = () => {
       [
         {
           text: 'Full Backup (All Data)',
-          onPress: async () => {
-            // Load every snapshot, not just the recent ones already in the store: a DOPE log
-            // whose environment is missing from the backup cannot be restored (issue #39).
-            await loadSnapshots();
-            const allEnvironments = useEnvironmentStore.getState().snapshots;
-            const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs, allEnvironments);
-            if (result.success) {
-              Alert.alert(
-                'Success',
-                `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, ` +
-                  `${allEnvironments.length} environment snapshots, and ${dopeLogs.length} DOPE logs.`
-              );
-            } else {
-              Alert.alert('Error', result.error || 'Export failed');
-            }
+          onPress: () => {
+            void runFullBackup();
           },
         },
         {
@@ -141,7 +219,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${rifles.length} rifle profiles.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -156,7 +234,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -171,7 +249,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -186,7 +264,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs as PDF report.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -409,6 +487,29 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
         </Card>
 
+        {/* Privacy */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Privacy</Text>
+          <Text style={[styles.privacyBlurb, { color: colors.text.secondary }]}>
+            This app has no network connection. Location is used only for altitude and an
+            approximate latitude, rounded to about 11 km before it is saved.
+          </Text>
+          <Button
+            title="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+            variant="secondary"
+            size="medium"
+            style={styles.button}
+          />
+          <Button
+            title="Delete Stored Location Data"
+            onPress={handleDeleteLocationData}
+            variant="danger"
+            size="medium"
+            style={styles.button}
+          />
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>
@@ -463,6 +564,11 @@ export const SettingsScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  privacyBlurb: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   scrollView: {
     flex: 1,

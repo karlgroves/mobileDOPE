@@ -215,4 +215,31 @@ When implementing new features:
 
 ## Data Privacy
 
-No personal data collection or analytics. All data stored locally unless user explicitly enables cloud sync. Implement optional biometric/passcode lock for sensitive shooting data.
+**Canonical statement:** `PRIVACY.md` at the repository root. Keep it and this section
+in step, and diff both against actual behaviour before a release -- an inaccurate
+privacy claim is a defect, not a documentation nit (see issue #44, which was filed
+because this section said the app collected nothing while it was storing precise GPS).
+
+### What is actually collected
+
+- **No analytics, telemetry, crash reporting or advertising identifiers.** The app has
+  no network layer: there is no `fetch` to any remote host anywhere in `src/`.
+- **No accounts and no cloud sync.** Cloud sync is a Phase 2 idea, not shipped
+  behaviour; do not describe it as if it exists.
+- **Approximate location is collected.** `EnvironmentInput` reads the device position
+  for altitude (density-altitude term) and latitude (Coriolis term). Latitude is
+  coarsened to one decimal place -- ~11 km -- by `src/utils/geoPrecision.ts` before it
+  is persisted. **Longitude is never recorded**; nothing calculates with it.
+- **User-initiated exports are the only egress.** A full JSON backup includes the
+  coarsened latitude, and the export flow warns and offers to omit it.
+
+### Constraints for new code
+
+- Coarsen at the point of capture, never at the point of export. `EnvironmentSnapshot`
+  is the chokepoint, so every write path inherits it.
+- Any new permission needs a purpose string in `app.config.ts` **and** a matching entry
+  in `PRIVACY.md`. `plugins/withTrimmedIosPermissions.js` deletes the placeholder usage
+  descriptions Expo's template seeds, and `android.blockedPermissions` does the same on
+  Android -- do not add a permission back without code that uses it.
+- There is **no** biometric or passcode lock. `description.md` used to promise one; it
+  does not exist and is not planned. Do not cite it as an existing control.
