@@ -57,7 +57,11 @@ export class EnvironmentRepository {
   async getAll(limit?: number): Promise<EnvironmentSnapshot[]> {
     const db = databaseService.getDatabase();
 
-    let sql = 'SELECT * FROM environment_snapshots ORDER BY timestamp DESC';
+    // `id DESC` breaks the tie: the schema default is `datetime('now')`, which has
+    // second resolution, so two readings taken in the same second sort equal and
+    // `getCurrent()` would return whichever the engine happened to emit first --
+    // in practice the older one. AUTOINCREMENT ids are strictly increasing.
+    let sql = 'SELECT * FROM environment_snapshots ORDER BY timestamp DESC, id DESC';
     const params: any[] = [];
     if (limit) {
       sql += ' LIMIT ?';
