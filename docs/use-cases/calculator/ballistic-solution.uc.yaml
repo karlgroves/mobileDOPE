@@ -1,0 +1,70 @@
+id: calculator-ballistic-solution
+title: 'Calculate a firing solution'
+type: positive
+description: >-
+  The full-fidelity solver, as opposed to the dashboard's quick loop. Takes rifle,
+  ammunition, distance and conditions and produces elevation, windage, time of
+  flight, retained velocity and energy. Every output is a number with a unit, so
+  every output must announce its unit.
+
+preconditions:
+  - 'A rifle profile and a matching ammunition profile both exist'
+  - 'An environment snapshot exists'
+
+start_location: 'Calculator/BallisticCalculator'
+
+expected_result: >-
+  A solution screen shows elevation and windage in the configured angular unit, plus
+  time of flight, retained velocity and energy, each labelled with its quantity and
+  unit.
+
+data:
+  rifle_selector: 'Select rifle'
+  ammo_selector: 'Select ammunition'
+  rifle_name: 'Tikka T3x'
+  ammo_name: '175gr SMK'
+  distance_field: 'Target distance, yards'
+  distance: '800'
+  wind_speed_field: 'Wind speed, miles per hour'
+  wind_speed: '10'
+  wind_direction_field: 'Wind direction, clock position'
+  calculate_button: 'Calculate solution'
+  # REPLACE: the outputs. Each must name its quantity AND its unit -- an elevation
+  # of "6.1" is unusable without knowing whether that is mils or MOA.
+  elevation_output: 'Elevation correction, 6.1 mils'
+  windage_output: 'Windage correction, 1.4 mils right'
+  time_of_flight_output: 'Time of flight, 1.12 seconds'
+  velocity_output: 'Retained velocity, 1520 feet per second'
+  energy_output: 'Retained energy, 898 foot-pounds'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ rifle_selector }}"
+  - focus: button "{{ rifle_selector }}"
+  - activate: button "{{ rifle_selector }}"
+  - select: radio "{{ rifle_name }}"
+
+  - locate: button "{{ ammo_selector }}"
+  - activate: button "{{ ammo_selector }}"
+  - select: radio "{{ ammo_name }}"
+
+  - locate: field "{{ distance_field }}"
+  - focus: field "{{ distance_field }}"
+  - enter: field "{{ distance_field }}" value "{{ distance }}"
+
+  - enter: field "{{ wind_speed_field }}" value "{{ wind_speed }}"
+  - locate: button "{{ wind_direction_field }}"
+  - activate: button "{{ wind_direction_field }}"
+
+  - locate: button "{{ calculate_button }}"
+  - focus: button "{{ calculate_button }}"
+  - activate: button "{{ calculate_button }}"
+
+  - audit: page
+
+  - verify: text "{{ elevation_output }}"
+  - verify: text "{{ windage_output }}"
+  - verify: text "{{ time_of_flight_output }}"
+  - verify: text "{{ velocity_output }}"
+  - verify: text "{{ energy_output }}"

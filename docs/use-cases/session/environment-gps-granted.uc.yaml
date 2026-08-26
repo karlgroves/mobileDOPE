@@ -1,0 +1,55 @@
+id: session-environment-gps-granted
+title: 'Fetch altitude and latitude from device location'
+type: positive
+description: >-
+  The only place the app asks for a permission, and the only place it records
+  anything about where the user is. PRIVACY.md makes specific promises about this
+  flow: the user is told what is captured before the system prompt, latitude is
+  stored coarsened, and longitude is never recorded. This asserts all three.
+
+preconditions:
+  - 'Location services are enabled on the device'
+  - 'The app has not yet been granted location permission'
+
+start_location: 'Session/EnvironmentInput'
+
+expected_result: >-
+  An explanation is shown before the system prompt. After granting, altitude and an
+  approximate latitude are populated. The stored latitude is coarse, and no
+  longitude field exists anywhere on the screen.
+
+data:
+  fetch_button: 'Fetch conditions from device location'
+  # REPLACE: the pre-permission explanation. It must state what is captured, that
+  # it is stored on-device, and that exports include it -- the system prompt has
+  # no room to say any of that.
+  explanation_title: 'About location'
+  explanation_mentions_storage: 'stored on this device'
+  explanation_mentions_export: 'included if you export'
+  continue_button: 'Continue'
+  altitude_field: 'Altitude, feet'
+  latitude_field: 'Latitude, degrees'
+  # REPLACE: a coarsened latitude -- one decimal place, roughly 11 km.
+  expected_latitude: '39.7'
+  longitude_field: 'Longitude'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ fetch_button }}"
+  - focus: button "{{ fetch_button }}"
+  - activate: button "{{ fetch_button }}"
+
+  # Explain before asking. The system prompt is a yes/no with no room for this.
+  - verify: text "{{ explanation_title }}"
+  - verify: text "{{ explanation_mentions_storage }}"
+  - verify: text "{{ explanation_mentions_export }}"
+
+  - locate: button "{{ continue_button }}"
+  - activate: button "{{ continue_button }}"
+
+  - verify: field "{{ altitude_field }}" has_value_matching "[0-9]+"
+  - verify: field "{{ latitude_field }}" has_value "{{ expected_latitude }}"
+
+  # Longitude is not collected at all -- no calculation in the app uses it.
+  - verify: no_element field "{{ longitude_field }}"

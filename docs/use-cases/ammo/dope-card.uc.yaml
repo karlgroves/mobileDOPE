@@ -1,0 +1,55 @@
+id: ammo-dope-card
+title: 'Generate and share a DOPE card'
+type: positive
+description: >-
+  The output a shooter actually carries. Produces a PDF for a rifle and load across a
+  range band, then hands it to the system share sheet. Exercises the one flow where
+  data deliberately leaves the device.
+
+preconditions:
+  - 'A rifle profile and a matching ammunition profile both exist'
+
+start_location: 'Ammo/DOPECardGenerator'
+
+expected_result: >-
+  A PDF is generated covering the requested range band at the requested interval, and
+  the share sheet is offered. Cancelling the share leaves the card generated and the
+  app in a usable state.
+
+data:
+  rifle_selector: 'Select rifle'
+  ammo_selector: 'Select ammunition'
+  rifle_name: 'Tikka T3x'
+  ammo_name: '175gr SMK'
+  start_distance_field: 'Start distance, yards'
+  end_distance_field: 'End distance, yards'
+  interval_field: 'Distance interval, yards'
+  start_distance: '100'
+  end_distance: '1000'
+  interval: '50'
+  generate_button: 'Generate DOPE card'
+  # REPLACE: confirmation that generation finished.
+  generated_announcement: 'DOPE card generated'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ rifle_selector }}"
+  - focus: button "{{ rifle_selector }}"
+  - activate: button "{{ rifle_selector }}"
+  - select: radio "{{ rifle_name }}"
+
+  - locate: button "{{ ammo_selector }}"
+  - activate: button "{{ ammo_selector }}"
+  - select: radio "{{ ammo_name }}"
+
+  - enter: field "{{ start_distance_field }}" value "{{ start_distance }}"
+  - enter: field "{{ end_distance_field }}" value "{{ end_distance }}"
+  - enter: field "{{ interval_field }}" value "{{ interval }}"
+
+  - locate: button "{{ generate_button }}"
+  - focus: button "{{ generate_button }}"
+  - activate: button "{{ generate_button }}"
+
+  - sr_says: '"{{ generated_announcement }}" after activate button "{{ generate_button }}"'
+  - audit: page

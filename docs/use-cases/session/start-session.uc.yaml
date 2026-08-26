@@ -1,0 +1,65 @@
+id: session-start-session
+title: 'Start a range session'
+type: positive
+description: >-
+  Opening a session binds a rifle, a load and a set of conditions so that every shot
+  recorded afterwards inherits them. Asserts the binding actually happens -- a
+  session that starts without conditions produces logs that cannot be reused.
+
+preconditions:
+  - 'A rifle profile and a matching ammunition profile both exist'
+
+start_location: 'Session/RangeSessionStart'
+
+expected_result: >-
+  An active session exists, bound to the chosen rifle, load and conditions, and the
+  active session screen shows all three.
+
+data:
+  # REPLACE: accessible names of the two selectors on the start screen.
+  rifle_selector: 'Select rifle'
+  ammo_selector: 'Select ammunition'
+  rifle_name: 'Tikka T3x'
+  ammo_name: '175gr SMK'
+  # REPLACE: the session's own fields. `session_name` is free text the shooter
+  # will search for later, so it appears in the summary and in history.
+  session_name_field: 'Session name'
+  session_name: 'Spring Match'
+  distance_field: 'Starting distance, yards'
+  distance: '500'
+  # REPLACE: a switch, not a button -- it must report on/off state.
+  cold_bore_toggle: 'Record first shot as cold bore'
+  start_button: 'Start session'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ rifle_selector }}"
+  - focus: button "{{ rifle_selector }}"
+  - activate: button "{{ rifle_selector }}"
+  - select: radio "{{ rifle_name }}"
+
+  - locate: button "{{ ammo_selector }}"
+  - activate: button "{{ ammo_selector }}"
+  - select: radio "{{ ammo_name }}"
+
+  - locate: field "{{ session_name_field }}"
+  - enter: field "{{ session_name_field }}" value "{{ session_name }}"
+
+  - locate: field "{{ distance_field }}"
+  - enter: field "{{ distance_field }}" value "{{ distance }}"
+
+  # A switch must report on/off state, not just look different.
+  - locate: switch "{{ cold_bore_toggle }}"
+  - focus: switch "{{ cold_bore_toggle }}"
+  - verify: switch "{{ cold_bore_toggle }}" has_state "off"
+  - activate: switch "{{ cold_bore_toggle }}"
+  - verify: switch "{{ cold_bore_toggle }}" has_state "on"
+
+  - locate: button "{{ start_button }}"
+  - activate: button "{{ start_button }}"
+
+  - audit: page
+  - verify: heading "{{ session_name }}"
+  - verify: text "{{ rifle_name }}"
+  - verify: text "{{ ammo_name }}"

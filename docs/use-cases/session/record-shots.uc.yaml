@@ -1,0 +1,61 @@
+id: session-record-shots
+title: 'Record shots and adjust corrections during a session'
+type: positive
+description: >-
+  The screen the app exists for, used on a firing line, in the cold, often gloved.
+  Every constraint in CLAUDE.md's field-use section applies here at once: large
+  targets, high contrast, minimal depth, one-tap entry. This use case asserts those
+  as requirements rather than leaving them to a design review.
+
+preconditions:
+  - 'An active range session exists'
+
+start_location: 'Session/RangeSessionActive'
+
+expected_result: >-
+  Elevation and windage can be adjusted in single increments and a shot recorded,
+  with the shot count updating. Adjustments can be reset to the calculated solution.
+  Every control on this screen meets the 48pt minimum touch target.
+
+data:
+  # REPLACE: the adjustment controls. Rendered as bare + / - glyphs next to a
+  # value, with the unit in a separate Text node -- so the accessible name has to
+  # carry the axis and the unit itself.
+  elevation_up: 'Increase elevation correction, mils'
+  elevation_down: 'Decrease elevation correction, mils'
+  windage_right: 'Adjust windage correction right, mils'
+  windage_left: 'Adjust windage correction left, mils'
+  reset_button: 'Reset elevation and windage adjustments'
+  record_shot_button: 'Record shot'
+  # REPLACE: the shot counter, before and after.
+  shot_count_before: 'Shots fired, 0'
+  shot_count_after: 'Shots fired, 1'
+  # REPLACE: the minimum touch target from src/constants/theme.ts.
+  minimum_touch_target: '48'
+
+steps:
+  - audit: page
+
+  # Field-use constraint, asserted rather than assumed.
+  - verify: button "{{ record_shot_button }}" has_min_size "{{ minimum_touch_target }}"
+  - verify: button "{{ elevation_up }}" has_min_size "{{ minimum_touch_target }}"
+
+  - verify: text "{{ shot_count_before }}"
+
+  - locate: button "{{ elevation_up }}"
+  - focus: button "{{ elevation_up }}"
+  - activate: button "{{ elevation_up }}"
+  - activate: button "{{ elevation_up }}"
+
+  - locate: button "{{ windage_left }}"
+  - activate: button "{{ windage_left }}"
+
+  # One tap from "corrections dialled" to "shot logged". If this ever needs a
+  # confirmation step, the one-tap constraint has been broken.
+  - locate: button "{{ record_shot_button }}"
+  - focus: button "{{ record_shot_button }}"
+  - activate: button "{{ record_shot_button }}"
+  - verify: text "{{ shot_count_after }}"
+
+  - locate: button "{{ reset_button }}"
+  - activate: button "{{ reset_button }}"

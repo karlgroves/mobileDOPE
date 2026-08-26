@@ -1,0 +1,48 @@
+id: dashboard-empty-state
+title: 'First run: the dashboard before any profile exists'
+type: negative
+description: >-
+  What a new install shows. The dashboard cannot produce a solution without a rifle,
+  ammunition and environmental readings, and this asserts that it says so and offers
+  a route to fix it -- rather than showing an empty or misleading solution.
+
+preconditions:
+  - 'No rifle profiles exist'
+  - 'No ammunition profiles exist'
+  - 'No environment snapshots exist'
+
+start_location: 'MainTabs/Dashboard'
+
+expected_result: >-
+  No firing solution is shown. The trust bar reports each missing prerequisite, and
+  each entry navigates to the screen where it can be supplied. No control offers to
+  log a shot.
+
+data:
+  # REPLACE: the trust bar entries in their unsatisfied state. The tick/circle
+  # glyph carries the meaning visually and must be in the accessible name too.
+  rifle_missing: 'Rifle: none selected'
+  ammo_missing: 'Ammo: none selected'
+  environment_missing: 'Environment: no readings'
+  # REPLACE: the empty-state copy. Should say what to do next, not just that
+  # something is absent.
+  empty_message: 'Add a rifle and ammunition to get a firing solution'
+  confirm_shot_button: 'Confirm shot'
+
+steps:
+  - audit: page
+
+  - verify: text "{{ empty_message }}"
+
+  # Each prerequisite is announced as unsatisfied, not merely styled as such.
+  - locate: button "{{ rifle_missing }}"
+  - focus: button "{{ rifle_missing }}"
+  - verify: button "{{ ammo_missing }}"
+  - verify: button "{{ environment_missing }}"
+
+  # A solution cannot be logged when there is no solution.
+  - verify: no_element button "{{ confirm_shot_button }}"
+
+  # The empty state has to be a route forward, not a dead end.
+  - activate: button "{{ rifle_missing }}"
+  - verify: heading "Rifles"

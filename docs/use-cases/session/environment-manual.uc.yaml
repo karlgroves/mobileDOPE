@@ -1,0 +1,56 @@
+id: session-environment-manual
+title: 'Enter environmental conditions by hand'
+type: positive
+description: >-
+  The path that must always work, because it is the fallback when location is denied
+  or a sensor is unavailable. Also the path a shooter uses with a Kestrel in hand.
+
+preconditions:
+  - 'The environment screen is reachable'
+
+start_location: 'Session/EnvironmentInput'
+
+expected_result: >-
+  The entered conditions are saved and become the current conditions used by the
+  solver. Density altitude is derived rather than requested.
+
+data:
+  temperature_field: 'Temperature, degrees Fahrenheit'
+  humidity_field: 'Humidity, percent'
+  pressure_field: 'Barometric pressure, inches of mercury'
+  altitude_field: 'Altitude, feet'
+  wind_speed_field: 'Wind speed, miles per hour'
+  wind_direction_field: 'Wind direction, degrees'
+  temperature: '72'
+  humidity: '40'
+  pressure: '29.92'
+  altitude: '5280'
+  wind_speed: '8'
+  wind_direction: '270'
+  save_button: 'Save conditions'
+  # REPLACE: density altitude is calculated, not entered. It must be shown as a
+  # derived value so the user does not go looking for a field to type it into.
+  density_altitude_readout: 'Density altitude, 7200 feet'
+  # REPLACE: a preset that fills the form in one tap.
+  preset_button: 'Standard atmosphere'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ preset_button }}"
+  - focus: button "{{ preset_button }}"
+  - activate: button "{{ preset_button }}"
+
+  - locate: field "{{ temperature_field }}"
+  - focus: field "{{ temperature_field }}"
+  - enter: field "{{ temperature_field }}" value "{{ temperature }}"
+  - enter: field "{{ humidity_field }}" value "{{ humidity }}"
+  - enter: field "{{ pressure_field }}" value "{{ pressure }}"
+  - enter: field "{{ altitude_field }}" value "{{ altitude }}"
+  - enter: field "{{ wind_speed_field }}" value "{{ wind_speed }}"
+  - enter: field "{{ wind_direction_field }}" value "{{ wind_direction }}"
+
+  - verify: text "{{ density_altitude_readout }}"
+
+  - locate: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"

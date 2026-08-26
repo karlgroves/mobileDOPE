@@ -1,0 +1,42 @@
+id: history-browse-logs
+title: 'Browse DOPE logs and open one'
+type: positive
+description: >-
+  The accumulated record. Each row shows an elevation and windage correction as
+  "up-arrow 2.34" and "right-arrow 0.50", which read aloud as two bare numbers with
+  no axis and no unit -- for a ballistic record that is not a cosmetic problem.
+
+preconditions:
+  - 'At least three DOPE log entries exist'
+
+start_location: 'History/DOPELogList'
+
+expected_result: >-
+  Each row announces its rifle, load, distance and both corrections with units.
+  Opening a row shows the full entry including the conditions it was recorded under.
+
+data:
+  # REPLACE: a row's accessible name. The arrows are decorative; the axis and unit
+  # have to be in the name.
+  log_row: 'Tikka T3x with 175gr SMK, 500 yards, elevation 3.40 MIL, windage 0.50 MIL'
+  search_field: 'Search DOPE logs'
+  search_term: '500'
+  # REPLACE: fields on the detail screen.
+  detail_distance: 'Distance, 500 yards'
+  detail_temperature: 'Temperature, 59 degrees Fahrenheit'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ search_field }}"
+  - focus: field "{{ search_field }}"
+  - enter: field "{{ search_field }}" value "{{ search_term }}"
+
+  - locate: button "{{ log_row }}"
+  - focus: button "{{ log_row }}"
+  - activate: button "{{ log_row }}"
+
+  - audit: page
+  - verify: text "{{ detail_distance }}"
+  # The conditions travel with the log: without them the entry cannot be reused.
+  - verify: text "{{ detail_temperature }}"

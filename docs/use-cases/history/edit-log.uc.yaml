@@ -1,0 +1,48 @@
+id: history-edit-log
+title: 'Correct a DOPE log entry'
+type: positive
+description: >-
+  Fixing an entry after the fact -- a mis-tapped correction, or a hit result
+  recorded before the spotter called it. Asserts the edit form arrives populated and
+  that the change is written through rather than only shown.
+
+preconditions:
+  - 'A DOPE log entry exists at data.distance'
+
+start_location: 'History/DOPELogList'
+
+expected_result: >-
+  The corrected value is stored and shown in the list. The entry's timestamp is not
+  rewritten to the edit time -- when the shot was taken is part of the record.
+
+data:
+  log_row: 'Tikka T3x with 175gr SMK, 500 yards, elevation 3.40 MIL, windage 0.50 MIL'
+  edit_button: 'Edit log at 500 yards'
+  elevation_field: 'Elevation correction, mils'
+  original_elevation: '3.40'
+  corrected_elevation: '3.60'
+  notes_field: 'Notes about this engagement'
+  notes: 'Mirage heavy, called low'
+  save_button: 'Save'
+  # REPLACE: the original capture time, which must survive the edit.
+  original_timestamp: '1 August 2026'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ edit_button }}"
+  - focus: button "{{ edit_button }}"
+  - activate: button "{{ edit_button }}"
+
+  - verify: field "{{ elevation_field }}" has_value "{{ original_elevation }}"
+
+  - focus: field "{{ elevation_field }}"
+  - enter: field "{{ elevation_field }}" value "{{ corrected_elevation }}"
+  - enter: field "{{ notes_field }}" value "{{ notes }}"
+
+  - activate: button "{{ save_button }}"
+
+  - navigate: 'History/DOPELogList'
+  - verify: text "{{ corrected_elevation }}"
+  # Editing a correction must not restamp when the shot was taken.
+  - verify: text "{{ original_timestamp }}"
