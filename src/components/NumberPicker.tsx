@@ -122,6 +122,9 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
 
             <FlatList
               data={values}
+              accessibilityRole="radiogroup"
+              accessibilityLabel={label}
+              accessibilityHint={`Choose one ${label.toLowerCase()} value`}
               keyExtractor={(item) => item.toString()}
               renderItem={({ item }) => {
                 const isSelected = item === value;

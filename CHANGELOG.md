@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking (component API):** `IconButton`'s `accessibilityLabel` prop is now
+  required. An icon button renders a bare glyph, so without a label it announces
+  as "button" and nothing more. Every existing call site already passed one, so
+  no migration was needed in-tree; external consumers of `IconButtonProps` will
+  see a type error until they add it.
+- `SegmentedControl` and `UnitToggle` options now use `accessibilityRole="radio"`
+  inside a `radiogroup` container rather than `button`, so a screen reader
+  announces them as the mutually exclusive choices they are.
+- The Modal backdrop is hidden from the accessibility tree. Screen-reader users
+  dismiss with the close button or the platform back gesture; the backdrop was
+  previously announced as an unlabelled tappable region ahead of the dialog's own
+  content.
+
+### Added
+
+- `TextInput` now derives an accessible name from its `label`, appends
+  ", required" when required, and folds `error`/`helperText` into
+  `accessibilityHint`. React Native does not associate a sibling `<Text>` label
+  with a field, so every text field in the app previously announced only as
+  "text field".
+
+### Fixed
+
+- The 65 outstanding `react-native-a11y` label and hint findings in `src/`, and
+  both rules raised from `warn` to `error` (see ADR-010). `lint-staged` now runs
+  `eslint --fix --fix-type problem,layout,suggestion` so the descriptor rule's
+  autofixer can no longer silently stamp placeholder
+  `accessibilityLabel="Text input field"` props on commit.
+
 ## [1.0.0] - 2026-07-20
 
 First tagged release. Ships the entire application (113 commits, 23 features, 3 fixes);

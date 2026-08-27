@@ -38,6 +38,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         disabled && styles.disabled,
         style,
       ]}
+      // The options are mutually exclusive, so they need a group to belong to.
+      // Without it the individual `radio` roles describe members of nothing.
+      accessibilityRole="radiogroup"
+      accessibilityState={{ disabled }}
     >
       {options.map((option, index) => {
         const isSelected = option.value === selectedValue;
@@ -62,7 +66,9 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             onPress={() => !disabled && onValueChange(option.value)}
             disabled={disabled}
             // `radio` rather than `button`: these are mutually exclusive choices,
-            // and the role is what tells a screen reader to announce "1 of 3".
+            // not independent actions, and `accessibilityState.selected` only
+            // reads correctly on a radio. Position ("option 2 of 3") is carried
+            // by the hint below -- React Native does not derive it from the role.
             accessibilityRole="radio"
             accessibilityState={{ selected: isSelected, disabled }}
             accessibilityLabel={option.label}

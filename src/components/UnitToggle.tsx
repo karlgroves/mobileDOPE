@@ -82,6 +82,10 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
   return (
     <View
       style={[styles.container, { borderColor: colors.border }, disabled && styles.disabled, style]}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={`${type} unit`}
+      accessibilityHint={`Choose the unit ${type} values are shown in`}
+      accessibilityState={{ disabled }}
     >
       {toggleOptions.map((option) => {
         const isSelected = option.value === value;

@@ -86,6 +86,9 @@ export const Picker: React.FC<PickerProps> = ({
       <Modal visible={isOpen} onClose={() => setIsOpen(false)} title={label}>
         <FlatList
           data={options}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={label}
+          accessibilityHint={`Choose one ${label.toLowerCase()} option`}
           keyExtractor={(item) => item.value}
           renderItem={({ item }) => (
             <TouchableOpacity
