@@ -76,9 +76,15 @@ module.exports = {
   //
   // ONLY EVER RAISE THESE.
   //
-  // Measure with a clean `coverage/` directory (`rm -rf coverage` first). A stale one
-  // left behind by a `--selectProjects` or single-file run reports lower figures,
-  // which would set the floors too loose and let real regressions through.
+  // `npm run test:coverage` clears `coverage/` before running, because a stale
+  // directory left by a `--selectProjects` or single-file run reports lower figures
+  // and would set the floors too loose. That used to be a comment asking you to
+  // remember; it is now in the script.
+  //
+  // `__tests__/unit/coverageThresholds.test.ts` asserts the property this design
+  // rests on: that every instrumented file belongs to one of the named groups
+  // below. Without it, a new top-level directory falls into `global` -- which is
+  // zero, so it is not gated at all -- and the gate stays green.
   //
   //   directory                      s      b      l      f     state
   //   utils                        90.5   77.4   90.1   87.5   ballistic math, done
@@ -95,8 +101,11 @@ module.exports = {
   // ts-jest/node `unit` project cannot parse -- they need the `components` project
   // or a transform allowlist), MigrationRunner, then screens.
   coverageThreshold: {
-    // Empty by construction -- see above. Left declared so a newly added top-level
-    // directory fails loudly here instead of being silently ungated.
+    // Empty by construction: every instrumented file matches one of the groups
+    // below, which `__tests__/unit/coverageThresholds.test.ts` enforces. Left
+    // declared because jest requires it and because a zero here is a deliberate
+    // statement -- anything reaching `global` is ungated, and that test is what
+    // makes sure nothing does.
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
     './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
