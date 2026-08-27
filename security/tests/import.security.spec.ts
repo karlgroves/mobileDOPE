@@ -82,16 +82,32 @@ describe('import: hostile structure', () => {
   });
 
   it('rejects deeply nested JSON rather than overflowing the stack', async () => {
-    // JSON.parse tolerates this; the recursive walks downstream of it do not.
+    // The nesting sits inside an OTHERWISE-VALID backup, so the depth guard is the
+    // only thing that can reject it. An earlier version nested at `data` itself,
+    // which `validateBackupData` rejected as the wrong shape -- so the test passed
+    // identically with the guard disabled and pinned nothing.
     const depth = 5000;
     const nested = '['.repeat(depth) + ']'.repeat(depth);
-    givenImportFile(`{"type":"full_backup","data":${nested}}`);
+    givenImportFile(
+      `{"exportDate":"2026-08-01T00:00:00.000Z","exportVersion":"1.1",` +
+        `"type":"full_backup","data":{"rifles":[{"name":"Tikka","notes":${nested}}],` +
+        `"ammos":[],"environments":[],"logs":[]}}`
+    );
 
     const result = await importFullBackup();
 
     expect(result.success).toBe(false);
-    // Must be a refusal, not a crash.
-    expect(typeof result.error).toBe('string');
+    // Asserting the specific refusal, not merely that something failed.
+    expect(result.error).toMatch(/nested too deeply/i);
+  });
+
+  it('accepts a backup nested within the depth limit', async () => {
+    // The other half of discrimination: the guard must not reject ordinary files.
+    givenImportFile(wellFormedBackup());
+
+    const result = await importFullBackup();
+
+    expect(result.error ?? '').not.toMatch(/nested too deeply/i);
   });
 
   it('rejects malformed JSON with a message rather than throwing', async () => {

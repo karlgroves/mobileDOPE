@@ -9,7 +9,7 @@ security/
 │   ├── audit-waivers.json          # individually waived npm advisories
 │   ├── audit-waivers.schema.json   # what a waiver must contain
 │   ├── gitleaks-baseline.json      # reviewed secret-scan findings (currently empty)
-│   └── semgrep.yml                 # 12 custom SAST rules for this codebase
+│   └── semgrep.yml                 # 11 custom SAST rules for this codebase
 ├── docs/
 │   ├── secret-scanning.md          # how gitleaks runs, and the baseline procedure
 │   └── security-exceptions.md      # the exception process, and the live register

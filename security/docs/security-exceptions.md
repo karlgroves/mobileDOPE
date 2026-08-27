@@ -72,15 +72,22 @@ Disposition for all 26 is `blocked-on-upstream`: they clear when Expo SDK ships 
 dependency set that resolves them. `npm run security:audit` fails the moment a new
 advisory appears that is not on that list, which is the property that matters.
 
-### Semgrep — 2 suppressions
+### Semgrep — 1 suppression
 
-| Rule                                  | Location                                   | Reason                                                                                                                                                                                                                                                                                                                                       | Owner      | Expires                                                    |
-| ------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------- |
-| `mobiledope-sql-string-interpolation` | `src/services/database/DatabaseService.ts` | SQLite does not accept bound parameters in a `PRAGMA` statement. The interpolated value is `DATABASE_VERSION`, a module-level numeric constant that never comes from input. This is a permanent limitation of the statement type, not deferred work.                                                                                         | karlgroves | Permanent — review if the PRAGMA ever takes a non-constant |
-| `mobiledope-uncoarsened-coordinate`   | `src/screens/EnvironmentInput.tsx`         | **A real finding, not a false positive.** Full-precision GPS is captured here. Fixed in PR #46 for issue #44, which replaces these lines with `coarsenLatitude()` and removes longitude entirely. Suppressed on this branch only so the gate reflects the rule being introduced rather than the pre-existing defect it was written to catch. | karlgroves | **On merge of #46** — remove the suppression with it       |
+| Rule                                  | Location                                   | Reason                                                                                                                                                                                                                                       | Owner      | Expires                                                    |
+| ------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------- |
+| `mobiledope-sql-string-interpolation` | `src/services/database/DatabaseService.ts` | SQLite does not accept bound parameters in a `PRAGMA` statement. The interpolated value is `DATABASE_VERSION`, a module-level numeric constant that never comes from input. A permanent limitation of the statement type, not deferred work. | karlgroves | Permanent — review if the PRAGMA ever takes a non-constant |
 
-The second row is the shape an exception should take when the finding is genuine: it
-says so plainly, names where the fix is, and expires on an event rather than drifting.
+There was briefly a second entry here, suppressing a real full-precision-GPS
+finding in `EnvironmentInput.tsx` on the grounds that issue #44 fixes it. That was
+the wrong shape and it has been removed along with the rule that produced it: a
+security gate reporting green **because** it suppresses a live defect is worse than
+one that never had the rule, since it also stops anyone else from looking. The rule
+now ships in #44's branch alongside the remediation that makes it pass.
+
+**The general principle, learned the hard way:** a new rule and the fix that makes
+it pass belong in the same change. If adding a rule requires a suppression on the
+first day, the rule is not ready to add here.
 
 ## Adding a waiver
 
