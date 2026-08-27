@@ -82,6 +82,10 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
   return (
     <View
       style={[styles.container, { borderColor: colors.border }, disabled && styles.disabled, style]}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={`${type} unit`}
+      accessibilityHint={`Choose the unit ${type} values are shown in`}
+      accessibilityState={{ disabled }}
     >
       {toggleOptions.map((option) => {
         const isSelected = option.value === value;
@@ -101,9 +105,12 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
             ]}
             onPress={() => !disabled && onValueChange(option.value)}
             disabled={disabled}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{ selected: isSelected, disabled }}
             accessibilityLabel={`${type} unit: ${option.label}`}
+            // The consequence is what matters here: switching MIL to MOA rewrites
+            // every correction on screen, and that is not obvious from the label.
+            accessibilityHint={`Shows all ${type} values in ${option.label}`}
           >
             <Text
               style={[

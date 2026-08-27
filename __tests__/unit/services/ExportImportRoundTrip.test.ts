@@ -92,6 +92,84 @@ describe('Export/Import round trip', () => {
       await environmentRepository.getAll()
     );
 
+  describe('exportFullBackup coordinate handling', () => {
+    // A shared backup is the only path by which data leaves the device, and it
+    // carries the latitude of every place the user has shot. See issue #44.
+    const seedWithLocation = async () => {
+      await environmentRepository.create(validEnvironment({ latitude: 39.7392 }));
+      await environmentRepository.create(validEnvironment({ latitude: -33.8688 }));
+    };
+
+    const environmentsIn = async (result: { uri?: string }) => {
+      const written = JSON.parse(readWritten(result.uri as string) as string) as {
+        data: { environments: Array<Record<string, unknown>> };
+      };
+      return written.data.environments;
+    };
+
+    it('includes coarsened latitude by default', async () => {
+      await seedWithLocation();
+      const result = await exportEverything();
+
+      // Sorted, because insertion order is not the property under test and is not
+      // what the repository returns. `getAll()` orders newest-first
+      // (`timestamp DESC, id DESC` -- see #28), so these come back reversed. The
+      // assertion is that both values are coarsened, not where they sit.
+      const environments = await environmentsIn(result);
+      expect(environments.map((e) => e.latitude).sort()).toEqual([-33.9, 39.7].sort());
+    });
+
+    it('omits latitude entirely when coordinates are excluded', async () => {
+      await seedWithLocation();
+      const result = await exportFullBackup([], [], [], await environmentRepository.getAll(), {
+        includeCoordinates: false,
+      });
+
+      const environments = await environmentsIn(result);
+      expect(environments).toHaveLength(2);
+      for (const environment of environments) {
+        expect(environment).not.toHaveProperty('latitude');
+      }
+    });
+
+    it('keeps the ballistic readings when coordinates are excluded', async () => {
+      await seedWithLocation();
+      const result = await exportFullBackup([], [], [], await environmentRepository.getAll(), {
+        includeCoordinates: false,
+      });
+
+      // Both seeded snapshots carry identical ballistic readings, so indexing is
+      // safe regardless of the newest-first order `getAll()` returns.
+      const environments = await environmentsIn(result);
+      expect(environments[0]).toMatchObject({
+        temperature: 59,
+        humidity: 50,
+        pressure: 29.92,
+        altitude: 1000,
+        windSpeed: 5,
+        windDirection: 90,
+      });
+      // The id must survive: DOPE logs reference it on restore.
+      expect(environments[0]?.id).toEqual(expect.any(Number));
+    });
+
+    it('never writes a longitude, with or without the option', async () => {
+      await seedWithLocation();
+      for (const options of [undefined, { includeCoordinates: false }]) {
+        const result = await exportFullBackup(
+          [],
+          [],
+          [],
+          await environmentRepository.getAll(),
+          options
+        );
+        for (const environment of await environmentsIn(result)) {
+          expect(environment).not.toHaveProperty('longitude');
+        }
+      }
+    });
+  });
+
   describe('exportFullBackup', () => {
     it('writes a backup file and reports its uri', async () => {
       await seed();

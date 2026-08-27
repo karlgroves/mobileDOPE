@@ -99,8 +99,9 @@ selector must either appear verbatim in `src/`, or be listed with a reason:
 
 - **flow-created data** — profile names and values the flow types in, which will
   never be in source;
-- **pending from another PR** — labels arriving with #46 or #47, each entry naming
-  its branch so the list shrinks as those land;
+- **pending from another PR** — labels arriving with a named open PR. Currently
+  empty: the eight entries that were here landed with #46 and #47, and the
+  `keeps the pending list honest` assertion flagged them the moment those merged;
 - **unverified on device** — the genuine remainder, currently five.
 
 `id:` selectors are checked strictly, with no allowance: unlike a visible label, a

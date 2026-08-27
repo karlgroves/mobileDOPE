@@ -17,7 +17,13 @@ const unit = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: ['**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)'],
+  // `security/tests/` runs in this project too: the security regression suite is
+  // plain TypeScript with no renderer, and keeping it inside `npm test` is what
+  // makes it a gate rather than an opt-in script. See issue #45 item 8.
+  testMatch: [
+    '**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)',
+    '**/security/tests/**/*.(test|spec).(ts|tsx)',
+  ],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
   transform: {
     '^.+\\.tsx?$': [
@@ -54,42 +60,96 @@ module.exports = {
     '!src/**/*.types.ts',
     '!src/**/__tests__/**',
   ],
-  // A RATCHET, not a target (#28 phases 1-2). These are floors just below actual coverage,
-  // so `npm run test:coverage` passes today and any regression fails. It once declared 70%,
-  // which nothing came close to -- the gate was fiction, so it could not be run in CI and
-  // caught nothing.
+  // PER-DIRECTORY RATCHETS, not targets (#28).
   //
-  // Ratcheted by #28 phase 2 as the services suites landed:
+  // This replaces the single merged `global` floor, which was not a meaningful gate.
+  // Coverage merged across the `unit` and `components` projects moves for reasons
+  // unrelated to test quality: the two projects instrument the same source with
+  // different denominators, so adding component tests dilutes the unit figure and
+  // vice versa. A number that goes up while risk stays flat -- or drops while tests
+  // are added -- cannot be ratcheted honestly. It also averaged `src/utils/` at ~90%
+  // against `src/screens/` at 0%, hiding both.
   //
-  //   metric       phase 1   3 repos   all 7 repos   export/import   + #39 fix   floor
-  //   lines        16.71%    20.12%    24.25%        27.00%          28.11%      27
-  //   statements   14.18%    17.13%    20.79%        23.47%          24.60%      24
-  //   branches     11.09%    13.14%    15.37%        16.68%          17.97%      17
-  //   functions    10.77%    13.96%    19.09%        20.93%          21.87%      21
+  // Every directory now carries its own floor, so a regression is attributed to the
+  // layer that caused it. Jest assigns each file to the most specific matching path,
+  // which leaves `global` covering nothing -- that is deliberate, not an oversight:
+  // there is no unclassified source left. Adding a new top-level directory under
+  // `src/` means adding its floor here.
   //
-  // Measure with a clean `coverage/` directory (`rm -rf coverage` first). A stale one left
-  // behind by a `--selectProjects` run reports a lower figure, which would set the floors
-  // too loose and let real regressions through.
+  // Floors are the integer below actual, dropped one further where that leaves under
+  // ~0.5pp of headroom, so landing a feature slightly ahead of its tests does not
+  // break the build while a real regression does.
   //
-  // Rule for each floor (unchanged from phase 1): the integer below actual, dropped one
-  // further when that would leave under ~0.5pp of headroom -- which is all four here. Every
-  // floor keeps >= 0.9pp of slack so landing a feature slightly ahead of its tests does not
-  // break the build, while a real regression does.
+  // ONLY EVER RAISE THESE.
   //
-  // ONLY EVER RAISE THESE. All 7 repositories sit at 98-100% statements and ImportService
-  // is at ~70%, but the layer is not done: ExportService is still ~9% (only the JSON
-  // full-backup path is covered; the CSV, Markdown and PDF exporters are not),
-  // DatabaseService is 21%, and MigrationRunner is 0%.
+  // `npm run test:coverage` clears `coverage/` before running, because a stale
+  // directory left by a `--selectProjects` or single-file run reports lower figures
+  // and would set the floors too loose. That used to be a comment asking you to
+  // remember; it is now in the script.
   //
-  // Note the percentages are not comparable to pre-#35 figures (18.8%/19.01%): the `unit`
-  // and `components` projects instrument differently and report different denominators for
-  // the same source, so the baseline was re-measured once both were wired up.
+  // `__tests__/unit/coverageThresholds.test.ts` asserts the property this design
+  // rests on: that every instrumented file belongs to one of the named groups
+  // below. Without it, a new top-level directory falls into `global` -- which is
+  // zero, so it is not gated at all -- and the gate stays green.
+  //
+  //   directory                      s      b      l      f     state
+  //   utils                        90.5   77.4   90.1   87.5   ballistic math, done
+  //   store                        93.4   83.9   94.4   92.5   #28 phase 3, this change
+  //   models                       85.3   80.7   85.2   83.3   #28 phase 4, mostly done
+  //   services/database            60.7   77.7   64.2   70.0   repositories high, runner 0%
+  //   services                     62.1   57.5   64.3   67.1   CSV/Markdown covered; PDF 0%
+  //   contexts                     66.7   50.0   76.9   40.0   incidental, via components
+  //   components                   14.4   20.2   18.1   16.0   8 of ~20 suites
+  //   constants                    10.2    7.1   13.2    2.2   data tables
+  //   screens / navigation / hooks  0      0      0      0     #28 phase 6, not started
+  //
+  // Next targets, in cost order: the PDF exporters (expo-print ships ESM, which the
+  // ts-jest/node `unit` project cannot parse -- they need the `components` project
+  // or a transform allowlist), MigrationRunner, then screens.
   coverageThreshold: {
-    global: {
-      branches: 17,
-      functions: 21,
-      lines: 27,
-      statements: 24,
+    // Empty by construction: every instrumented file matches one of the groups
+    // below, which `__tests__/unit/coverageThresholds.test.ts` enforces. Left
+    // declared because jest requires it and because a zero here is a deliberate
+    // statement -- anything reaching `global` is ungated, and that test is what
+    // makes sure nothing does.
+    global: { branches: 0, functions: 0, lines: 0, statements: 0 },
+
+    './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
+    // Several groups are floored below their OBSERVED WORST CASE rather than their
+    // usual reading, because the merged coverage report is intermittently missing
+    // one jest project's contribution. All tests pass; only the numbers move.
+    //
+    //   group        usual                    observed low
+    //   store        93.39/83.87/92.47/94.38  87.17 statements
+    //   contexts     66.66/50.00/40.00/76.92  52.63 statements, 58.82 lines
+    //   components   14.35/20.16/16.00/18.12  16.61 lines, 14.15 functions
+    //
+    // The affected group moves between runs and spans both projects, so this is a
+    // property of the two-project coverage merge (ADR-012 / #35), not of any one
+    // suite. Tracked in #54.
+    //
+    // A ratchet that reds two pushes in five gets re-run rather than read, so these
+    // sit under the low readings. RAISE THEM BACK once #54 lands -- the usual
+    // figures above are the targets.
+    './src/store/': { branches: 77, functions: 86, lines: 88, statements: 86 },
+    './src/models/': { branches: 79, functions: 82, lines: 84, statements: 84 },
+    './src/services/database/': { branches: 76, functions: 69, lines: 63, statements: 59 },
+    './src/services/': { branches: 56, functions: 66, lines: 63, statements: 61 },
+    './src/contexts/': { branches: 38, functions: 28, lines: 56, statements: 50 },
+    './src/components/': { branches: 17, functions: 13, lines: 16, statements: 12 },
+    './src/constants/': { branches: 5, functions: 1, lines: 11, statements: 8 },
+
+    // Not yet started. Declared at 0 so they are visible in this table rather than
+    // invisible inside a merged average, and so the first test written for them can
+    // raise a floor that means something.
+    './src/services/database/migrations/': {
+      branches: 0,
+      functions: 0,
+      lines: 0,
+      statements: 0,
     },
+    './src/screens/': { branches: 0, functions: 0, lines: 0, statements: 0 },
+    './src/navigation/': { branches: 0, functions: 0, lines: 0, statements: 0 },
+    './src/hooks/': { branches: 0, functions: 0, lines: 0, statements: 0 },
   },
 };

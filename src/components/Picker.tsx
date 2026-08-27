@@ -60,6 +60,10 @@ export const Picker: React.FC<PickerProps> = ({
         ]}
         onPress={() => !disabled && setIsOpen(true)}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selectedOption ? selectedOption.label : placeholder}`}
+        accessibilityHint={`Opens a list of ${label.toLowerCase()} options`}
+        accessibilityState={{ disabled, expanded: isOpen }}
       >
         <Text
           style={[
@@ -82,6 +86,9 @@ export const Picker: React.FC<PickerProps> = ({
       <Modal visible={isOpen} onClose={() => setIsOpen(false)} title={label}>
         <FlatList
           data={options}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={label}
+          accessibilityHint={`Choose one ${label.toLowerCase()} option`}
           keyExtractor={(item) => item.value}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -92,6 +99,10 @@ export const Picker: React.FC<PickerProps> = ({
                 },
               ]}
               onPress={() => handleSelect(item.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={item.label}
+              accessibilityHint={`Sets ${label.toLowerCase()} to ${item.label}`}
+              accessibilityState={{ selected: item.value === value }}
             >
               <Text
                 style={[

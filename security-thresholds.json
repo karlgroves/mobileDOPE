@@ -1,0 +1,70 @@
+{
+  "$comment": [
+    "Single source of truth for what every security scan treats as a failure.",
+    "Read by scripts/security-audit.mjs and security/tests/*.spec.ts. Changing a",
+    "threshold here changes the gate; it is deliberately not spread across tool",
+    "invocations. See security/docs/security-exceptions.md for the process that",
+    "governs waiving an individual finding rather than lowering a threshold.",
+    "Issue #45 item 9."
+  ],
+  "npmAudit": {
+    "$comment": [
+      "The full dependency tree is gated, not just production. The RN/Expo",
+      "toolchain is a dev dependency but its output is what ships, so a compromise",
+      "there is a compromise of the artifact.",
+      "Findings at or above failOn must each carry a waiver in",
+      "security/config/audit-waivers.json. Anything new fails immediately."
+    ],
+    "failOn": "high",
+    "scope": "all",
+    "waiverFile": "security/config/audit-waivers.json",
+    "maxWaiverDays": 90
+  },
+  "osvScanner": {
+    "$comment": [
+      "Lockfile scan via scripts/security-osv.mjs. osv-scanner has no severity",
+      "threshold of its own -- it exits non-zero on any finding -- so the wrapper",
+      "applies this one and honours the npm-audit waiver register, giving one",
+      "advisory one decision recorded in one place.",
+      "failOn is a qualitative CVSS v3 rating: CRITICAL is >= 9.0."
+    ],
+    "failOn": "CRITICAL"
+  },
+  "semgrep": {
+    "$comment": [
+      "Custom rules in security/config/semgrep.yml plus the registry packs.",
+      "ERROR-severity rules are defects and block. WARNING-severity rules point at",
+      "work to do -- they are reported but do not stop a push, because a gate that",
+      "cries wolf gets bypassed."
+    ],
+    "failOn": "ERROR",
+    "configFile": "security/config/semgrep.yml"
+  },
+  "eslint": {
+    "$comment": [
+      "A ratchet, not a target. Warnings may only ever go down. Lower this number",
+      "as cleanup lands; never raise it to accommodate new warnings.",
+      "Issue #45 item 3."
+    ],
+    "maxWarnings": 625
+  },
+  "secretScanning": {
+    "$comment": [
+      "gitleaks. `required` means the pre-push hook fails when the binary is",
+      "absent rather than printing a note and continuing -- a gate that silently",
+      "skips is not a gate. Issue #45 item 7."
+    ],
+    "required": true,
+    "baselineFile": "security/config/gitleaks-baseline.json"
+  },
+  "workflows": {
+    "$comment": [
+      "Enforced by security/tests/workflows.security.spec.ts rather than by adding",
+      "a scanner binary: it runs in the existing `npm test` gate, needs no install,",
+      "and works offline. Issue #45 items 4-6."
+    ],
+    "requireExplicitPermissions": true,
+    "requireShaPinnedActions": true,
+    "forbidWorkflowWritePermissions": true
+  }
+}

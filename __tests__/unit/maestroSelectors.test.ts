@@ -29,24 +29,16 @@ const flowDir = path.join(repoRoot, '.maestro');
 const FLOW_CREATED_DATA = ['Tikka T3x', '175gr SMK', 'Shots fired, 1', 'DOPE card generated'];
 
 /**
- * Labels that arrive with another open PR. Each entry names the branch, so this
- * list shrinks as those land rather than becoming permanent.
+ * Labels that arrive with another open PR.
  *
- * When a PR merges, remove its entries and re-run: anything still missing is a
- * real selector defect rather than a sequencing artefact.
+ * Empty: #46 (consent copy) and #47 (accessibility labels) have both landed, and
+ * every entry that was here is now present in `src/`. The `keeps the pending list
+ * honest` assertion below flagged all eight as stale the moment those merged,
+ * which is the point of tracking them here rather than in prose.
+ *
+ * Add entries again only for labels genuinely arriving with a named open PR.
  */
-const PENDING_FROM_OTHER_PRS: Record<string, string> = {
-  // #30 / PR #47 -- accessibility labels on the session and form screens
-  'Increase elevation correction, mils': '#47',
-  'Adjust windage correction right, mils': '#47',
-  'Record shot': '#47',
-  'Barrel twist rate, inches per turn': '#47',
-  'Ammunition name': '#47',
-  'Bullet type, for example hollow point boat tail': '#47',
-  // #44 / PR #46 -- the pre-permission consent copy
-  'About location': '#46',
-  Continue: '#46',
-};
+const PENDING_FROM_OTHER_PRS: Record<string, string> = {};
 
 /**
  * Selectors matching neither of the above, kept deliberately so the flow is

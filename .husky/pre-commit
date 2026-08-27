@@ -3,9 +3,19 @@
 # each tool — `tsc-files` with no file arguments silently checks nothing.
 npx lint-staged
 
-# Optional: gitleaks. Skips gracefully when the binary is not installed.
+# Secret scan over the staged diff.
+#
+# This used to skip silently when gitleaks was absent, which meant a contributor
+# who had not run scripts/bootstrap.sh had no secret gate and no way to know it.
+# It now fails. See security/docs/secret-scanning.md. (Issue #45 item 7.)
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks protect --staged --no-banner
+  gitleaks protect --staged --no-banner --redact || exit 1
+elif [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
+  echo "⚠  SECRET SCAN SKIPPED — gitleaks is not installed and SKIP_SECRET_SCAN=1."
+  echo "⚠  Nothing checked this commit for credentials. Install it: ./scripts/bootstrap.sh"
 else
-  echo "ℹ gitleaks not installed — skipping secret scan (run scripts/bootstrap.sh to enable)"
+  echo "✖ gitleaks is not installed, so this commit cannot be scanned for secrets."
+  echo "  Install it:      ./scripts/bootstrap.sh"
+  echo "  Or, knowingly:   SKIP_SECRET_SCAN=1 git commit ..."
+  exit 1
 fi

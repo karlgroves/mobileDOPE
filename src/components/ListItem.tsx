@@ -9,6 +9,14 @@ interface ListItemProps {
   onPress?: () => void;
   hideSeparator?: boolean;
   testID?: string;
+  /**
+   * Overrides the label derived from title/subtitle/rightText. Supply one when the
+   * visible text is abbreviated -- "300 / 2.1" reads as digits to a screen reader,
+   * where "300 yards, 2.1 mils" does not.
+   */
+  accessibilityLabel?: string;
+  /** What activating the row does, when the title does not already say so. */
+  accessibilityHint?: string;
 }
 
 export const ListItem: React.FC<ListItemProps> = ({
@@ -18,7 +26,12 @@ export const ListItem: React.FC<ListItemProps> = ({
   onPress,
   hideSeparator = false,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
+  // A row reads as one thing, not three. Joining the visible strings keeps the
+  // announcement in the order they appear on screen.
+  const derivedLabel = [title, subtitle, rightText].filter(Boolean).join(', ');
   const content = (
     <>
       <View style={styles.content}>
@@ -46,6 +59,9 @@ export const ListItem: React.FC<ListItemProps> = ({
         style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         onPress={onPress}
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? derivedLabel}
+        accessibilityHint={accessibilityHint}
       >
         {content}
       </Pressable>
@@ -53,7 +69,9 @@ export const ListItem: React.FC<ListItemProps> = ({
   }
 
   return (
-    <View style={styles.container} testID={testID}>
+    // Non-interactive rows carry a role but no label: the child <Text> nodes are
+    // already announced in reading order, and a grouping label would repeat them.
+    <View style={styles.container} testID={testID} accessibilityRole="text">
       {content}
     </View>
   );

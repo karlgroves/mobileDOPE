@@ -8,7 +8,17 @@ export interface IconButtonProps {
   size?: 'small' | 'medium' | 'large';
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   disabled?: boolean;
-  accessibilityLabel?: string;
+  /**
+   * Required. The icon is a bare glyph, so this is the only thing a screen reader
+   * has to work with -- without it the control announces as "button" and nothing
+   * more. Name the action and its subject: "Delete rifle profile", not "Delete".
+   */
+  accessibilityLabel: string;
+  /**
+   * What happens on activation, when that is not obvious from the label alone.
+   * Omit rather than restating the label.
+   */
+  accessibilityHint?: string;
   style?: ViewStyle;
 }
 
@@ -19,6 +29,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   variant = 'ghost',
   disabled = false,
   accessibilityLabel,
+  accessibilityHint,
   style,
 }) => {
   const { theme } = useTheme();
@@ -86,7 +97,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
     >
       <Text style={iconStyles}>{icon}</Text>
     </TouchableOpacity>

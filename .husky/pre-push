@@ -1,7 +1,51 @@
-# Full local quality gate before pushing: lint, typecheck, markdownlint, dupes.
+# Full local quality gate before pushing.
+#
+# ADR-011 puts the gates here rather than in GitHub Actions, so anything that is
+# meant to block has to run in this hook — an npm script that no hook invokes is
+# opt-in tooling, not a gate. Issue #45 wired the security scans in for that reason.
+
+# `set -e` is load-bearing. Without it a failing command here does not stop the
+# push: sh returns the exit status of the LAST command, so `npm run check` could
+# fail and the hook would still exit 0 as long as the final gitleaks scan passed.
+# That was true of this hook as first written, which made the headline quality
+# gate the one step that could not block a push.
+set -e
+
+# lint (warning-capped), typecheck, markdownlint, dupes
 npm run check
 
-# Optional secret scan over history. Skips gracefully when not installed.
+# Dependency advisories, gated against security/config/audit-waivers.json.
+# Fails on anything not individually waived, and on any expired waiver.
+npm run security:audit
+
+# Lockfile scan, gated at CRITICAL and honouring the same waiver register as the
+# audit above (scripts/security-osv.mjs). Optional binary: reported when absent,
+# because it is a second source for advisories the audit gate already covers.
+if command -v osv-scanner >/dev/null 2>&1; then
+  npm run security:osv || exit 1
+else
+  echo "ℹ osv-scanner not installed — lockfile scan skipped (npm audit gate still ran)"
+fi
+
+# SAST. ERROR-severity rules block; WARNING-severity rules are advisory.
+# See security/config/semgrep.yml and security-thresholds.json.
+if command -v semgrep >/dev/null 2>&1; then
+  npm run security:semgrep || exit 1
+else
+  echo "ℹ semgrep not installed — SAST skipped (run ./scripts/bootstrap.sh to enable)"
+fi
+
+# Secret scan over full history, minus the reviewed baseline.
+# Fails when the binary is absent — see .husky/pre-commit for the reasoning.
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks detect --no-banner --redact || exit 1
+  gitleaks detect --no-banner --redact \
+    --baseline-path security/config/gitleaks-baseline.json || exit 1
+elif [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
+  echo "⚠  SECRET SCAN SKIPPED — gitleaks is not installed and SKIP_SECRET_SCAN=1."
+  echo "⚠  Nothing checked this push for credentials. Install it: ./scripts/bootstrap.sh"
+else
+  echo "✖ gitleaks is not installed, so this push cannot be scanned for secrets."
+  echo "  Install it:      ./scripts/bootstrap.sh"
+  echo "  Or, knowingly:   SKIP_SECRET_SCAN=1 git push"
+  exit 1
 fi

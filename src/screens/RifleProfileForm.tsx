@@ -180,6 +180,8 @@ export const RifleProfileForm: React.FC = () => {
     >
       <TextInput
         label="Rifle Name"
+        accessibilityLabel="Rifle name"
+        accessibilityHint="The name this rifle appears under in lists and DOPE cards"
         value={name}
         onChangeText={setName}
         placeholder="e.g., Remington 700"
@@ -214,6 +216,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Twist Rate"
+        accessibilityLabel="Barrel twist rate, inches per turn"
+        accessibilityHint="For example, 1 in 8. Used for spin drift and stability"
         value={twistRate}
         onChangeText={setTwistRate}
         placeholder="e.g., 1:10"
@@ -238,6 +242,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Optic Manufacturer"
+        accessibilityLabel="Optic manufacturer"
+        accessibilityHint="For example, Vortex, Nightforce or Leupold"
         value={opticManufacturer}
         onChangeText={setOpticManufacturer}
         placeholder="e.g., Vortex, Leupold"
@@ -248,6 +254,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Optic Model"
+        accessibilityLabel="Optic model"
+        accessibilityHint="For example, Razor H D Gen 3"
         value={opticModel}
         onChangeText={setOpticModel}
         placeholder="e.g., Razor HD Gen II"
@@ -258,6 +266,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Reticle Type"
+        accessibilityLabel="Reticle type"
+        accessibilityHint="For example, E B R 7C or Tremor 3"
         value={reticleType}
         onChangeText={setReticleType}
         placeholder="e.g., EBR-2C, Horus H59"
@@ -305,6 +315,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Notes"
+        accessibilityLabel="Notes about this rifle"
+        accessibilityHint="Optional free text, for example zero history or maintenance"
         value={notes}
         onChangeText={setNotes}
         placeholder="Additional notes (optional)"

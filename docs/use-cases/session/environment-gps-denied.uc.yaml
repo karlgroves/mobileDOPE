@@ -1,0 +1,49 @@
+id: session-environment-gps-denied
+title: 'The app remains fully usable with location denied'
+type: negative
+description: >-
+  Declining location must cost the user nothing but the convenience of not typing an
+  altitude. PRIVACY.md states this explicitly, so it is a requirement rather than a
+  courtesy: no feature is withheld, no repeated prompt, no degraded solution.
+
+preconditions:
+  - 'Location permission has been denied for the app'
+
+start_location: 'Session/EnvironmentInput'
+
+expected_result: >-
+  The refusal is acknowledged without scolding, the manual altitude field remains
+  editable, conditions can be saved, and a firing solution can still be produced.
+
+data:
+  fetch_button: 'Fetch conditions from device location'
+  continue_button: 'Continue'
+  # REPLACE: the denial message. It should say what still works, not just that
+  # permission was denied.
+  denial_message: 'You can still enter altitude and latitude by hand'
+  altitude_field: 'Altitude, feet'
+  altitude: '5280'
+  save_button: 'Save conditions'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ fetch_button }}"
+  - focus: button "{{ fetch_button }}"
+  - activate: button "{{ fetch_button }}"
+  - activate: button "{{ continue_button }}"
+
+  - sr_says: '"{{ denial_message }}" after activate button "{{ continue_button }}"'
+
+  # The fallback must be genuinely available, not merely mentioned.
+  - locate: field "{{ altitude_field }}"
+  - focus: field "{{ altitude_field }}"
+  - enter: field "{{ altitude_field }}" value "{{ altitude }}"
+  - verify: field "{{ altitude_field }}" has_value "{{ altitude }}"
+
+  - locate: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"
+
+  # And the solver still works with hand-entered conditions.
+  - navigate: 'MainTabs/Dashboard'
+  - verify: text "Elevation hold"

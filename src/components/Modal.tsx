@@ -41,7 +41,16 @@ export const Modal: React.FC<ModalProps> = ({
       testID={testID}
     >
       <View style={styles.overlay}>
-        <TouchableWithoutFeedback onPress={handleBackdropPress}>
+        {/* The backdrop is a pointer affordance only. Screen-reader users dismiss
+            with the close button or the platform back gesture, so it is hidden
+            rather than announced as an unlabelled tappable region. The props go on
+            the Touchable because it clones them onto its child. */}
+        <TouchableWithoutFeedback
+          onPress={handleBackdropPress}
+          accessibilityRole="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
           <View style={styles.backdrop} testID={testID ? `${testID}-backdrop` : 'modal-backdrop'} />
         </TouchableWithoutFeedback>
         <View style={styles.container}>
@@ -51,6 +60,9 @@ export const Modal: React.FC<ModalProps> = ({
               onPress={onClose}
               style={styles.closeButton}
               testID={testID ? `${testID}-close-button` : 'modal-close-button'}
+              accessibilityRole="button"
+              accessibilityLabel={title ? `Close ${title}` : 'Close dialog'}
+              accessibilityHint="Dismisses this dialog without saving"
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </Pressable>

@@ -1,0 +1,81 @@
+id: dashboard-quick-solution
+title: 'Get a firing solution and log a shot from the dashboard'
+type: positive
+description: >-
+  The app's core loop. With a rifle, ammunition and environmental readings already
+  selected, the shooter adjusts distance and wind on the dashboard, reads the
+  elevation and windage holds, and logs the shot. This is the flow CLAUDE.md's
+  "one-tap DOPE entry" constraint refers to, so the interaction count matters as
+  much as the outcome.
+
+preconditions:
+  - 'At least one rifle profile exists and is selected'
+  - 'At least one ammunition profile exists for that rifle and is selected'
+  - 'An environment snapshot exists, so the trust bar reads all three as satisfied'
+
+start_location: 'MainTabs/Dashboard'
+
+expected_result: >-
+  The dashboard shows an elevation and a windage hold, each with its unit. Confirming
+  the shot writes a DOPE log entry at the displayed distance and the entry is
+  immediately visible in History.
+
+data:
+  # REPLACE: accessible name of the distance readout. Must carry the unit --
+  # a bare number is ambiguous between yards and meters.
+  distance_readout: 'Distance, 500 yards'
+  # REPLACE: accessible names of the quick-adjust controls. These are rendered as
+  # "-25" / "+25", which read as bare digits without an explicit label.
+  distance_minus_25: 'Decrease target distance by 25 yards'
+  distance_plus_25: 'Increase target distance by 25 yards'
+  # REPLACE: the wind direction control. Cycles through clock positions.
+  wind_direction_button: 'Wind direction: 3 o'
+  wind_speed_increase: 'Increase wind speed by 1 mile per hour'
+  # REPLACE: accessible names of the two holds. Both MUST name the axis and the
+  # unit -- "up 2.3" is not a usable announcement for a firing solution.
+  elevation_hold: 'Elevation hold'
+  windage_hold: 'Wind hold'
+  confirm_shot_button: 'Confirm shot'
+  # REPLACE: the confirmation the app gives after logging.
+  logged_announcement: 'Shot logged'
+
+steps:
+  - audit: page
+
+  # The trust bar is the precondition made visible. Verify it before relying on it.
+  - verify: 'button "Rifle: selected"'
+  - verify: 'button "Ammo: selected"'
+  - verify: 'button "Environment: readings recorded"'
+
+  - locate: text "{{ distance_readout }}"
+
+  - locate: button "{{ distance_plus_25 }}"
+  - focus: button "{{ distance_plus_25 }}"
+  - activate: button "{{ distance_plus_25 }}"
+  # The readout must change, and must still carry its unit after changing.
+  - verify: text "Distance, 525 yards"
+
+  - locate: button "{{ distance_minus_25 }}"
+  - activate: button "{{ distance_minus_25 }}"
+  - verify: text "{{ distance_readout }}"
+
+  - locate: button "{{ wind_direction_button }}"
+  - focus: button "{{ wind_direction_button }}"
+  - activate: button "{{ wind_direction_button }}"
+
+  - locate: button "{{ wind_speed_increase }}"
+  - activate: button "{{ wind_speed_increase }}"
+
+  # The solution is the whole point of the screen. Both holds must be present and
+  # must be announced with their unit, not just rendered.
+  - verify: text "{{ elevation_hold }}"
+  - verify: text "{{ windage_hold }}"
+
+  - locate: button "{{ confirm_shot_button }}"
+  - focus: button "{{ confirm_shot_button }}"
+  - activate: button "{{ confirm_shot_button }}"
+  - sr_says: '"{{ logged_announcement }}" after activate button "{{ confirm_shot_button }}"'
+
+  # The log must actually exist, not just be reported as created.
+  - navigate: 'MainTabs/History'
+  - verify: button "{{ distance_readout }}"

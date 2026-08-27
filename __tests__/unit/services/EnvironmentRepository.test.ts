@@ -63,9 +63,8 @@ describe('EnvironmentRepository', () => {
 
       const row = await db.getFirstAsync<{
         latitude: number | null;
-        longitude: number | null;
-      }>('SELECT latitude, longitude FROM environment_snapshots WHERE id = ?', [created.id]);
-      expect(row).toEqual({ latitude: null, longitude: null });
+      }>('SELECT latitude FROM environment_snapshots WHERE id = ?', [created.id]);
+      expect(row).toEqual({ latitude: null });
     });
 
     it('derives density altitude when it is not supplied', async () => {
@@ -80,17 +79,98 @@ describe('EnvironmentRepository', () => {
       expect(created.densityAltitude).toBe(row?.density_altitude);
     });
 
-    it('persists supplied GPS coordinates', async () => {
+    it('persists a supplied latitude, coarsened', async () => {
+      // Longitude is no longer collected at all, and latitude is reduced to one
+      // decimal place before it reaches the database. See #44.
       const created = await environmentRepository.create(
-        validEnvironment({ latitude: 39.7392, longitude: -104.9903, densityAltitude: 7200 })
+        validEnvironment({ latitude: 39.7392, densityAltitude: 7200 })
       );
 
       const fetched = await environmentRepository.getById(created.id as number);
       expect(fetched).toMatchObject({
-        latitude: 39.7392,
-        longitude: -104.9903,
+        latitude: 39.7,
         densityAltitude: 7200,
       });
+    });
+
+    it('stores no full-precision coordinate even when handed one', async () => {
+      const created = await environmentRepository.create(validEnvironment({ latitude: 39.739236 }));
+
+      const row = await db.getFirstAsync<{ latitude: number | null }>(
+        'SELECT latitude FROM environment_snapshots WHERE id = ?',
+        [created.id]
+      );
+      expect(row?.latitude).toBe(39.7);
+    });
+  });
+
+  describe('clearStoredCoordinates', () => {
+    // Settings offers this so a user can retire their location history without
+    // destroying the ballistic readings those snapshots carry. See issue #44.
+    it('nulls every stored latitude', async () => {
+      await environmentRepository.create(validEnvironment({ latitude: 39.7 }));
+      await environmentRepository.create(validEnvironment({ latitude: -33.9 }));
+
+      await environmentRepository.clearStoredCoordinates();
+
+      const rows = await db.getAllAsync<{ latitude: number | null }>(
+        'SELECT latitude FROM environment_snapshots'
+      );
+      expect(rows.map((row) => row.latitude)).toEqual([null, null]);
+    });
+
+    it('reports how many snapshots it cleared', async () => {
+      await environmentRepository.create(validEnvironment({ latitude: 39.7 }));
+      await environmentRepository.create(validEnvironment());
+
+      // Only the row that actually held a coordinate counts.
+      expect(await environmentRepository.clearStoredCoordinates()).toBe(1);
+    });
+
+    it('preserves the ballistic readings', async () => {
+      const created = await environmentRepository.create(
+        validEnvironment({ latitude: 39.7, temperature: 72, windSpeed: 11 })
+      );
+
+      await environmentRepository.clearStoredCoordinates();
+
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(fetched).toMatchObject({ temperature: 72, windSpeed: 11 });
+      expect(fetched?.latitude).toBeUndefined();
+    });
+
+    it('is safe to run when nothing is stored', async () => {
+      expect(await environmentRepository.clearStoredCoordinates()).toBe(0);
+    });
+  });
+
+  describe('ordering', () => {
+    it('returns the newest first when two readings share a timestamp', async () => {
+      // The schema default is `datetime('now')` -- second resolution. Two readings
+      // taken in the same second tie on timestamp, and without a secondary sort
+      // `getCurrent()` returns the older one.
+      const first = await environmentRepository.create(validEnvironment({ temperature: 59 }));
+      const second = await environmentRepository.create(validEnvironment({ temperature: 72 }));
+      expect((second.id as number) > (first.id as number)).toBe(true);
+
+      const current = await environmentRepository.getCurrent();
+
+      expect(current?.temperature).toBe(72);
+    });
+
+    it('still orders by timestamp ahead of id', async () => {
+      // A restored backup inserts rows in arbitrary id order but carries the real
+      // capture times, which must win.
+      await environmentRepository.create(
+        validEnvironment({ temperature: 59, timestamp: '2026-08-01T10:00:00.000Z' })
+      );
+      await environmentRepository.create(
+        validEnvironment({ temperature: 72, timestamp: '2026-07-01T10:00:00.000Z' })
+      );
+
+      const current = await environmentRepository.getCurrent();
+
+      expect(current?.temperature).toBe(59);
     });
   });
 

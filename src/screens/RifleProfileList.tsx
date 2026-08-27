@@ -143,21 +143,24 @@ export const RifleProfileList: React.FC = () => {
             onPress={() => handleClone(item)}
             variant="ghost"
             size="medium"
-            accessibilityLabel="Clone rifle profile"
+            accessibilityLabel={`Clone ${item.name}`}
+            accessibilityHint="Creates a copy you can edit as a new profile"
           />
           <IconButton
             icon="✏️"
             onPress={() => handleEdit(item)}
             variant="ghost"
             size="medium"
-            accessibilityLabel="Edit rifle profile"
+            accessibilityLabel={`Edit ${item.name}`}
+            accessibilityHint="Opens the rifle profile form"
           />
           <IconButton
             icon="🗑️"
             onPress={() => handleDeletePress(item)}
             variant="ghost"
             size="medium"
-            accessibilityLabel="Delete rifle profile"
+            accessibilityLabel={`Delete ${item.name}`}
+            accessibilityHint="Asks for confirmation before removing this profile"
           />
         </View>
       </Card>
@@ -190,6 +193,8 @@ export const RifleProfileList: React.FC = () => {
                   borderColor: colors.border,
                 },
               ]}
+              accessibilityLabel="Search rifle profiles"
+              accessibilityHint="Filters the list as you type"
               placeholder="Search rifles..."
               placeholderTextColor={colors.text.secondary}
               value={searchQuery}
@@ -227,6 +232,7 @@ export const RifleProfileList: React.FC = () => {
             style={[styles.fab, { backgroundColor: colors.primary }]}
             onPress={handleCreate}
             accessibilityLabel="Create new rifle profile"
+            accessibilityHint="Opens an empty rifle profile form"
             accessibilityRole="button"
           >
             <Text style={[styles.fabIcon, { color: colors.text.inverse }]}>+</Text>

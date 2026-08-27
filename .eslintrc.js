@@ -197,12 +197,16 @@ module.exports = {
     'react-native-a11y/has-valid-accessibility-live-region': 'error',
     'react-native-a11y/has-valid-accessibility-ignores-invert-colors': 'error',
     'react-native-a11y/no-nested-touchables': 'error',
-    'react-native-a11y/has-valid-accessibility-descriptors': 'warn',
-    'react-native-a11y/has-accessibility-hint': 'warn',
+    // Raised from `warn` once the 65-finding backlog in `src/` was cleared -- see
+    // issue #30 and ADR-010. The autofixer for `has-valid-accessibility-descriptors`
+    // inserts generic placeholder labels ("Text input field"), which satisfies the
+    // rule while making the app worse; treat any new finding as hand-written work.
+    'react-native-a11y/has-valid-accessibility-descriptors': 'error',
+    'react-native-a11y/has-accessibility-hint': 'error',
   },
   overrides: [
     {
-      files: ['jest.setup.js', '__tests__/**/*.{js,ts,tsx}'],
+      files: ['jest.setup.js', '__tests__/**/*.{js,ts,tsx}', 'security/tests/**/*.{ts,tsx}'],
       env: {
         jest: true,
       },

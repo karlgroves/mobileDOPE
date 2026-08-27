@@ -1,0 +1,53 @@
+id: rifles-validation-rejects-bad-input
+title: 'Rifle form rejects out-of-range ballistic input'
+type: negative
+description: >-
+  Input validation is load-bearing here: a bad twist rate or scope height does not
+  produce an obviously broken app, it produces a firing solution that is quietly
+  wrong. This asserts the form refuses the value, says why, and that the error is
+  announced with the field rather than as a detached line of text.
+
+preconditions:
+  - 'The rifle form is reachable'
+
+start_location: 'Rifles/RifleProfileForm'
+
+expected_result: >-
+  Saving is refused. Each invalid field carries an error that names the acceptable
+  range, and the error is part of the field's announcement, not a separate string a
+  screen reader user may never reach.
+
+data:
+  name_field: 'Rifle name'
+  rifle_name: 'Bad Data Rifle'
+  barrel_length_field: 'Barrel length, inches'
+  # REPLACE: a value outside the accepted range (validation allows > 0 and <= 50).
+  invalid_barrel_length: '400'
+  barrel_length_error: 'Barrel length must be between 1 and 50 inches'
+  twist_rate_field: 'Barrel twist rate, inches per turn'
+  invalid_twist_rate: '-8'
+  save_button: 'Save'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ name_field }}"
+  - enter: field "{{ name_field }}" value "{{ rifle_name }}"
+
+  - locate: field "{{ barrel_length_field }}"
+  - focus: field "{{ barrel_length_field }}"
+  - enter: field "{{ barrel_length_field }}" value "{{ invalid_barrel_length }}"
+
+  - locate: field "{{ twist_rate_field }}"
+  - enter: field "{{ twist_rate_field }}" value "{{ invalid_twist_rate }}"
+
+  - locate: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"
+
+  # The error has to reach a screen reader user, which means it belongs to the
+  # field, not to a sibling <Text> node further down the screen.
+  - verify: field "{{ barrel_length_field }}" has_description "{{ barrel_length_error }}"
+  - sr_says: '"{{ barrel_length_error }}" after activate button "{{ save_button }}"'
+
+  # Still on the form: nothing was saved.
+  - verify: field "{{ name_field }}" has_value "{{ rifle_name }}"

@@ -1,0 +1,69 @@
+id: ammo-create-profile
+title: 'Create an ammunition profile'
+type: positive
+description: >-
+  Ballistic coefficient and muzzle velocity are the two inputs the solver is most
+  sensitive to, so this flow gives them particular attention: both must be entered,
+  both must announce their unit, and both must survive the round trip unchanged.
+
+preconditions:
+  - 'The Ammo tab is reachable'
+
+start_location: 'Ammo/AllAmmoProfileList'
+
+expected_result: >-
+  An ammunition profile exists with the entered values and appears in the list. The
+  ballistic coefficient is stored to the precision entered, not rounded.
+
+data:
+  create_button: 'Create new ammo profile'
+  name_field: 'Ammunition name'
+  manufacturer_field: 'Manufacturer'
+  caliber_field: 'Caliber'
+  bullet_weight_field: 'Bullet weight, grains'
+  bullet_type_field: 'Bullet type, for example hollow point boat tail'
+  bc_g7_field: 'Ballistic coefficient, G7'
+  muzzle_velocity_field: 'Muzzle velocity, feet per second'
+  save_button: 'Save'
+  ammo_name: '175gr SMK'
+  manufacturer: 'Sierra'
+  caliber: '.308 Win'
+  bullet_weight: '175'
+  bullet_type: 'HPBT'
+  # REPLACE: three decimal places is normal for a G7 BC and must not be truncated.
+  bc_g7: '0.243'
+  muzzle_velocity: '2650'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ create_button }}"
+  - focus: button "{{ create_button }}"
+  - activate: button "{{ create_button }}"
+
+  - audit: page
+
+  - locate: field "{{ name_field }}"
+  - focus: field "{{ name_field }}"
+  - enter: field "{{ name_field }}" value "{{ ammo_name }}"
+
+  - enter: field "{{ manufacturer_field }}" value "{{ manufacturer }}"
+  - enter: field "{{ caliber_field }}" value "{{ caliber }}"
+  - enter: field "{{ bullet_weight_field }}" value "{{ bullet_weight }}"
+  - enter: field "{{ bullet_type_field }}" value "{{ bullet_type }}"
+
+  - locate: field "{{ bc_g7_field }}"
+  - focus: field "{{ bc_g7_field }}"
+  - enter: field "{{ bc_g7_field }}" value "{{ bc_g7 }}"
+  - verify: field "{{ bc_g7_field }}" has_value "{{ bc_g7 }}"
+
+  - locate: field "{{ muzzle_velocity_field }}"
+  - enter: field "{{ muzzle_velocity_field }}" value "{{ muzzle_velocity }}"
+
+  - activate: button "{{ save_button }}"
+
+  - navigate: 'Ammo/AllAmmoProfileList'
+  - verify: button "{{ ammo_name }}"
+  - activate: button "{{ ammo_name }}"
+  # Precision must survive storage. A BC silently rounded to 0.24 changes the drop.
+  - verify: text "{{ bc_g7 }}"

@@ -173,7 +173,21 @@ export function DOPELogList({ navigation }: Props) {
     const ammo = getAmmoById(item.ammoId);
 
     return (
-      <TouchableOpacity onPress={() => handleView(item)} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={() => handleView(item)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        // The card shows corrections as "↑ 2.34" and "→ 0.50". Read aloud that is
+        // two bare numbers with no axis and no unit, which is exactly the
+        // ambiguity a DOPE entry cannot afford.
+        accessibilityLabel={
+          `${rifle?.name || 'Unknown rifle'} with ${ammo?.name || 'unknown ammo'}, ` +
+          `${item.distance} ${item.distanceUnit}, ` +
+          `elevation ${item.elevationCorrection.toFixed(2)} ${item.correctionUnit}, ` +
+          `windage ${item.windageCorrection.toFixed(2)} ${item.correctionUnit}`
+        }
+        accessibilityHint="Opens the full log entry"
+      >
         <Card style={[styles.logCard, { backgroundColor: colors.surface }]}>
           <View style={styles.logHeader}>
             <View style={styles.logTitleContainer}>
@@ -231,12 +245,18 @@ export function DOPELogList({ navigation }: Props) {
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
               onPress={() => handleEdit(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit log at ${item.distance} ${item.distanceUnit}`}
+              accessibilityHint="Opens this entry for editing"
             >
               <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
               onPress={() => handleDelete(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete log at ${item.distance} ${item.distanceUnit}`}
+              accessibilityHint="Asks for confirmation before removing this entry"
             >
               <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
             </TouchableOpacity>
@@ -282,6 +302,8 @@ export function DOPELogList({ navigation }: Props) {
                   borderColor: colors.border,
                 },
               ]}
+              accessibilityLabel="Search DOPE logs"
+              accessibilityHint="Filters the list as you type"
               placeholder="Search logs..."
               placeholderTextColor={colors.text.secondary}
               value={searchQuery}
@@ -325,12 +347,18 @@ export function DOPELogList({ navigation }: Props) {
                 { backgroundColor: colors.surface, borderColor: colors.primary },
               ]}
               onPress={handleExport}
+              accessibilityRole="button"
+              accessibilityLabel="Export DOPE logs"
+              accessibilityHint="Choose a format and share the exported file"
             >
               <Text style={[styles.exportFabText, { color: colors.primary }]}>↗</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.fab, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('DOPELogEdit', {})}
+              accessibilityRole="button"
+              accessibilityLabel="Add DOPE log entry"
+              accessibilityHint="Opens an empty log entry form"
             >
               <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>

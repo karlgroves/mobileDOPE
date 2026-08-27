@@ -1,0 +1,43 @@
+id: session-finish-session
+title: 'Finish a session and review its summary'
+type: positive
+description: >-
+  Closing a session and reading back what it produced. The summary is the artefact a
+  shooter reviews afterwards, so its figures must be attributable and its export must
+  work.
+
+preconditions:
+  - 'An active range session exists with at least three recorded shots'
+
+start_location: 'Session/RangeSessionActive'
+
+expected_result: >-
+  The session is closed and its summary reports shot count, distances engaged and
+  hit rate. The session appears in history and can be exported as a report.
+
+data:
+  end_session_button: 'End session'
+  confirm_end_button: 'End Session'
+  # REPLACE: summary figures, each naming its quantity.
+  shot_count_summary: 'Shots fired, 3'
+  hit_rate_summary: 'Hit rate, 67 percent'
+  export_button: 'Export session report'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ end_session_button }}"
+  - focus: button "{{ end_session_button }}"
+  - activate: button "{{ end_session_button }}"
+
+  # Ending a session is destructive of in-progress state, so it is confirmed.
+  - locate: button "{{ confirm_end_button }}"
+  - activate: button "{{ confirm_end_button }}"
+
+  - audit: page
+  - verify: text "{{ shot_count_summary }}"
+  - verify: text "{{ hit_rate_summary }}"
+
+  - locate: button "{{ export_button }}"
+  - focus: button "{{ export_button }}"
+  - activate: button "{{ export_button }}"
