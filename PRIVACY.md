@@ -1,7 +1,7 @@
 # Privacy Policy — Mobile DOPE
 
 **Last updated:** 2026-08-26
-**Applies to:** Mobile DOPE for iOS and Android, all versions from 1.1.0 onward.
+**Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
 
@@ -49,10 +49,10 @@ does not identify a shooting position.
 
 **Longitude is not recorded at all.** No calculation in the app uses it.
 
-**Earlier versions.** Versions before 1.1.0 stored both latitude and longitude at
-full GPS precision. Upgrading runs a one-time migration that deletes every stored
+**Earlier versions.** Earlier releases stored both latitude and longitude at full
+GPS precision. Upgrading runs a one-time migration that clears every stored
 longitude and rounds every stored latitude to one decimal place. This is not
-reversible, which is the intent.
+reversible, which is the intent. See `CHANGELOG.md` for the release it shipped in.
 
 **You can decline.** The app is fully usable with location permission denied —
 altitude can be entered by hand, and the Coriolis correction is optional. Nothing is

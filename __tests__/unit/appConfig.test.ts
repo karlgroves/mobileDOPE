@@ -86,6 +86,55 @@ describe('permissions the app has no code to use', () => {
     );
   });
 
+  it('actually deletes the placeholders, not just registers a plugin', () => {
+    // The registration assertion below says the plugin is wired up; this says it
+    // does its job. Expo's bare template seeds these six, and a `false` in
+    // `ios.infoPlist` does not remove them -- only a withInfoPlist mod does.
+    // Exercising the mod directly means an Expo change to its semantics fails
+    // here rather than silently restoring six unearned permission strings to a
+    // shipped build.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const withTrimmedIosPermissions = require('../../plugins/withTrimmedIosPermissions');
+
+    const seeded = {
+      NSLocationWhenInUseUsageDescription: 'Real, and must survive',
+      NSLocationAlwaysUsageDescription: 'Allow $(PRODUCT_NAME) to access your location',
+      NSLocationAlwaysAndWhenInUseUsageDescription: 'Allow $(PRODUCT_NAME) …',
+      NSCameraUsageDescription: 'Allow $(PRODUCT_NAME) to access your camera',
+      NSPhotoLibraryUsageDescription: 'Allow $(PRODUCT_NAME) to access your photos',
+      NSPhotoLibraryAddUsageDescription: 'Allow $(PRODUCT_NAME) …',
+      NSMicrophoneUsageDescription: 'Allow $(PRODUCT_NAME) to access your microphone',
+      NSMotionUsageDescription: 'Allow $(PRODUCT_NAME) to access your device motion',
+      CFBundleName: 'Mobile DOPE',
+    };
+
+    // withInfoPlist(config, mod) hands the mod a config whose modResults is the
+    // merged plist. Capture the mod and run it against the seeded template.
+    let captured: ((modConfig: { modResults: Record<string, unknown> }) => unknown) | undefined;
+    jest.isolateModules(() => {
+      jest.doMock('expo/config-plugins', () => ({
+        withInfoPlist: (config: unknown, mod: typeof captured) => {
+          captured = mod;
+          return config;
+        },
+      }));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+      const plugin = require('../../plugins/withTrimmedIosPermissions');
+      plugin({});
+    });
+
+    expect(typeof captured).toBe('function');
+    const modResults: Record<string, unknown> = { ...seeded };
+    (captured as (m: { modResults: Record<string, unknown> }) => unknown)({ modResults });
+
+    expect(Object.keys(modResults).filter((k) => k.endsWith('UsageDescription'))).toEqual([
+      'NSLocationWhenInUseUsageDescription',
+    ]);
+    // Non-permission keys are untouched.
+    expect(modResults.CFBundleName).toBe('Mobile DOPE');
+    expect(withTrimmedIosPermissions).toBeDefined();
+  });
+
   it('runs the plugin that strips the iOS template placeholders', () => {
     // Expo's bare template seeds camera/photo/microphone/motion strings that a
     // `false` in `ios.infoPlist` does not remove.

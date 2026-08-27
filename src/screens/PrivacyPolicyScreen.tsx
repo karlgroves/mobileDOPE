@@ -99,7 +99,7 @@ export const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>
         accessibilityHint="Scroll to read how Mobile DOPE handles your data"
       >
         <Text style={[styles.updated, { color: colors.text.secondary }]}>
-          Last updated 26 August 2026
+          Last updated 26 August 2026 · applies to this release
         </Text>
 
         {SECTIONS.map((section) => (
