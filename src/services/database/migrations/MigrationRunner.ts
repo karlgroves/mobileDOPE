@@ -9,6 +9,61 @@ export interface Migration {
   down: (db: SQLite.SQLiteDatabase) => Promise<void>;
 }
 
+/**
+ * Run one migration with foreign keys suspended, per SQLite's documented
+ * table-rebuild procedure.
+ *
+ * A migration that rebuilds a table (create new, copy, `DROP TABLE`, rename) is
+ * unsafe with foreign keys enforced, and unsafe in two different ways depending on
+ * the child's delete action:
+ *
+ * - plain `FOREIGN KEY` -> `DROP TABLE` raises `FOREIGN KEY constraint failed` and
+ *   the migration aborts;
+ * - `ON DELETE CASCADE` -> `DROP TABLE` performs an implicit `DELETE FROM`, the
+ *   cascade fires, and **every child row is silently deleted**. No error. The app
+ *   reports a successful migration over a table that has just been emptied.
+ *
+ * The second is what migration 004 did: `dope_logs.ammo_id` cascades from
+ * `ammo_profiles`, so rebuilding that table wiped the user's entire DOPE history
+ * while reporting success. See issue #52.
+ *
+ * `PRAGMA foreign_keys` is a documented no-op inside a transaction, so a migration
+ * cannot protect itself — the pragma has to be set out here, around the
+ * transaction. `PRAGMA foreign_key_check` then verifies the result before the
+ * commit, which is what makes suspending enforcement safe rather than merely quiet.
+ *
+ * @param db - The database to migrate.
+ * @param work - What to run inside the transaction.
+ */
+const withForeignKeysSuspended = async (
+  db: SQLite.SQLiteDatabase,
+  work: (txDb: SQLite.SQLiteDatabase) => Promise<void>
+): Promise<void> => {
+  await db.execAsync('PRAGMA foreign_keys = OFF;');
+  try {
+    await databaseService.transaction(async (txDb) => {
+      await work(txDb);
+
+      // Enforcement was off, so nothing checked referential integrity as we went.
+      // This is that check, and it runs before the commit so a migration that
+      // orphans a row rolls back instead of persisting the damage.
+      const violations = await txDb.getAllAsync<Record<string, unknown>>(
+        'PRAGMA foreign_key_check'
+      );
+      if (violations.length > 0) {
+        throw new Error(
+          `Migration left ${violations.length} foreign key violation(s): ` +
+            JSON.stringify(violations.slice(0, 5))
+        );
+      }
+    });
+  } finally {
+    // Restored even when the migration threw: leaving enforcement off would let
+    // every later write corrupt the database silently.
+    await db.execAsync('PRAGMA foreign_keys = ON;');
+  }
+};
+
 class MigrationRunner {
   private migrations: Migration[] = [];
 
@@ -40,7 +95,7 @@ class MigrationRunner {
     for (const migration of pendingMigrations) {
       try {
         console.log(`Running migration ${migration.version}: ${migration.name}`);
-        await databaseService.transaction(async (txDb) => {
+        await withForeignKeysSuspended(databaseService.getDatabase(), async (txDb) => {
           await migration.up(txDb);
           await txDb.execAsync(`PRAGMA user_version = ${migration.version};`);
         });
@@ -74,7 +129,9 @@ class MigrationRunner {
     for (const migration of migrationsToRollback) {
       try {
         console.log(`Rolling back migration ${migration.version}: ${migration.name}`);
-        await databaseService.transaction(async (txDb) => {
+        // A `down()` rebuilds tables for the same reasons an `up()` does, so it
+        // carries the same hazard and gets the same protection.
+        await withForeignKeysSuspended(databaseService.getDatabase(), async (txDb) => {
           await migration.down(txDb);
           await txDb.execAsync(`PRAGMA user_version = ${migration.version - 1};`);
         });

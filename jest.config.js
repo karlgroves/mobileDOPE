@@ -142,11 +142,14 @@ module.exports = {
     // Not yet started. Declared at 0 so they are visible in this table rather than
     // invisible inside a merged average, and so the first test written for them can
     // raise a floor that means something.
+    // Raised from 0 by #52's migration suites. Branches stays at 0: the migration
+    // files are almost entirely SQL string literals with no conditionals in them,
+    // so there is nothing to branch on and the metric is not meaningful here.
     './src/services/database/migrations/': {
       branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
+      functions: 50,
+      lines: 56,
+      statements: 56,
     },
     './src/screens/': { branches: 0, functions: 0, lines: 0, statements: 0 },
     './src/navigation/': { branches: 0, functions: 0, lines: 0, statements: 0 },
