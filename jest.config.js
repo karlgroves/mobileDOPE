@@ -115,21 +115,29 @@ module.exports = {
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
     './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
-    // Floored below the observed worst case, not the usual one. `src/store/`
-    // normally reports 93.39/83.87/92.47/94.38, but roughly one run in six loses
-    // one store test file's contribution and reports 87.17 statements instead --
-    // reproduced across repeated clean runs, in-band and parallel alike. The cause
-    // is tracked in #54.
+    // Several groups are floored below their OBSERVED WORST CASE rather than their
+    // usual reading, because the merged coverage report is intermittently missing
+    // one jest project's contribution. All tests pass; only the numbers move.
     //
-    // A ratchet that reds one push in six gets re-run rather than read, so these
-    // sit under the low reading. Raise them back to the ~92 mark once #54 lands.
+    //   group        usual                    observed low
+    //   store        93.39/83.87/92.47/94.38  87.17 statements
+    //   contexts     66.66/50.00/40.00/76.92  52.63 statements, 58.82 lines
+    //   components   14.35/20.16/16.00/18.12  16.61 lines, 14.15 functions
+    //
+    // The affected group moves between runs and spans both projects, so this is a
+    // property of the two-project coverage merge (ADR-012 / #35), not of any one
+    // suite. Tracked in #54.
+    //
+    // A ratchet that reds two pushes in five gets re-run rather than read, so these
+    // sit under the low readings. RAISE THEM BACK once #54 lands -- the usual
+    // figures above are the targets.
     './src/store/': { branches: 77, functions: 86, lines: 88, statements: 86 },
     './src/models/': { branches: 79, functions: 82, lines: 84, statements: 84 },
     './src/services/database/': { branches: 76, functions: 69, lines: 63, statements: 59 },
     './src/services/': { branches: 56, functions: 66, lines: 63, statements: 61 },
-    './src/contexts/': { branches: 48, functions: 38, lines: 75, statements: 65 },
-    './src/components/': { branches: 19, functions: 15, lines: 17, statements: 13 },
-    './src/constants/': { branches: 6, functions: 1, lines: 12, statements: 9 },
+    './src/contexts/': { branches: 38, functions: 28, lines: 56, statements: 50 },
+    './src/components/': { branches: 17, functions: 13, lines: 16, statements: 12 },
+    './src/constants/': { branches: 5, functions: 1, lines: 11, statements: 8 },
 
     // Not yet started. Declared at 0 so they are visible in this table rather than
     // invisible inside a merged average, and so the first test written for them can
