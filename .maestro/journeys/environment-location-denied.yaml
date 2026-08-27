@@ -1,0 +1,56 @@
+# Critical journey: the app stays fully usable with location denied.
+#
+# PRIVACY.md commits to this in as many words, which makes it a requirement rather
+# than a courtesy. It is also the one thing in the app that a unit test genuinely
+# cannot cover: the system permission dialog is outside the JavaScript runtime.
+#
+# Transcribed from docs/use-cases/session/environment-gps-denied.uc.yaml.
+appId: com.mobiledope.app.development
+tags:
+  - journey
+  - permissions
+  # clearState: true below wipes stored data, so this must not run by accident.
+  - destructive
+---
+- launchApp:
+    clearState: true
+    permissions:
+      location: deny
+
+- extendedWaitUntil:
+    visible: 'Mobile DOPE'
+    timeout: 30000
+
+- tapOn: 'Session'
+- scrollUntilVisible:
+    element: 'Environment'
+    direction: DOWN
+- tapOn: 'Environment'
+
+- tapOn: 'Fetch GPS Data'
+
+# Explain before asking. The system prompt has no room to say what is captured,
+# where it is kept, or that exports include it.
+- assertVisible: 'About location'
+- assertVisible:
+    text: '.*stored on this device.*'
+- tapOn: 'Continue'
+
+# The refusal must say what still works, not merely that permission was denied.
+- assertVisible:
+    text: '.*enter altitude.*by hand.*'
+- tapOn: 'OK'
+
+# And the fallback must genuinely be available.
+- tapOn: 'Altitude'
+- inputText: '5280'
+- hideKeyboard
+- scrollUntilVisible:
+    element: 'Save'
+    direction: DOWN
+- tapOn: 'Save'
+
+# No repeated prompting: returning to the screen must not re-ask.
+- tapOn: 'Session'
+- tapOn: 'Environment'
+- assertNotVisible: 'About location'

@@ -1,0 +1,22 @@
+# Maestro configuration.
+#
+# Maestro rather than Detox, per ADR-009 and issue #20: its flows are YAML, which
+# makes them close to a transcription of the use-case definitions in
+# docs/use-cases/ rather than a fresh authoring pass. It also needs no build-time
+# instrumentation, which matters in a managed Expo workflow where the native
+# projects are generated rather than committed.
+#
+# `appId` is the development variant, because that is what `expo prebuild` +
+# `expo run:ios` produces. See docs/E2E_TESTING.md for how to point it at a
+# staging or production build.
+appId: com.mobiledope.app.development
+
+flows:
+  - 'smoke/*.yaml'
+  - 'journeys/*.yaml'
+
+# Flows tagged `destructive` mutate or delete stored data. They are excluded by
+# default so a stray local run cannot wipe a device that has real DOPE on it;
+# run them explicitly with `npm run test:e2e -- --include-tags destructive`.
+excludeTags:
+  - destructive

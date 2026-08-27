@@ -33,7 +33,10 @@
     "prepare": "husky",
     "security:audit:raw": "npm audit --audit-level=high",
     "security:all": "npm-run-all -s security:audit security:osv security:semgrep security:secrets",
-    "security:osv:raw": "osv-scanner --lockfile=package-lock.json"
+    "security:osv:raw": "osv-scanner --lockfile=package-lock.json",
+    "test:e2e": "./scripts/e2e.sh",
+    "test:e2e:smoke": "./scripts/e2e.sh --include-tags smoke",
+    "test:e2e:all": "./scripts/e2e.sh --include-tags smoke,journey,destructive"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
