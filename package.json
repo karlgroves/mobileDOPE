@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "rm -rf coverage && jest --coverage",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
     "markdownlint:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "dupes": "jscpd",

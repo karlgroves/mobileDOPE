@@ -144,6 +144,36 @@ describe('EnvironmentRepository', () => {
     });
   });
 
+  describe('ordering', () => {
+    it('returns the newest first when two readings share a timestamp', async () => {
+      // The schema default is `datetime('now')` -- second resolution. Two readings
+      // taken in the same second tie on timestamp, and without a secondary sort
+      // `getCurrent()` returns the older one.
+      const first = await environmentRepository.create(validEnvironment({ temperature: 59 }));
+      const second = await environmentRepository.create(validEnvironment({ temperature: 72 }));
+      expect((second.id as number) > (first.id as number)).toBe(true);
+
+      const current = await environmentRepository.getCurrent();
+
+      expect(current?.temperature).toBe(72);
+    });
+
+    it('still orders by timestamp ahead of id', async () => {
+      // A restored backup inserts rows in arbitrary id order but carries the real
+      // capture times, which must win.
+      await environmentRepository.create(
+        validEnvironment({ temperature: 59, timestamp: '2026-08-01T10:00:00.000Z' })
+      );
+      await environmentRepository.create(
+        validEnvironment({ temperature: 72, timestamp: '2026-07-01T10:00:00.000Z' })
+      );
+
+      const current = await environmentRepository.getCurrent();
+
+      expect(current?.temperature).toBe(59);
+    });
+  });
+
   describe('timestamp handling', () => {
     it('preserves a caller-supplied capture time', async () => {
       const captured = '2026-03-14T15:09:26.000Z';
