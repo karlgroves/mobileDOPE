@@ -80,10 +80,14 @@ advisory appears that is not on that list, which is the property that matters.
 
 There was briefly a second entry here, suppressing a real full-precision-GPS
 finding in `EnvironmentInput.tsx` on the grounds that issue #44 fixes it. That was
-the wrong shape and it has been removed along with the rule that produced it: a
-security gate reporting green **because** it suppresses a live defect is worse than
-one that never had the rule, since it also stops anyone else from looking. The rule is
-tracked in #53, to be added once #44 and this tree are both on develop.
+the wrong shape and it was removed along with the rule that produced it: a security
+gate reporting green **because** it suppresses a live defect is worse than one that
+never had the rule, since it also stops anyone else from looking.
+
+`mobiledope-uncoarsened-coordinate` is now in the ruleset (#53), added after #44's
+remediation had landed — so it passes on its own merits, with no suppression. The
+register is shorter by an entry because the defect was fixed, which is the only
+way an exception should ever leave this list.
 
 **The general principle, learned the hard way:** a new rule and the fix that makes
 it pass belong in the same change. If adding a rule requires a suppression on the
