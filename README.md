@@ -40,21 +40,31 @@ src/
 ├── components/     # Reusable UI components
 ├── constants/      # Theme and configuration constants
 ├── contexts/       # React Context providers (Theme)
-├── db/             # SQLite database and migrations
+├── hooks/          # Shared React hooks
+├── models/         # Domain entities (RifleProfile, AmmoProfile, DOPELog, ...)
 ├── navigation/     # React Navigation setup
-├── services/       # Analytics, database, queue processing
-├── state/          # Zustand store, React Query, preferences
-└── utils/          # Device info and utility functions
+├── screens/        # Screen components
+├── services/       # SQLite repositories, migrations, export and import
+├── store/          # Zustand stores
+├── types/          # Shared TypeScript types
+└── utils/          # Ballistic math and utility functions
 ```
 
 ## Features
 
-- Local SQLite database with migration runner
+- Local SQLite database with a migration runner
 - Theme support (light, dark, night vision modes)
-- Deep linking support (`mobiledope://`)
-- Offline queue processing
-- Analytics integration
+- Ballistic solver: elevation and windage, spin drift, Coriolis, aerodynamic jump,
+  transonic and subsonic handling
+- DOPE logging, wind tables, DOPE card generation
+- Export to JSON, CSV, Markdown and PDF; import from a JSON backup
 - Error boundary handling
+
+**Not present**, despite what earlier revisions of this file claimed: there is no
+analytics integration, no offline queue, no deep-link scheme (`app.config.ts` declares
+no `scheme`), no TanStack React Query and no gesture handler. The app has **no network
+layer at all** — the only `fetch` in `src/` reads a local `file://` URI during import.
+See `PRIVACY.md`.
 
 ## Scripts
 
@@ -70,13 +80,20 @@ src/
 | `npm test` / `npm run test:coverage`             | Jest unit/integration tests                             |
 | `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes |
 | `npm run check:all`                              | Full gate: `check` + format check + tests               |
-| `npm run security:audit`                         | `npm audit` (high severity, prod deps) — advisory\*     |
+| `npm run security:audit`                         | Waiver-gated `npm audit` — **blocking**                 |
 | `npm run security:osv` / `:semgrep` / `:secrets` | Binary-backed scans (see Tooling)                       |
+| `npm run security:all`                           | Every security gate in sequence                         |
 | `npm run license:check`                          | License allowlist compliance                            |
 
-\* `security:audit` currently exits non-zero on high-severity advisories in Expo's
-transitive dependencies, which have no upstream fix yet. It is informational for now —
-the `post-merge` hook does not fail on it — and should be re-checked on each Expo bump.
+`security:audit` is no longer advisory. It runs `scripts/security-audit.mjs`, which
+fails on any high or critical advisory that is not individually waived in
+`security/config/audit-waivers.json`, and on any waiver that has expired. The 26
+current advisories are all transitive through the Expo/Metro build toolchain and are
+waived with a reason, an owner and a 90-day expiry — so a **new** one fails the build
+immediately rather than disappearing into the existing debt. See
+[`security/docs/security-exceptions.md`](./security/docs/security-exceptions.md).
+
+`npm run lint` carries `--max-warnings=625`, a ratchet: warnings may only go down.
 
 ## Code Quality & Tooling
 
@@ -84,13 +101,20 @@ Quality is enforced **locally** through Husky hooks rather than additional CI
 (see [ADR-011](./docs/adr/011-local-gate-first-no-new-actions.md)):
 
 - **pre-commit** — `lint-staged`, which runs ESLint + Prettier and a `tsc-files`
-  type-check over the staged files, plus an optional `gitleaks` secret scan.
+  type-check over the staged files, plus a `gitleaks` secret scan.
 - **commit-msg** — Conventional Commits via commitlint.
-- **pre-push** — the full `npm run check` gate plus optional `gitleaks`.
+- **pre-push** — `npm run check`, the waiver-gated dependency audit, `osv-scanner`,
+  Semgrep, and a full-history `gitleaks` scan against the committed baseline.
+
+The `gitleaks` steps **fail when the binary is absent** rather than printing a note and
+continuing. A gate that silently skips is not a gate; run `./scripts/bootstrap.sh` to
+install it, or set `SKIP_SECRET_SCAN=1` to skip it loudly and deliberately. See
+[`security/docs/secret-scanning.md`](./security/docs/secret-scanning.md).
+
 - **post-merge** — re-installs and audits when `package-lock.json` changes.
 
-The binary-backed scanners (`gitleaks`, `osv-scanner`, `semgrep`, `lychee`) are
-optional; the hooks skip them gracefully when absent. Install them with:
+`osv-scanner`, `semgrep` and `lychee` are optional — the hooks report and continue when
+they are absent. `gitleaks` is **not** optional; see above. Install them with:
 
 ```bash
 bash scripts/bootstrap.sh
@@ -110,13 +134,18 @@ npm test
 npm run test:coverage
 ```
 
-Accessibility is linted via `eslint-plugin-react-native-a11y` (malformed a11y props are
-errors; missing labels/hints are warnings pending remediation) — see
+Accessibility is linted via `eslint-plugin-react-native-a11y` — see
 [ADR-009](./docs/adr/009-rn-scope-web-tools-na.md).
 
-`jest.config.js` declares a 70% coverage threshold, but actual coverage is well below
-that today, so `npm run test:coverage` fails. The threshold is a ratchet target, not a
-gate; see [ADR-010](./docs/adr/010-pragmatic-quality-adoption.md).
+Security configuration, thresholds, exception process and regression tests live under
+[`security/`](./security/README.md), with every tool reading its failure policy from
+`security-thresholds.json`.
+
+`jest.config.js` declares **per-directory** coverage floors, set just below actual
+coverage so `npm run test:coverage` passes today and any regression fails. They only
+ever ratchet upward, and each layer is gated separately so a well-covered directory
+cannot mask an uncovered one. See [ADR-010](./docs/adr/010-pragmatic-quality-adoption.md)
+and issue #28.
 
 ## Releases
 

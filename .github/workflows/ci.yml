@@ -10,6 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege at the workflow level. This job runs `npm ci`, which executes
+# dependency lifecycle scripts; without an explicit block, GITHUB_TOKEN inherits the
+# repository default and arbitrary postinstall code would run with a possibly
+# write-capable token. See issue #45 item 5.
+permissions:
+  contents: read
+
 jobs:
   lint-and-typecheck:
     name: Lint & Format
@@ -17,16 +24,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      # `--ignore-scripts`: nothing in the lint/type-check/format path needs a
+      # dependency's postinstall step to have run, so it is not granted.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run ESLint
         run: npm run lint
@@ -51,7 +60,7 @@ jobs:
         run: npm run lint:cpd:ci
 
       - name: Upload duplication report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: jscpd-report
           path: reports/jscpd/
@@ -65,14 +74,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      # Scripts are needed here: jest-expo's transform relies on expo module
+      # postinstall output, so the test project cannot run without them. This is the
+      # one place in the repo that grants them, which is why the workflow-level
+      # `permissions: contents: read` above matters.
       - name: Install dependencies
         run: npm ci
 

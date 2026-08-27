@@ -1,0 +1,180 @@
+# Custom Semgrep rules for Mobile DOPE.
+#
+# The registry packs (p/typescript, p/react, p/owasp-top-ten, p/secrets) are still
+# run -- see the `security:semgrep` script -- but they are written for server and
+# web code and miss the things that are actually risky in an offline React Native
+# app. These twelve categories cover that gap.
+#
+# Every rule here exists because of something in this codebase's own history or
+# threat model, not because a category was on a checklist. Issue #45 item 2.
+rules:
+  # 1. Hardcoded secrets ------------------------------------------------------
+  - id: mobiledope-hardcoded-secret
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Hardcoded credential. This app ships as a client binary -- anything embedded
+      in it is readable by anyone who installs it. There is no server to keep it on.
+    patterns:
+      - pattern-regex: (?i)(api[_-]?key|secret|password|token|passphrase)\s*[:=]\s*['"][A-Za-z0-9_\-/+=]{16,}['"]
+      - pattern-not-regex: (?i)(placeholder|example|your[_-]?|xxx|changeme|<[^>]+>)
+
+  # 2. Network egress ---------------------------------------------------------
+  - id: mobiledope-no-network-egress
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      This app has no network layer, and its privacy policy says so (PRIVACY.md).
+      Introducing one changes what the app is. If this is intended, the policy,
+      CLAUDE.md and description.md all have to change with it.
+    patterns:
+      - pattern-either:
+          - pattern: fetch($URL, ...)
+          - pattern: new WebSocket(...)
+          - pattern: new XMLHttpRequest(...)
+          - pattern: axios.$METHOD(...)
+      - pattern-not: fetch("file://...", ...)
+      - pattern-not-inside: |
+          // semgrep-allow: local-file-read
+          ...
+    paths:
+      include: ['/src/']
+
+  # 3. Insecure local storage -------------------------------------------------
+  - id: mobiledope-secret-in-async-storage
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      AsyncStorage is unencrypted plaintext on disk. Use expo-secure-store for
+      anything that would matter if the device were imaged.
+    pattern-regex: AsyncStorage\.setItem\(\s*['"][^'"]*(?i:token|secret|password|key|credential)[^'"]*['"]
+
+  # 4. Unsafe deserialisation of untrusted input ------------------------------
+  - id: mobiledope-unbounded-json-parse
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      JSON.parse on file content picked by the user. Bound the input size and
+      validate the shape before use -- see ImportService and its allowlist.
+    patterns:
+      - pattern: JSON.parse($X)
+      - pattern-inside: |
+          async function $F(...) { ... }
+    paths:
+      include: ['/src/services/ImportService.ts']
+
+  # 5. Prototype pollution ----------------------------------------------------
+  - id: mobiledope-prototype-pollution-sink
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Assigning through a computed key from parsed input can write __proto__ or
+      constructor. Use an explicit allowlist of fields, as ImportService does.
+    patterns:
+      - pattern-either:
+          - pattern: Object.assign($TARGET, JSON.parse(...))
+          - pattern: $OBJ[$KEY] = $VALUE
+      - pattern-inside: |
+          $DATA = JSON.parse(...)
+          ...
+    paths:
+      include: ['/src/services/']
+
+  # 6. Dynamic code execution -------------------------------------------------
+  - id: mobiledope-dynamic-code-execution
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: eval and Function() constructors have no legitimate use in this app.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+      - pattern: setTimeout("...", ...)
+
+  # 7. SQL injection ----------------------------------------------------------
+  - id: mobiledope-sql-string-interpolation
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      SQL built by interpolation. Every repository in this codebase uses bound
+      parameters (`?`); keep it that way.
+    patterns:
+      - pattern-either:
+          - pattern: $DB.execAsync(`...${$X}...`)
+          - pattern: $DB.runAsync(`...${$X}...`)
+          - pattern: $DB.getAllAsync(`...${$X}...`)
+          - pattern: $DB.getFirstAsync(`...${$X}...`)
+    paths:
+      include: ['/src/']
+      exclude: ['/src/services/database/migrations/']
+
+  # 8. CSV / spreadsheet formula injection ------------------------------------
+  - id: mobiledope-unsanitised-csv-cell
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      CSV cells must go through sanitizeCsvCell. A note beginning `=`, `+`, `-`
+      or `@` executes on open in Excel, Numbers and Sheets.
+    patterns:
+      - pattern: $ROW.join(',')
+      # Satisfied when the enclosing function routes cells through the sanitiser.
+      # Written as "somewhere in this function" rather than "on this line" because
+      # the cells are built in a separate map() from the join.
+      - pattern-not-inside: |
+          function $F(...) {
+            ...
+            sanitizeCsvCell(...)
+            ...
+          }
+    paths:
+      include: ['/src/services/ExportService.ts']
+
+  # 9. (reserved) Precise location capture
+  #
+  # A `mobiledope-uncoarsened-coordinate` rule belongs here, and was drafted with
+  # this ruleset. It is deliberately NOT included yet: the defect it catches is
+  # live on `develop` (EnvironmentInput captures GPS at toFixed(6)), so adding the
+  # rule here would have meant shipping a `nosemgrep` suppression over a real
+  # finding and a security gate that reports green because of it.
+  #
+  # The remediation lands in #44 and this tree lands here, so the two halves are in
+  # different PRs. Tracked as #53: add the rule once both are on develop, and
+  # confirm the gate is green with no suppression anywhere. A rule and the fix that
+  # makes it pass belong in the same change; splitting them produces exactly the
+  # kind of suppression this repo's exception process exists to prevent.
+  # 10. Logging that could leak stored data ------------------------------------
+  - id: mobiledope-logs-user-record
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Logging a whole record writes user data to the device log, which is readable
+      by other tooling. Log an id and a message, not the object.
+    pattern-either:
+      - pattern: console.log($X.toJSON())
+      - pattern: console.error($X.toJSON())
+      - pattern: console.log(..., $X.latitude, ...)
+
+  # 11. Error detail reaching the user ------------------------------------------
+  - id: mobiledope-raw-error-in-alert
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Surfacing a raw error can put a stack trace or filesystem path in front of
+      the user. Show a message you wrote; log the detail.
+    pattern-either:
+      - pattern: Alert.alert($TITLE, $ERR.stack)
+      - pattern: Alert.alert($TITLE, String($ERR))
+      - pattern: Alert.alert($TITLE, `...${$ERR.stack}...`)
+
+  # 12. Permission requests without a declared purpose string -------------------
+  - id: mobiledope-permission-without-declaration
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Requesting a permission requires a matching purpose string in app.config.ts
+      and an entry in PRIVACY.md. On iOS a missing string terminates the app at
+      the request. See __tests__/unit/appConfig.test.ts.
+    pattern-either:
+      - pattern: $MOD.requestForegroundPermissionsAsync(...)
+      - pattern: $MOD.requestBackgroundPermissionsAsync(...)
+      - pattern: $MOD.requestCameraPermissionsAsync(...)
+      - pattern: $MOD.requestMediaLibraryPermissionsAsync(...)
