@@ -111,8 +111,12 @@ describe('Export/Import round trip', () => {
       await seedWithLocation();
       const result = await exportEverything();
 
+      // Sorted, because insertion order is not the property under test and is not
+      // what the repository returns. `getAll()` orders newest-first
+      // (`timestamp DESC, id DESC` -- see #28), so these come back reversed. The
+      // assertion is that both values are coarsened, not where they sit.
       const environments = await environmentsIn(result);
-      expect(environments.map((e) => e.latitude)).toEqual([39.7, -33.9]);
+      expect(environments.map((e) => e.latitude).sort()).toEqual([-33.9, 39.7].sort());
     });
 
     it('omits latitude entirely when coordinates are excluded', async () => {
@@ -134,6 +138,8 @@ describe('Export/Import round trip', () => {
         includeCoordinates: false,
       });
 
+      // Both seeded snapshots carry identical ballistic readings, so indexing is
+      // safe regardless of the newest-first order `getAll()` returns.
       const environments = await environmentsIn(result);
       expect(environments[0]).toMatchObject({
         temperature: 59,
