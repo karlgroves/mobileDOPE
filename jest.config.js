@@ -109,7 +109,15 @@ module.exports = {
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
     './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
-    './src/store/': { branches: 82, functions: 91, lines: 93, statements: 92 },
+    // Floored below the observed worst case, not the usual one. `src/store/`
+    // normally reports 93.39/83.87/92.47/94.38, but roughly one run in six loses
+    // one store test file's contribution and reports 87.17 statements instead --
+    // reproduced across repeated clean runs, in-band and parallel alike. The cause
+    // is tracked in #54.
+    //
+    // A ratchet that reds one push in six gets re-run rather than read, so these
+    // sit under the low reading. Raise them back to the ~92 mark once #54 lands.
+    './src/store/': { branches: 77, functions: 86, lines: 88, statements: 86 },
     './src/models/': { branches: 79, functions: 82, lines: 84, statements: 84 },
     './src/services/database/': { branches: 76, functions: 69, lines: 63, statements: 59 },
     './src/services/': { branches: 56, functions: 66, lines: 63, statements: 61 },
