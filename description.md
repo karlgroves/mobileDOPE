@@ -307,10 +307,29 @@ DOPELog {
 
 ## 6. Security & Privacy
 
-- All data stored locally unless user opts into cloud sync
-- End-to-end encryption for cloud sync
-- No personal data collection
-- Optional passcode/biometric lock
+This section describes **shipped behaviour**. Anything not yet built is listed under
+Roadmap, not here. The published statement is `PRIVACY.md`.
+
+### As shipped
+
+- All data is stored locally, in a private SQLite database. There is no network layer
+  in the app at all -- no analytics, telemetry, crash reporting or advertising
+  identifiers, and no request to any remote host.
+- The app **does** record approximate location with each environmental reading:
+  altitude for the density-altitude term, and latitude for the Coriolis term. Latitude
+  is rounded to one decimal place (~11 km) before it is stored. Longitude is never
+  recorded.
+- User-initiated export and share is the only way data leaves the device. A full JSON
+  backup carries the rounded latitude, and the export flow warns and offers to omit it.
+- Settings offers deletion of stored location data on its own, and of all data.
+- The only runtime permission requested is foreground location. Camera, photo library,
+  microphone and motion permissions are explicitly blocked in the build configuration.
+
+### Not built
+
+- **Cloud sync and its end-to-end encryption.** Roadmap Phase 2; no code exists.
+- **Passcode / biometric lock.** Not implemented and not currently planned. Earlier
+  drafts of this document listed it as a control; it never shipped. See issue #44.
 
 ## 7. Roadmap
 

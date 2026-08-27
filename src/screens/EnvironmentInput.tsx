@@ -9,8 +9,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { coarsenLatitude } from '../utils/geoPrecision';
 import * as Location from 'expo-location';
 
 // Wind direction options in degrees
@@ -72,7 +73,6 @@ export function EnvironmentInput() {
     current?.windDirection || 0
   );
   const [latitude, setLatitude] = useState<number | undefined>(current?.latitude);
-  const [longitude, setLongitude] = useState<number | undefined>(current?.longitude);
 
   // Sensor availability
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -103,6 +103,32 @@ export function EnvironmentInput() {
    * Request location permission
    */
   const requestLocationPermission = async () => {
+    // Explain before asking. The system prompt is a yes/no with no room to say what
+    // happens to the reading afterwards, and "location permission is required to
+    // fetch GPS data" -- the previous copy -- told the user nothing about retention
+    // or export. See issue #44.
+    const consented = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'About location',
+        'Your device location is read for two things: altitude, which feeds the ' +
+          'density-altitude calculation, and latitude, which the Coriolis correction ' +
+          'uses.\n\n' +
+          'Latitude is rounded to about 11 km before it is saved, and longitude is ' +
+          'never recorded. The rounded value is stored on this device with the ' +
+          'reading, and is included if you export a full backup — the export will ' +
+          'offer to leave it out.\n\n' +
+          'You can decline: altitude can be entered by hand and everything else works ' +
+          'the same.',
+        [
+          { text: 'Not Now', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Continue', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
+
+    if (!consented) return;
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       setLocationPermission(status === 'granted');
@@ -116,7 +142,8 @@ export function EnvironmentInput() {
       } else {
         Alert.alert(
           'Permission Denied',
-          'Location permission is required to automatically fetch GPS data.'
+          'Mobile DOPE will not read your location. You can still enter altitude and ' +
+            'latitude by hand below, and every other feature works as normal.'
         );
       }
     } catch (_error) {
@@ -146,8 +173,9 @@ export function EnvironmentInput() {
       });
 
       setAltitude(Math.round(location.coords.altitude || 0) * 3.28084); // meters to feet
-      setLatitude(Number(location.coords.latitude.toFixed(6)));
-      setLongitude(Number(location.coords.longitude.toFixed(6)));
+      // Coarsened at capture: the Coriolis model consumes only sin/cos(latitude),
+      // and a full-precision coordinate would identify the shooting position. #44
+      setLatitude(coarsenLatitude(location.coords.latitude));
 
       Alert.alert('Success', 'GPS data updated from device location');
     } catch (_error) {
@@ -220,7 +248,6 @@ export function EnvironmentInput() {
         windSpeed,
         windDirection,
         latitude,
-        longitude,
       };
 
       setCurrent(data);
@@ -255,7 +282,6 @@ export function EnvironmentInput() {
       windSpeed,
       windDirection,
       latitude,
-      longitude,
     };
 
     setCurrent(data);
@@ -381,7 +407,12 @@ export function EnvironmentInput() {
         {/* GPS Coordinates (Optional) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            GPS Coordinates (Optional)
+            Location (Optional)
+          </Text>
+          <Text style={[styles.sectionNote, { color: colors.text.secondary }]}>
+            Latitude is used only for the Coriolis correction and is stored rounded to about 11 km.
+            Longitude is not recorded. Full backups include this value unless you choose to leave it
+            out.
           </Text>
 
           <NumberInput
@@ -390,17 +421,7 @@ export function EnvironmentInput() {
             onChangeValue={setLatitude}
             min={-90}
             max={90}
-            precision={6}
-            unit="°"
-          />
-
-          <NumberInput
-            label="Longitude"
-            value={longitude}
-            onChangeValue={setLongitude}
-            min={-180}
-            max={180}
-            precision={6}
+            precision={1}
             unit="°"
           />
         </View>
@@ -432,6 +453,11 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+  },
+  sectionNote: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,

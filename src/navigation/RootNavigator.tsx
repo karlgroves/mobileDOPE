@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabNavigator } from './TabNavigator';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,6 +66,22 @@ export const RootNavigator: React.FC = () => {
             presentation: 'modal',
             headerShown: true,
             title: 'Settings',
+            headerStyle: {
+              backgroundColor: '#2a2a2a',
+            },
+            headerTintColor: '#FFFFFF',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              fontSize: 18,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{
+            headerShown: true,
+            title: 'Privacy Policy',
             headerStyle: {
               backgroundColor: '#2a2a2a',
             },
