@@ -94,6 +94,24 @@ flow is malformed, which otherwise surfaces minutes into a device run on a machi
 that has Xcode, Maestro and a booted simulator — the slowest feedback loop in this
 repository.
 
+`__tests__/unit/maestroSelectors.test.ts` narrows the gap further. Every literal
+selector must either appear verbatim in `src/`, or be listed with a reason:
+
+- **flow-created data** — profile names and values the flow types in, which will
+  never be in source;
+- **pending from another PR** — labels arriving with #46 or #47, each entry naming
+  its branch so the list shrinks as those land;
+- **unverified on device** — the genuine remainder, currently five.
+
+`id:` selectors are checked strictly, with no allowance: unlike a visible label, a
+testID has no reason to be absent from source. That rule exists because two flows
+originally tapped `create-rifle-button` and `create-ammo-button`, neither of which
+exists anywhere in the app — so the flagship journey could not have run past its
+second step.
+
+When one of those PRs merges, remove its entries and re-run. Anything still
+missing is a real selector defect rather than a sequencing artefact.
+
 ## CI
 
 **The suite is not wired into GitHub Actions, and this is deliberate.**
@@ -122,7 +140,8 @@ not with this suite.
 2. Transcribe the steps. `activate` → `tapOn`, `enter` → `tapOn` + `inputText`,
    `verify` → `assertVisible`, `wait_for` → `extendedWaitUntil`.
 3. Prefer accessible names as selectors over `id:`. A flow that can only find a
-   control by test id is telling you the control has no accessible name.
+   control by test id is telling you the control has no accessible name — and
+   `maestroSelectors.test.ts` rejects a testID that exists nowhere in `src/`.
 4. Tag it. Add `destructive` if it uses `clearState: true`.
 5. Run `npm test` before running on a device — it catches the malformed cases in
    seconds rather than minutes.

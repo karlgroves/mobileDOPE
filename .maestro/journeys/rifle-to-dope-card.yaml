@@ -25,8 +25,10 @@ tags:
 
 # --- Rifle -----------------------------------------------------------------
 - tapOn: 'Rifles'
-- tapOn:
-    id: 'create-rifle-button'
+# By accessible name, not testID: the FABs carry no testID, and this file's own
+# guidance in docs/E2E_TESTING.md says a flow that can only find a control by test
+# id is telling you the control has no accessible name. These do have one.
+- tapOn: 'Create new rifle profile'
 
 - tapOn: 'Rifle name'
 - inputText: 'Tikka T3x'
@@ -62,8 +64,7 @@ tags:
 
 # --- Ammunition ------------------------------------------------------------
 - tapOn: 'Ammo'
-- tapOn:
-    id: 'create-ammo-button'
+- tapOn: 'Create new ammo profile'
 
 - tapOn: 'Ammunition name'
 - inputText: '175gr SMK'
