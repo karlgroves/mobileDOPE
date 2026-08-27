@@ -139,13 +139,15 @@ export const AllAmmoProfileList: React.FC = () => {
           icon="✏️"
           onPress={() => handleEdit(item)}
           variant="ghost"
-          accessibilityLabel="Edit ammo profile"
+          accessibilityLabel={`Edit ${item.ammo.name}`}
+          accessibilityHint="Opens the ammunition profile form"
         />
         <IconButton
           icon="🗑️"
           onPress={() => handleDeletePress(item.ammo)}
           variant="ghost"
-          accessibilityLabel="Delete ammo profile"
+          accessibilityLabel={`Delete ${item.ammo.name}`}
+          accessibilityHint="Asks for confirmation before removing this profile"
         />
       </View>
     </Card>
@@ -177,6 +179,8 @@ export const AllAmmoProfileList: React.FC = () => {
                   borderColor: colors.border,
                 },
               ]}
+              accessibilityLabel="Search ammunition profiles"
+              accessibilityHint="Filters the list as you type"
               placeholder="Search ammo..."
               placeholderTextColor={colors.text.secondary}
               value={searchQuery}
@@ -227,6 +231,7 @@ export const AllAmmoProfileList: React.FC = () => {
             style={[styles.fab, { backgroundColor: colors.primary }]}
             onPress={handleCreate}
             accessibilityLabel="Create new ammo profile"
+            accessibilityHint="Opens an empty ammunition profile form"
             accessibilityRole="button"
           >
             <Text style={[styles.fabIcon, { color: colors.text.inverse }]}>+</Text>

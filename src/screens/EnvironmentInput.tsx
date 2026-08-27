@@ -300,6 +300,10 @@ export function EnvironmentInput() {
                 key={key}
                 style={[styles.presetButton, { backgroundColor: colors.surface }]}
                 onPress={() => applyPreset(preset)}
+                accessibilityRole="button"
+                // The button shows only the first word of the preset name.
+                accessibilityLabel={preset.name}
+                accessibilityHint="Fills the form with this preset's conditions"
               >
                 <Text style={[styles.presetText, { color: colors.primary }]}>
                   {preset.name.split(' ')[0]}

@@ -321,6 +321,8 @@ export function DOPELogEntry({ route, navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Notes</Text>
           <TextInput
             label="Notes"
+            accessibilityLabel="Notes about this engagement"
+            accessibilityHint="Optional. For example, mirage, light or position"
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes about this engagement..."

@@ -414,7 +414,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.addPresetRow}>
             <TextInput
-              accessibilityLabel="Text input field"
+              accessibilityLabel="New distance preset, yards"
+              accessibilityHint="Enter a distance, then activate Add to save it as a preset"
               style={[
                 styles.presetInput,
                 {

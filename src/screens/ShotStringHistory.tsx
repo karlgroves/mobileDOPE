@@ -49,7 +49,19 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onDelete, onUpdateVe
 
   return (
     <Card style={styles.sessionCard}>
-      <Pressable onPress={() => setExpanded(!expanded)} style={styles.sessionHeader}>
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={styles.sessionHeader}
+        accessibilityRole="button"
+        // "ES: 24" and a bare fps figure read as loose numbers; name each stat.
+        accessibilityLabel={
+          `${formattedDate}, ${session.stats.count} shots, ` +
+          `average velocity ${session.stats.averageVelocity} feet per second, ` +
+          `extreme spread ${session.stats.extremeSpread}`
+        }
+        accessibilityHint={expanded ? 'Collapses this session' : 'Expands to show each shot'}
+        accessibilityState={{ expanded }}
+      >
         <View style={styles.sessionInfo}>
           <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>{formattedDate}</Text>
           <Text style={[styles.sessionSubtitle, { color: colors.text.secondary }]}>

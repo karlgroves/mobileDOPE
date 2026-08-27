@@ -254,7 +254,13 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Trust Indicators */}
         <View style={[styles.trustBar, { backgroundColor: colors.surface }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Rifles')} style={styles.trustItem}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Rifles')}
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={hasRifle ? 'Rifle: selected' : 'Rifle: none selected'}
+            accessibilityHint="Opens the rifle profile list"
+          >
             <Text
               style={[
                 styles.trustText,
@@ -265,7 +271,13 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
           <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Ammo')} style={styles.trustItem}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Ammo')}
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={hasAmmo ? 'Ammo: selected' : 'Ammo: none selected'}
+            accessibilityHint="Opens the ammunition profile list"
+          >
             <Text
               style={[
                 styles.trustText,
@@ -276,7 +288,15 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
           <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Session')} style={styles.trustItem}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Session')}
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={
+              hasEnv ? 'Environment: readings recorded' : 'Environment: no readings'
+            }
+            accessibilityHint="Opens the range session screen to enter conditions"
+          >
             <Text
               style={[styles.trustText, { color: hasEnv ? colors.primary : colors.text.secondary }]}
             >
@@ -297,24 +317,36 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(-25)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease target distance by 25 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-25</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(-10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease target distance by 10 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-10</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase target distance by 10 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+10</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(25)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase target distance by 25 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+25</Text>
                 </TouchableOpacity>
@@ -345,6 +377,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.windButton, { backgroundColor: colors.background }]}
                   onPress={cycleWindDirection}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Wind direction: ${getWindDirectionText(windDirection)}`}
+                  accessibilityHint="Cycles to the next wind direction"
                 >
                   <Text style={[styles.windValue, { color: colors.text.primary }]}>
                     {getWindDirectionText(windDirection)}
@@ -357,6 +392,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   <TouchableOpacity
                     style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
                     onPress={() => adjustWindSpeed(-1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease wind speed by 1 mile per hour"
+                    accessibilityHint={`Wind is currently ${windSpeed} miles per hour`}
                   >
                     <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>−</Text>
                   </TouchableOpacity>
@@ -366,6 +404,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   <TouchableOpacity
                     style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
                     onPress={() => adjustWindSpeed(1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase wind speed by 1 mile per hour"
+                    accessibilityHint={`Wind is currently ${windSpeed} miles per hour`}
                   >
                     <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>+</Text>
                   </TouchableOpacity>
@@ -378,6 +419,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.confirmButton, { backgroundColor: colors.primary }]}
               onPress={handleConfirmShot}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm shot"
+              accessibilityHint="Saves this solution to your DOPE log at the current distance"
             >
               <Text style={[styles.confirmButtonText, { color: colors.text.inverse }]}>
                 CONFIRM SHOT

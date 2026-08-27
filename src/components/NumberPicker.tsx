@@ -78,6 +78,8 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${displayValue}`}
+        accessibilityHint={`Opens a list of ${label.toLowerCase()} values to choose from`}
+        accessibilityState={{ disabled, expanded: isOpen }}
       >
         <Text
           style={[
@@ -107,13 +109,22 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text.primary }]}>{label}</Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeButton}>
+              <TouchableOpacity
+                onPress={() => setIsOpen(false)}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Done choosing ${label.toLowerCase()}`}
+                accessibilityHint="Closes the list and keeps the selected value"
+              >
                 <Text style={[styles.closeButtonText, { color: colors.primary }]}>Done</Text>
               </TouchableOpacity>
             </View>
 
             <FlatList
               data={values}
+              accessibilityRole="radiogroup"
+              accessibilityLabel={label}
+              accessibilityHint={`Choose one ${label.toLowerCase()} value`}
               keyExtractor={(item) => item.toString()}
               renderItem={({ item }) => {
                 const isSelected = item === value;
@@ -124,6 +135,12 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                       isSelected && { backgroundColor: colors.primary + '20' },
                     ]}
                     onPress={() => handleSelect(item)}
+                    accessibilityRole="radio"
+                    // The unit belongs in the option too: a bare "2.5" in a list is
+                    // ambiguous between mils, MOA and yards.
+                    accessibilityLabel={`${item}${unit ? ` ${unit}` : ''}`}
+                    accessibilityHint={`Sets ${label.toLowerCase()} to this value`}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text
                       style={[
