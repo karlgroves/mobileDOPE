@@ -4,6 +4,13 @@
 # meant to block has to run in this hook — an npm script that no hook invokes is
 # opt-in tooling, not a gate. Issue #45 wired the security scans in for that reason.
 
+# `set -e` is load-bearing. Without it a failing command here does not stop the
+# push: sh returns the exit status of the LAST command, so `npm run check` could
+# fail and the hook would still exit 0 as long as the final gitleaks scan passed.
+# That was true of this hook as first written, which made the headline quality
+# gate the one step that could not block a push.
+set -e
+
 # lint (warning-capped), typecheck, markdownlint, dupes
 npm run check
 
