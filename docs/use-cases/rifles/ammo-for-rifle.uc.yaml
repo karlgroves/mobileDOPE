@@ -1,0 +1,40 @@
+id: rifles-ammo-for-rifle
+title: 'Review the ammunition available for a rifle'
+type: positive
+description: >-
+  Ammunition is matched to a rifle by caliber (ADR-004), not owned by it. This
+  asserts the per-rifle list shows what is actually usable in that rifle and does
+  not offer loads in another caliber.
+
+preconditions:
+  - 'A rifle profile at data.rifle_name exists in data.caliber'
+  - 'At least one ammunition profile exists in data.caliber'
+  - 'At least one ammunition profile exists in a DIFFERENT caliber'
+
+start_location: 'Rifles/RifleProfileList'
+
+expected_result: >-
+  The rifle's ammunition list contains the matching-caliber load and excludes the
+  non-matching one.
+
+data:
+  rifle_name: 'Tikka T3x'
+  caliber: '.308 Win'
+  matching_ammo: '175gr SMK'
+  # REPLACE: a load in a caliber this rifle cannot fire.
+  non_matching_ammo: '140gr ELD-M'
+  ammo_list_button: 'Ammunition for Tikka T3x'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ rifle_name }}"
+  - focus: button "{{ rifle_name }}"
+  - activate: button "{{ rifle_name }}"
+
+  - locate: button "{{ ammo_list_button }}"
+  - activate: button "{{ ammo_list_button }}"
+
+  - audit: page
+  - verify: button "{{ matching_ammo }}"
+  - verify: no_element button "{{ non_matching_ammo }}"

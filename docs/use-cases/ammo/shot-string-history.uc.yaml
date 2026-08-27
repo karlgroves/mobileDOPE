@@ -1,0 +1,42 @@
+id: ammo-shot-string-history
+title: 'Review chronograph history for a load'
+type: positive
+description: >-
+  Past shot strings, grouped by session and collapsible. Asserts the collapsed
+  summary carries its statistics in its accessible name and that the expanded state
+  is announced -- an expandable row that does not report expanded/collapsed leaves a
+  screen reader user unable to tell whether activating it did anything.
+
+preconditions:
+  - 'An ammunition profile at data.ammo_name has at least one saved shot string'
+
+start_location: 'Ammo/ShotStringHistory'
+
+expected_result: >-
+  Each session row summarises its shot count, average velocity and extreme spread.
+  Expanding a row reveals the individual shots and the row reports itself expanded.
+
+data:
+  ammo_name: '175gr SMK'
+  # REPLACE: the session row. "12 shots - Avg: 2651 fps" plus "ES: 7" renders as
+  # loose numbers; the accessible name must name each statistic.
+  session_row: '1 August 2026, 12 shots, average velocity 2651 feet per second, extreme spread 7'
+  expand_hint: 'Expands to show each shot'
+  first_shot: 'Shot 1, 2648 feet per second'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ session_row }}"
+  - focus: button "{{ session_row }}"
+  - verify: button "{{ session_row }}" has_state "collapsed"
+  - verify: button "{{ session_row }}" has_description "{{ expand_hint }}"
+
+  - activate: button "{{ session_row }}"
+  - verify: button "{{ session_row }}" has_state "expanded"
+  - verify: text "{{ first_shot }}"
+
+  - audit: page
+
+  - activate: button "{{ session_row }}"
+  - verify: button "{{ session_row }}" has_state "collapsed"

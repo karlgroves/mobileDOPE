@@ -1,0 +1,39 @@
+id: calculator-missing-inputs
+title: 'Calculator refuses to solve without a rifle and load'
+type: negative
+description: >-
+  A solver that returns a number regardless of whether it was given a ballistic
+  coefficient is worse than one that refuses. This asserts the refusal is explicit
+  and says which input is missing.
+
+preconditions:
+  - 'No rifle is selected on the calculator'
+  - 'No ammunition is selected on the calculator'
+
+start_location: 'Calculator/BallisticCalculator'
+
+expected_result: >-
+  Calculating is refused. The message names the missing selection. No solution
+  screen is shown and no partial figures are rendered.
+
+data:
+  distance_field: 'Target distance, yards'
+  distance: '800'
+  calculate_button: 'Calculate solution'
+  # REPLACE: the refusal. "Invalid input" does not tell the user what to do.
+  missing_message: 'Select a rifle and a load before calculating'
+  elevation_output: 'Elevation correction'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ distance_field }}"
+  - enter: field "{{ distance_field }}" value "{{ distance }}"
+
+  - locate: button "{{ calculate_button }}"
+  - focus: button "{{ calculate_button }}"
+  - activate: button "{{ calculate_button }}"
+
+  - sr_says: '"{{ missing_message }}" after activate button "{{ calculate_button }}"'
+  # No partial output: a blank or zeroed solution would be read as a real one.
+  - verify: no_element text "{{ elevation_output }}"

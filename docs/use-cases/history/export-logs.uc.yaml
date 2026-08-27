@@ -1,0 +1,53 @@
+id: history-export-logs
+title: 'Export DOPE logs'
+type: positive
+description: >-
+  One of the two paths by which data leaves the device. Offers CSV, JSON and PDF and
+  hands the file to the system share sheet. The CSV path in particular carries a
+  security requirement: a note beginning "=" executes on open in Excel, Numbers and
+  Sheets, so cells are sanitised.
+
+preconditions:
+  - 'At least one DOPE log entry exists'
+
+start_location: 'History/DOPELogList'
+
+expected_result: >-
+  The chosen format is written and offered to the share sheet. Cancelling writes
+  nothing and leaves the screen usable.
+
+  CSV cell sanitisation (a note beginning `=` must not export as a live formula) is
+  asserted at the unit level in `__tests__/unit/services/ExportFormats.test.ts`, not
+  here: it is a property of the file's bytes, which a UI-driving runner cannot see.
+
+data:
+  # REPLACE: accessible names of the export control and the format options it
+  # offers. The formats come from src/services/ExportService.ts.
+  export_button: 'Export DOPE logs'
+  csv_option: 'CSV'
+  json_option: 'JSON'
+  pdf_option: 'PDF'
+  cancel_option: 'Cancel'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ export_button }}"
+  - focus: button "{{ export_button }}"
+  - activate: button "{{ export_button }}"
+
+  - audit: page
+  - verify: button "{{ csv_option }}"
+  - verify: button "{{ json_option }}"
+  - verify: button "{{ pdf_option }}"
+
+  # Cancelling must leave nothing written and the screen usable.
+  - locate: button "{{ cancel_option }}"
+  - activate: button "{{ cancel_option }}"
+  - verify: button "{{ export_button }}"
+
+  - activate: button "{{ export_button }}"
+  - locate: button "{{ csv_option }}"
+  - focus: button "{{ csv_option }}"
+  - activate: button "{{ csv_option }}"
+

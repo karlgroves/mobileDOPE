@@ -1,0 +1,48 @@
+id: rifles-edit-profile
+title: 'Edit an existing rifle profile'
+type: positive
+description: >-
+  Changing a stored value -- typically after a re-zero or a barrel change. Asserts
+  the form opens populated with the current values rather than blank, which is the
+  common failure mode for an edit route that reuses a create form.
+
+preconditions:
+  - 'A rifle profile named at data.rifle_name exists'
+
+start_location: 'Rifles/RifleProfileList'
+
+expected_result: >-
+  The edited value is stored and shown everywhere the rifle appears. No other field
+  is altered by the edit.
+
+data:
+  # REPLACE: the rifle to edit, and the edit control on its row.
+  rifle_name: 'Tikka T3x'
+  edit_button: 'Edit Tikka T3x'
+  zero_distance_field: 'Zero distance, yards'
+  original_zero: '100'
+  new_zero: '200'
+  # REPLACE: a field that must NOT change, to prove the edit is targeted.
+  caliber_field: 'Caliber'
+  caliber: '.308 Win'
+  save_button: 'Save'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ edit_button }}"
+  - focus: button "{{ edit_button }}"
+  - activate: button "{{ edit_button }}"
+
+  # The form must arrive populated. A blank edit form silently discards data.
+  - verify: field "{{ zero_distance_field }}" has_value "{{ original_zero }}"
+  - verify: field "{{ caliber_field }}" has_value "{{ caliber }}"
+
+  - focus: field "{{ zero_distance_field }}"
+  - enter: field "{{ zero_distance_field }}" value "{{ new_zero }}"
+
+  - locate: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"
+
+  - verify: text "{{ new_zero }}"
+  - verify: text "{{ caliber }}"

@@ -1,0 +1,38 @@
+id: history-dope-curve
+title: 'View the DOPE curve for a rifle and load'
+type: positive
+description: >-
+  Recorded drop plotted against distance, next to the predicted curve. A chart is
+  the least accessible thing in the app, so this asserts the underlying figures are
+  reachable as text -- a plot with no data table is unreadable to a screen reader and
+  unreadable to anyone in bright sunlight.
+
+preconditions:
+  - 'At least four DOPE log entries exist for the same rifle and load at different distances'
+
+start_location: 'History/DOPECurve'
+
+expected_result: >-
+  The curve renders, and every plotted point is available as labelled text giving its
+  distance and drop with units.
+
+data:
+  chart_label: 'Recorded drop against distance'
+  # REPLACE: a plotted point, as text. A chart without this is decorative.
+  sample_point: '500 yards, recorded drop 3.4 mils, predicted 3.3 mils'
+  # REPLACE: control for switching between recorded and predicted series.
+  series_toggle: 'Show predicted curve'
+
+steps:
+  - audit: page
+
+  - wait_for: region "{{ chart_label }}"
+  - audit: region "{{ chart_label }}"
+
+  # The numbers behind the picture must exist as text.
+  - verify: text "{{ sample_point }}"
+
+  - locate: switch "{{ series_toggle }}"
+  - focus: switch "{{ series_toggle }}"
+  - activate: switch "{{ series_toggle }}"
+  - verify: switch "{{ series_toggle }}" has_state "on"
