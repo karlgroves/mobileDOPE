@@ -136,10 +136,11 @@ rules:
   # rule here would have meant shipping a `nosemgrep` suppression over a real
   # finding and a security gate that reports green because of it.
   #
-  # The rule ships with its fix, in the branch for issue #44. A rule and the
-  # remediation that makes it pass belong in the same change; splitting them
-  # produces exactly the kind of suppression this repo's exception process exists
-  # to prevent.
+  # The remediation lands in #44 and this tree lands here, so the two halves are in
+  # different PRs. Tracked as #53: add the rule once both are on develop, and
+  # confirm the gate is green with no suppression anywhere. A rule and the fix that
+  # makes it pass belong in the same change; splitting them produces exactly the
+  # kind of suppression this repo's exception process exists to prevent.
   # 10. Logging that could leak stored data ------------------------------------
   - id: mobiledope-logs-user-record
     languages: [typescript, javascript]

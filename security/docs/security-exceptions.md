@@ -82,8 +82,8 @@ There was briefly a second entry here, suppressing a real full-precision-GPS
 finding in `EnvironmentInput.tsx` on the grounds that issue #44 fixes it. That was
 the wrong shape and it has been removed along with the rule that produced it: a
 security gate reporting green **because** it suppresses a live defect is worse than
-one that never had the rule, since it also stops anyone else from looking. The rule
-now ships in #44's branch alongside the remediation that makes it pass.
+one that never had the rule, since it also stops anyone else from looking. The rule is
+tracked in #53, to be added once #44 and this tree are both on develop.
 
 **The general principle, learned the hard way:** a new rule and the fix that makes
 it pass belong in the same change. If adding a rule requires a suppression on the
