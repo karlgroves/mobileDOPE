@@ -13,17 +13,21 @@ preconditions:
 start_location: 'History/DOPELogList'
 
 expected_result: >-
-  The chosen format is written and offered to the share sheet. A note beginning with
-  a formula character is neutralised in the CSV rather than exported as a formula.
+  The chosen format is written and offered to the share sheet. Cancelling writes
+  nothing and leaves the screen usable.
+
+  CSV cell sanitisation (a note beginning `=` must not export as a live formula) is
+  asserted at the unit level in `__tests__/unit/services/ExportFormats.test.ts`, not
+  here: it is a property of the file's bytes, which a UI-driving runner cannot see.
 
 data:
+  # REPLACE: accessible names of the export control and the format options it
+  # offers. The formats come from src/services/ExportService.ts.
   export_button: 'Export DOPE logs'
   csv_option: 'CSV'
   json_option: 'JSON'
   pdf_option: 'PDF'
   cancel_option: 'Cancel'
-  # REPLACE: a log whose notes begin with a spreadsheet formula trigger.
-  hostile_note: '=HYPERLINK("http://example.invalid","click")'
 
 steps:
   - audit: page
@@ -47,6 +51,3 @@ steps:
   - focus: button "{{ csv_option }}"
   - activate: button "{{ csv_option }}"
 
-  # Covered directly by __tests__/unit/services/ExportFormats.test.ts; asserted
-  # here so the requirement is visible in the flow that produces the file.
-  - verify: exported_cell_not_formula "{{ hostile_note }}"

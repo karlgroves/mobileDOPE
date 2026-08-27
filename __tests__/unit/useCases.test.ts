@@ -16,8 +16,15 @@ import yaml from 'js-yaml';
  */
 const useCaseDir = path.resolve(__dirname, '../../docs/use-cases');
 
-/** Verbs from the DSL. `lang_check` is omitted: it has no React Native meaning. */
-const VERBS = [
+/**
+ * Verbs from the `@afixt/usecase-runner` DSL, as used by the reference library at
+ * `AFixt/audit-usecases`.
+ *
+ * `lang_check`, `contrast`, `read_image` and `deselect` exist in the DSL but have
+ * no use here: the first asserts a document `lang` attribute and the rest are not
+ * needed by these flows.
+ */
+const REFERENCE_VERBS = [
   'audit',
   'locate',
   'focus',
@@ -26,9 +33,51 @@ const VERBS = [
   'select',
   'verify',
   'wait_for',
-  'navigate',
   'keyboard',
   'sr_says',
+];
+
+/**
+ * Verbs this library adds. Each one is a deliberate React Native adaptation and
+ * must be listed in the README's dialect table -- see the assertion below.
+ */
+const LOCAL_VERBS = ['navigate'];
+
+const VERBS = [...REFERENCE_VERBS, ...LOCAL_VERBS];
+
+/** Target types the reference library uses. */
+const REFERENCE_TARGETS = [
+  'button',
+  'checkbox',
+  'field',
+  'heading',
+  'link',
+  'live_region',
+  'page',
+  'region',
+  'text',
+];
+
+/** Target types this library adds. */
+const LOCAL_TARGETS = ['radio', 'switch', 'no_element'];
+
+/** Predicates the reference library uses. */
+const REFERENCE_PREDICATES = [
+  'attribute',
+  'has_value',
+  // enter: field "X" value "Y"
+  'value',
+  // sr_says: '"X" after activate button "Y"'
+  'after',
+];
+
+/** Predicates this library adds. */
+const LOCAL_PREDICATES = [
+  'has_state',
+  'has_description',
+  'has_min_size',
+  'has_value_matching',
+  'has_focus',
 ];
 
 const REQUIRED_FIELDS = [
@@ -70,6 +119,17 @@ describe('use-case library', () => {
 
     expect(listed.length).toBeGreaterThan(0);
     expect([...new Set(listed)].sort()).toEqual(files);
+  });
+
+  it('documents every local extension in the README dialect table', () => {
+    // The README used to claim the steps use "the DSL verbs unchanged". They do
+    // not -- this library adds one verb, three target types and five predicates.
+    // The claim is now a table, and this keeps the table honest.
+    const readme = fs.readFileSync(path.join(useCaseDir, 'README.md'), 'utf8');
+
+    for (const extension of [...LOCAL_VERBS, ...LOCAL_TARGETS, ...LOCAL_PREDICATES]) {
+      expect(readme).toContain(`\`${extension}\``);
+    }
   });
 
   it('covers every mounted tab stack', () => {
@@ -136,6 +196,33 @@ describe.each(files)('%s', (file) => {
   it('uses only DSL verbs in its steps', () => {
     const used = useCase.steps.map((step) => Object.keys(step)[0] as string);
     const unknown = [...new Set(used)].filter((verb) => !VERBS.includes(verb));
+    expect(unknown).toEqual([]);
+  });
+
+  it('uses only declared target types', () => {
+    // The verb check alone let invented vocabulary through: `verify` is a real
+    // verb, so `verify: sprocket "x"` passed. Targets and predicates are checked
+    // too, and every non-reference one has to be declared above and documented in
+    // the README's dialect table.
+    const allowed = [...REFERENCE_TARGETS, ...LOCAL_TARGETS];
+    const used = useCase.steps
+      .map((step) => String(Object.values(step)[0]))
+      .map((value) => /^([a-z_]+)\b/.exec(value)?.[1])
+      .filter((target): target is string => Boolean(target));
+
+    const unknown = [...new Set(used)].filter((target) => !allowed.includes(target));
+    expect(unknown).toEqual([]);
+  });
+
+  it('uses only declared predicates', () => {
+    const allowed = [...REFERENCE_PREDICATES, ...LOCAL_PREDICATES];
+    // A predicate is the bare token that follows a quoted target name.
+    const used = useCase.steps
+      .map((step) => String(Object.values(step)[0]))
+      .map((value) => /"\s+([a-z_]+)/.exec(value)?.[1])
+      .filter((predicate): predicate is string => Boolean(predicate));
+
+    const unknown = [...new Set(used)].filter((p) => !allowed.includes(p));
     expect(unknown).toEqual([]);
   });
 

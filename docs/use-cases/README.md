@@ -16,7 +16,10 @@ it had to be settled before ~25 files were written in the wrong shape:
 > 2. **Keep the frontmatter fields but relax `steps:`** to prose, since nothing
 >    validates them.
 
-**Option 1.** The steps use the `@afixt/usecase-runner` DSL verbs unchanged.
+**Option 1**, with one correction to how it was first described: the steps use the
+`@afixt/usecase-runner` DSL **plus a small, declared set of extensions**. An earlier
+draft of this file claimed the verbs were "unchanged" and that the files were
+"already valid input" for a runner. Neither was true — see the dialect table below.
 
 The reasoning in that thread is the reason: the constraint of writing real verbs is
 what keeps a use case honest about whether an element is actually reachable. Prose
@@ -31,8 +34,47 @@ It also makes #20 cheap. Maestro flows are YAML too, so translating
 [ADR-009](../adr/009-rn-scope-web-tools-na.md) there is no browser surface to drive —
 `react-native-web`, `react-dom` and `@expo/metro-runtime` are all absent, so
 `expo start --web` will not boot. The DSL is used here purely as an authoring format.
-That door stays open: if a web target ever appears, these files are already valid
-input.
+
+If a web target ever appears, these files are **close to** runner input, not
+drop-in: the extensions below would need mapping or removing first. That is a much
+smaller job than rewriting the flows, which is the actual benefit of staying near
+the DSL.
+
+## The dialect
+
+Nine additions to the reference vocabulary at `AFixt/audit-usecases`. Each exists
+because these are native screens rather than web pages. `__tests__/unit/useCases.test.ts`
+rejects any verb, target or predicate not in this table, so the list cannot quietly
+grow.
+
+### Verbs
+
+| Verb       | Why                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `navigate` | Moves between navigator routes. The reference library changes pages by `start_location` per file; a native flow crosses several screens in one journey. |
+
+### Target types
+
+| Target       | Why                                                                                                                                                                                          |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `radio`      | React Native's `accessibilityRole="radio"`. The reference uses `checkbox`/`checked` for its exclusive controls.                                                                              |
+| `switch`     | React Native's `<Switch>`, which reports on/off state rather than checked/unchecked.                                                                                                         |
+| `no_element` | Asserts absence. The reference expresses this with a `hidden` target; `no_element` reads more clearly for a control that should not exist at all rather than one that is present-but-hidden. |
+
+### Predicates
+
+| Predicate            | Why                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `has_state`          | Asserts `accessibilityState` — `expanded`, `selected`, `disabled`, `busy`. The reference's `checked`/`unchecked`/`enabled` cover only part of this.                |
+| `has_description`    | Asserts `accessibilityHint`. There is no web equivalent; hints are a native concept.                                                                               |
+| `has_min_size`       | Asserts a touch target meets the 48pt minimum in `src/constants/theme.ts`. Gloved operation is a stated design constraint, so it is asserted rather than reviewed. |
+| `has_value_matching` | A regex form of `has_value`, for values the environment computes (a GPS-derived altitude).                                                                         |
+| `has_focus`          | Asserts where focus landed after an action — the thing that decides whether a repeated entry loop is one tap or two.                                               |
+
+**Not extended:** `verify`, `locate`, `focus`, `enter`, `activate`, `select`,
+`audit`, `wait_for`, `keyboard`, `sr_says`, and the `button` / `field` / `text` /
+`heading` / `region` targets are all used exactly as the reference library uses
+them.
 
 ## Adaptations for React Native
 
