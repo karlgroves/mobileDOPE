@@ -9,9 +9,41 @@
 // jest-expo requires jest 29 (it depends on jest 29 internals), which is why the
 // dependency alignment in ADR-012 had to land before this file could be wired up.
 // See issue #28 phase 5.
+//
+// ---------------------------------------------------------------------------------
+//
+// COVERAGE OWNERSHIP: exactly one project instruments each source file (#54).
+//
+// `collectCoverageFrom` is a root-level option, so before this split BOTH projects
+// instrumented every file under `src/` -- the `unit` project through ts-jest, the
+// `components` project through jest-expo's babel pipeline. The two transformers emit
+// different code, so istanbul builds a different statement/branch/function map for the
+// same source, in the coordinates of that project's own output.
+//
+// Jest merges the two into one entry per file (`CoverageMap.addFileCoverage` ->
+// `FileCoverage.merge`), which unions the position maps but keeps only the FIRST
+// entry's `inputSourceMap`. Which entry lands first is whichever project's test result
+// arrives first -- so the source map used to remap the merged positions back to the
+// original `.ts` changed from run to run, and with it the denominator.
+//
+// `src/store/useAppStore.ts` is the only file both projects actually EXECUTE (a
+// component test reaches it through the theme), and it is what flaked: 49 statements
+// all covered when the ts-jest map won, 71 statements with 55 covered when the babel
+// map did. That moved `src/store/` between 198/212 = 93.39% and 204/234 = 87.17% --
+// exactly the two readings in #54 -- while the tests themselves were identical.
+//
+// Splitting ownership removes the merge entirely: `components` owns the three
+// directories its suites render, `unit` owns everything else. Nothing is instrumented
+// twice, so nothing depends on which project finishes first. It is also the honest
+// attribution -- a file is now measured by the transformer that actually ran it.
+const COMPONENT_OWNED = '<rootDir>/src/(components|contexts|constants)/';
+const NODE_MODULES = '/node_modules/';
+
 const unit = {
   displayName: 'unit',
   preset: 'ts-jest',
+  // See COVERAGE OWNERSHIP above: everything except the component-rendered directories.
+  coveragePathIgnorePatterns: [NODE_MODULES, COMPONENT_OWNED],
   testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   moduleNameMapper: {
@@ -24,7 +56,7 @@ const unit = {
     '**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)',
     '**/security/tests/**/*.(test|spec).(ts|tsx)',
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
+  testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
@@ -40,11 +72,15 @@ const unit = {
 const components = {
   displayName: 'components',
   preset: 'jest-expo',
+  // See COVERAGE OWNERSHIP above: only the directories these suites render. The
+  // negative lookahead is the complement of `unit`'s pattern, so the two partition
+  // `src/` with no file in both and none in neither.
+  coveragePathIgnorePatterns: [NODE_MODULES, '<rootDir>/src/(?!components/|contexts/|constants/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testMatch: ['**/__tests__/components/**/*.(test|spec).(ts|tsx)'],
-  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
+  testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
   // jest.setup.js supplies the expo-sqlite / AsyncStorage mocks these components need.
   // It existed but was never referenced by any config before this change, so it had
   // never run.
@@ -58,6 +94,16 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.types.ts',
+    // Also the un-dotted form, which `!src/**/*.types.ts` does not match -- there is no
+    // dot before `types`. `src/navigation/types.ts` is 21 type and interface
+    // declarations and zero runtime statements, so it compiles to an empty module: one
+    // transformer emits a coverage entry for it and the other emits none, which made it
+    // appear and disappear between runs. It has no statements, lines, functions or
+    // branches, so it never moved a percentage -- but a file that flickers in and out of
+    // the report is noise, and a type-only module has nothing to cover in the first
+    // place. Excluding it is hygiene, not the #54 fix; see COVERAGE OWNERSHIP above for
+    // that.
+    '!src/**/types.ts',
     '!src/**/__tests__/**',
   ],
   // PER-DIRECTORY RATCHETS, not targets (#28).
@@ -71,10 +117,10 @@ module.exports = {
   // against `src/screens/` at 0%, hiding both.
   //
   // Every directory now carries its own floor, so a regression is attributed to the
-  // layer that caused it. Jest assigns each file to the most specific matching path,
-  // which leaves `global` covering nothing -- that is deliberate, not an oversight:
-  // there is no unclassified source left. Adding a new top-level directory under
-  // `src/` means adding its floor here.
+  // layer that caused it. `global` covers nothing -- that is deliberate, not an
+  // oversight: only files matching NO path group fall into it, and there is no
+  // unclassified source left. Adding a new top-level directory under `src/` means
+  // adding its floor here.
   //
   // Floors are the integer below actual, dropped one further where that leaves under
   // ~0.5pp of headroom, so landing a feature slightly ahead of its tests does not
@@ -92,15 +138,25 @@ module.exports = {
   // below. Without it, a new top-level directory falls into `global` -- which is
   // zero, so it is not gated at all -- and the gate stays green.
   //
+  // Figures below are as measured after the #54 coverage-ownership split, and are
+  // reproducible: 20 consecutive `rm -rf coverage && npm run test:coverage` runs
+  // produce a byte-identical per-file report. Several rose against the pre-#54 table
+  // without a test being written, because a file is no longer counted twice with two
+  // different statement maps -- see COVERAGE OWNERSHIP at the top of this file.
+  //
+  // A group's figure is the sum over the files beneath it, and jest counts a file in
+  // EVERY threshold path it sits under, not just the most specific one -- so
+  // `./src/services/` includes `database/` and `database/migrations/`.
+  //
   //   directory                      s      b      l      f     state
-  //   utils                        90.5   77.4   90.1   87.5   ballistic math, done
-  //   store                        93.4   83.9   94.4   92.5   #28 phase 3, this change
-  //   models                       85.3   80.7   85.2   83.3   #28 phase 4, mostly done
-  //   services/database            60.7   77.7   64.2   70.0   repositories high, runner 0%
-  //   services                     62.1   57.5   64.3   67.1   CSV/Markdown covered; PDF 0%
-  //   contexts                     66.7   50.0   76.9   40.0   incidental, via components
-  //   components                   14.4   20.2   18.1   16.0   8 of ~20 suites
-  //   constants                    10.2    7.1   13.2    2.2   data tables
+  //   utils                        90.5   77.3   90.1   87.5   ballistic math, done
+  //   store                        92.9   86.6   94.1   92.3   #28 phase 3
+  //   models                       86.7   82.6   86.7   84.7   #28 phase 4, mostly done
+  //   services/database            77.2   79.1   78.5   81.0   repositories high, runner low
+  //   services                     72.7   59.1   73.2   75.7   CSV/Markdown covered; PDF 0%
+  //   contexts                     83.3   50.0   83.3   66.6   incidental, via components
+  //   components                   27.0   31.8   27.5   28.5   8 of ~20 suites
+  //   constants                    18.3    9.0   23.6    3.4   data tables
   //   screens / navigation / hooks  0      0      0      0     #28 phase 6, not started
   //
   // Next targets, in cost order: the PDF exporters (expo-print ships ESM, which the
@@ -115,29 +171,25 @@ module.exports = {
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
     './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
-    // Several groups are floored below their OBSERVED WORST CASE rather than their
-    // usual reading, because the merged coverage report is intermittently missing
-    // one jest project's contribution. All tests pass; only the numbers move.
+    // The store, contexts, components and constants floors were dropped below their
+    // observed worst case by #48, as a stopgap while the coverage numbers moved
+    // between runs. #54 fixed the cause -- `src/store/useAppStore.ts` was instrumented
+    // by BOTH jest projects and the merged entry was remapped through whichever
+    // project's source map arrived first, swinging `src/store/` between 198/212 =
+    // 93.39% and 204/234 = 87.17% statements. See COVERAGE OWNERSHIP at the top of
+    // this file.
     //
-    //   group        usual                    observed low
-    //   store        93.39/83.87/92.47/94.38  87.17 statements
-    //   contexts     66.66/50.00/40.00/76.92  52.63 statements, 58.82 lines
-    //   components   14.35/20.16/16.00/18.12  16.61 lines, 14.15 functions
-    //
-    // The affected group moves between runs and spans both projects, so this is a
-    // property of the two-project coverage merge (ADR-012 / #35), not of any one
-    // suite. Tracked in #54.
-    //
-    // A ratchet that reds two pushes in five gets re-run rather than read, so these
-    // sit under the low readings. RAISE THEM BACK once #54 lands -- the usual
-    // figures above are the targets.
-    './src/store/': { branches: 77, functions: 86, lines: 88, statements: 86 },
+    // They are back at their pre-#48 values. Every one now sits below a figure that 20
+    // consecutive clean runs reproduce exactly. The readings in the table above are
+    // higher still for the groups the split un-diluted; ratcheting up to them is a
+    // separate, deliberate step, not a side effect of a bug fix.
+    './src/store/': { branches: 82, functions: 91, lines: 93, statements: 92 },
     './src/models/': { branches: 79, functions: 82, lines: 84, statements: 84 },
     './src/services/database/': { branches: 76, functions: 69, lines: 63, statements: 59 },
     './src/services/': { branches: 56, functions: 66, lines: 63, statements: 61 },
-    './src/contexts/': { branches: 38, functions: 28, lines: 56, statements: 50 },
-    './src/components/': { branches: 17, functions: 13, lines: 16, statements: 12 },
-    './src/constants/': { branches: 5, functions: 1, lines: 11, statements: 8 },
+    './src/contexts/': { branches: 48, functions: 38, lines: 75, statements: 65 },
+    './src/components/': { branches: 19, functions: 15, lines: 17, statements: 13 },
+    './src/constants/': { branches: 6, functions: 1, lines: 12, statements: 9 },
 
     // Not yet started. Declared at 0 so they are visible in this table rather than
     // invisible inside a merged average, and so the first test written for them can
