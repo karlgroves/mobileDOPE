@@ -44,12 +44,32 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/**
+ * The repository being scanned, asked of git rather than derived from this file's
+ * own path.
+ *
+ * A hook helper should act on the repository it was invoked in. Deriving the root
+ * from `import.meta.url` instead pins it to whichever checkout the script happens
+ * to live in, which is the same answer for the hooks -- they run at the top level
+ * -- but wrong for a worktree, wrong for a submodule, and untestable, since no
+ * caller can point it at a fixture.
+ */
+const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+  encoding: 'utf8',
+}).trim();
 
 /** trufflehog exits 183 when `--fail` is set and it found something. */
 const FINDINGS_EXIT = 183;
+
+/**
+ * Largest staged blob to read into memory, per file.
+ *
+ * Exceeding this is a hard failure rather than a skip -- see materialiseStaged.
+ * Overridable so the failure path can be exercised by a test without writing a
+ * 64MB fixture; nothing in normal operation sets it.
+ */
+const MAX_BLOB_BYTES = Number(process.env.MOBILEDOPE_SECRETSCAN_MAX_BYTES) || 64 * 1024 * 1024;
 
 const mode = process.argv.includes('--staged') ? 'staged' : 'history';
 
@@ -100,17 +120,45 @@ const materialiseStaged = () => {
 
   if (names.length === 0) return null;
 
+  // Submodules are the one thing legitimately unreadable here: a gitlink records a
+  // commit id, not content, so there is nothing for a scanner to look at. Identify
+  // them up front by index mode rather than inferring them from a failed read --
+  // otherwise every other failure looks like a submodule too.
+  const gitlinks = new Set(
+    execFileSync('git', ['ls-files', '--stage', '-z'], { cwd: repoRoot, encoding: 'utf8' })
+      .split('\0')
+      .filter(Boolean)
+      .filter((entry) => entry.startsWith('160000'))
+      .map((entry) => entry.slice(entry.indexOf('\t') + 1))
+  );
+
   const dir = mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-'));
   for (const name of names) {
+    if (gitlinks.has(name)) continue;
+
     let blob;
     try {
       blob = execFileSync('git', ['show', `:${name}`], {
         cwd: repoRoot,
-        maxBuffer: 64 * 1024 * 1024,
+        maxBuffer: MAX_BLOB_BYTES,
       });
-    } catch {
-      // Unreadable from the index (a submodule, say). Nothing to scan.
-      continue;
+    } catch (error) {
+      // Never `continue` here. Skipping a file we could not read, and then printing
+      // "scan clean", is a gate reporting green without having looked -- the exact
+      // failure #78 was about. The realistic trigger is size: execFileSync throws
+      // ENOBUFS above maxBuffer, so a large staged file would have been dropped
+      // silently.
+      rmSync(dir, { recursive: true, force: true });
+      const why =
+        error.code === 'ENOBUFS'
+          ? `it is larger than the ${MAX_BLOB_BYTES / (1024 * 1024)}MB read limit`
+          : `git could not read it from the index (${error.code ?? `exit ${error.status}`})`;
+      console.error(`\u2716 Cannot scan staged file for secrets: ${name}`);
+      console.error(`  ${why}.`);
+      console.error('');
+      console.error('  Refusing to report a clean scan for content that was not read.');
+      console.error('  Unstage it, or raise MAX_BLOB_BYTES if the file is legitimate.');
+      process.exit(1);
     }
     const target = path.join(dir, name);
     mkdirSync(path.dirname(target), { recursive: true });
@@ -120,11 +168,19 @@ const materialiseStaged = () => {
 };
 
 /** Runs trufflehog and returns its exit status, streaming output through. */
-const scan = (args) =>
-  spawnSync('trufflehog', [...args, '--fail', '--no-update'], {
+const scan = (args) => {
+  const result = spawnSync('trufflehog', [...args, '--fail', '--no-update'], {
     cwd: repoRoot,
     stdio: 'inherit',
-  }).status;
+  });
+  // `status` is null when the child was killed by a signal; report the signal
+  // rather than printing "exited null".
+  if (result.status === null && result.signal) {
+    console.error(`\u2716 trufflehog was killed by ${result.signal} before it finished.`);
+    process.exit(1);
+  }
+  return result.status;
+};
 
 let status;
 let scratch = null;
