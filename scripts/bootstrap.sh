@@ -5,16 +5,20 @@
 # when these are absent, so this script is a convenience, not a requirement.
 set -euo pipefail
 
-have() { command -v "$1" >/dev/null 2>&1; }
+# Presence is not the same as working. #78: a Linux gitleaks build sat in
+# /usr/local/bin on an arm64 Mac, satisfied `command -v`, and then failed to exec
+# on every commit -- while this script reported it "present" and declined to
+# reinstall it. Ask the binary to run instead.
+have() { "$1" --version >/dev/null 2>&1; }
 
 echo "Checking optional tooling binaries..."
 
-# gitleaks — secret scanning (pre-commit / pre-push)
-if have gitleaks; then
-  echo "✓ gitleaks present"
+# trufflehog — secret scanning (pre-commit / pre-push)
+if have trufflehog; then
+  echo "✓ trufflehog present"
 else
-  echo "… installing gitleaks"
-  brew install gitleaks 2>/dev/null || echo "  ! install gitleaks manually: https://github.com/gitleaks/gitleaks/releases"
+  echo "… installing trufflehog"
+  brew install trufflehog 2>/dev/null || echo "  ! install trufflehog manually: https://github.com/trufflesecurity/trufflehog/releases"
 fi
 
 # osv-scanner — dependency vulnerability scanning (npm run security:osv)

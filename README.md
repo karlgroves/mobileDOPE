@@ -126,20 +126,23 @@ Quality is enforced **locally** through Husky hooks rather than additional CI
 (see [ADR-011](./docs/adr/011-local-gate-first-no-new-actions.md)):
 
 - **pre-commit** — `lint-staged`, which runs ESLint + Prettier and a `tsc-files`
-  type-check over the staged files, plus a `gitleaks` secret scan.
+  type-check over the staged files, plus a `trufflehog` secret scan of the staged
+  content.
 - **commit-msg** — Conventional Commits via commitlint.
 - **pre-push** — `npm run check`, the waiver-gated dependency audit, `osv-scanner`,
-  Semgrep, and a full-history `gitleaks` scan against the committed baseline.
+  Semgrep, and a full-history `trufflehog` scan.
 
-The `gitleaks` steps **fail when the binary is absent** rather than printing a note and
-continuing. A gate that silently skips is not a gate; run `./scripts/bootstrap.sh` to
-install it, or set `SKIP_SECRET_SCAN=1` to skip it loudly and deliberately. See
+The secret-scan steps **fail when the tool is absent, or present but unable to run**,
+rather than printing a note and continuing. A gate that silently skips is not a gate,
+and neither is one whose binary is the wrong architecture — see #78. Run
+`./scripts/bootstrap.sh` to install it, or set `SKIP_SECRET_SCAN=1` to skip it loudly
+and deliberately. See
 [`security/docs/secret-scanning.md`](./security/docs/secret-scanning.md).
 
 - **post-merge** — re-installs and audits when `package-lock.json` changes.
 
 `osv-scanner`, `semgrep` and `lychee` are optional — the hooks report and continue when
-they are absent. `gitleaks` is **not** optional; see above. Install them with:
+they are absent. `trufflehog` is **not** optional; see above. Install them with:
 
 ```bash
 bash scripts/bootstrap.sh

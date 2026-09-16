@@ -35,17 +35,11 @@ else
   echo "ℹ semgrep not installed — SAST skipped (run ./scripts/bootstrap.sh to enable)"
 fi
 
-# Secret scan over full history, minus the reviewed baseline.
-# Fails when the binary is absent — see .husky/pre-commit for the reasoning.
-if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks detect --no-banner --redact \
-    --baseline-path security/config/gitleaks-baseline.json || exit 1
-elif [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
-  echo "⚠  SECRET SCAN SKIPPED — gitleaks is not installed and SKIP_SECRET_SCAN=1."
-  echo "⚠  Nothing checked this push for credentials. Install it: ./scripts/bootstrap.sh"
-else
-  echo "✖ gitleaks is not installed, so this push cannot be scanned for secrets."
-  echo "  Install it:      ./scripts/bootstrap.sh"
-  echo "  Or, knowingly:   SKIP_SECRET_SCAN=1 git push"
-  exit 1
-fi
+# Secret scan over full history — what this push would publish.
+# Fails when the tool is absent or cannot run; see scripts/security-secrets.mjs.
+#
+# There is no baseline file. The gitleaks one was an empty array, so nothing was
+# being excluded, and carrying an empty exclusion list forward would only invite
+# someone to add to it. If an exclusion is ever genuinely needed, add a deliberate
+# --exclude-paths in the script where it can be read and reviewed.
+npm run --silent security:secrets
