@@ -83,21 +83,31 @@ const trufflehogRuns = () => {
   return probe.error === undefined && probe.status === 0;
 };
 
-if (!trufflehogRuns()) {
-  const skipped = process.env.SKIP_SECRET_SCAN === '1';
-  if (skipped) {
-    console.error('⚠  SECRET SCAN SKIPPED — trufflehog cannot run and SKIP_SECRET_SCAN=1.');
-    console.error('⚠  Nothing checked this change for credentials.');
+/**
+ * Exits unless trufflehog can actually run.
+ *
+ * Called immediately before scanning, not at startup: whether the tool is present
+ * is irrelevant when there is nothing staged to scan, and demanding it earlier
+ * makes the "nothing to do" path -- and the staged-blob reader -- impossible to
+ * exercise anywhere the binary is absent, CI included.
+ */
+const requireTrufflehog = () => {
+  if (trufflehogRuns()) return;
+  if (process.env.SKIP_SECRET_SCAN === '1') {
+    console.error(
+      '\u26a0  SECRET SCAN SKIPPED \u2014 trufflehog cannot run and SKIP_SECRET_SCAN=1.'
+    );
+    console.error('\u26a0  Nothing checked this change for credentials.');
     process.exit(0);
   }
-  console.error('✖ trufflehog is not installed, or cannot execute on this machine,');
+  console.error('\u2716 trufflehog is not installed, or cannot execute on this machine,');
   console.error('  so this change cannot be scanned for secrets.');
   console.error('');
   console.error('  Install it:      ./scripts/bootstrap.sh');
   console.error('  Check it runs:   trufflehog --version');
   console.error('  Or, knowingly:   SKIP_SECRET_SCAN=1 git commit ...');
   process.exit(1);
-}
+};
 
 /**
  * Writes every staged blob into a temp directory, preserving paths.
@@ -169,6 +179,7 @@ const materialiseStaged = () => {
 
 /** Runs trufflehog and returns its exit status, streaming output through. */
 const scan = (args) => {
+  requireTrufflehog();
   const result = spawnSync('trufflehog', [...args, '--fail', '--no-update'], {
     cwd: repoRoot,
     stdio: 'inherit',
