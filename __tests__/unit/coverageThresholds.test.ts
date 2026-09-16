@@ -22,6 +22,16 @@ const jestConfig = require('../../jest.config.js') as {
  */
 const repoRoot = path.resolve(__dirname, '../..');
 
+/**
+ * Escapes a literal for use inside a `RegExp`.
+ *
+ * `coveragePathIgnorePatterns` entries are regex sources with `<rootDir>` spliced in,
+ * so an unescaped checkout path containing a metacharacter would change what the
+ * pattern matches. Used with a replacer *function* below so a `$` in the path is not
+ * read as a `String.replace` substitution token either.
+ */
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /** Every source file `collectCoverageFrom` actually instruments. */
 const instrumentedFiles = (): string[] => {
   const walk = (dir: string): string[] =>
@@ -108,7 +118,9 @@ describe('coverage threshold groups', () => {
         .filter(
           (project) =>
             !project.coveragePathIgnorePatterns.some((pattern) =>
-              new RegExp(pattern.replace('<rootDir>', repoRoot)).test(path.join(repoRoot, file))
+              new RegExp(pattern.replace('<rootDir>', () => escapeRegExp(repoRoot))).test(
+                path.join(repoRoot, file)
+              )
             )
         )
         .map((project) => project.displayName);
@@ -136,11 +148,22 @@ describe('coverage threshold groups', () => {
     // declarations is a type module that should have been excluded.
     const typeOnly = instrumentedFiles().filter((file) => {
       const source = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-      const runtime = /^\s*(export\s+)?(const|let|var|function|class|enum)\s/m.test(source);
+      // A declaration, optionally exported, and optionally behind `async`/`abstract`.
+      // Both modifiers sit between `export` and the keyword, so they have to be
+      // matched or `export async function f() {}` reads as having no runtime code.
+      const declaration =
+        /^\s*(export\s+)?(async\s+|abstract\s+)?(const|let|var|function|class|enum)\s/m.test(
+          source
+        );
+      // `export default` emits runtime code whatever follows it -- a function, a class
+      // or a bare object literal -- and none of those reach the pattern above, because
+      // `default` sits where the modifiers do. `export default function Screen()` is
+      // the React Native screen idiom, so this is not a hypothetical form.
+      const defaultExport = /^\s*export\s+default\s/m.test(source);
       // Barrel files re-export rather than declare: `export * from './x'` and
       // `export { X } from './x'` both emit runtime code.
       const reExport = /^\s*export\s+[*{]/m.test(source);
-      return !runtime && !reExport;
+      return !declaration && !defaultExport && !reExport;
     });
 
     expect(typeOnly).toEqual([]);
