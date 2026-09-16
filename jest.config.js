@@ -205,6 +205,11 @@ module.exports = {
     },
     './src/screens/': { branches: 0, functions: 0, lines: 0, statements: 0 },
     './src/navigation/': { branches: 0, functions: 0, lines: 0, statements: 0 },
-    './src/hooks/': { branches: 0, functions: 0, lines: 0, statements: 0 },
+    // `./src/hooks/` was here until #60 removed its only file, `useOrientation.ts`,
+    // which Knip found orphaned -- no importer, and no open issue that wanted one.
+    // Jest fails with "Coverage data for ./src/hooks/ was not found" when a threshold
+    // path matches no instrumented file, so the group goes with it. Adding a hook back
+    // means adding the floor back, and `coverageThresholds.test.ts` fails the build
+    // until you do: an ungated directory is exactly what it watches for.
   },
 };

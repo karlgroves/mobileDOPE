@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "App.tsx",
+    "plugins/*.js",
+    "scripts/*.mjs",
+    "src/services/database/index.ts",
+    "src/components/index.ts",
+    "src/constants/index.ts",
+    "src/contexts/index.ts",
+    "src/store/index.ts",
+    "src/services/database/migrations/index.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "__tests__/**/*.{ts,tsx}", "security/**/*.ts"],
+  "ignoreDependencies": [
+    "date-fns",
+    "expo-image-picker",
+    "expo-sensors",
+    "react-hook-form",
+    "expo-updates",
+    "expo-system-ui",
+    "@types/js-yaml"
+  ],
+  "ignoreBinaries": ["trufflehog", "lychee", "semgrep", "osv-scanner"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "exports": "warn",
+    "types": "warn",
+    "duplicates": "warn"
+  }
+}

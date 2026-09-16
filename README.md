@@ -68,23 +68,24 @@ See `PRIVACY.md`.
 
 ## Scripts
 
-| Script                                           | Purpose                                                 |
-| ------------------------------------------------ | ------------------------------------------------------- |
-| `npm start`                                      | Start the Expo dev server                               |
-| `npm run ios` / `npm run android`                | Run on a simulator/emulator                             |
-| `npm run lint` / `npm run lint:fix`              | ESLint (legacy config via `eslint-config-expo`)         |
-| `npm run format` / `npm run format:check`        | Prettier                                                |
-| `npm run type-check`                             | TypeScript `tsc --noEmit`                               |
-| `npm run markdownlint`                           | Lint Markdown with `markdownlint-cli2`                  |
-| `npm run dupes`                                  | Duplication check (`jscpd`)                             |
-| `npm test` / `npm run test:coverage`             | Jest unit/integration tests                             |
-| `npm run test:e2e`                               | Maestro E2E flows on a simulator (see below)            |
-| `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes |
-| `npm run check:all`                              | Full gate: `check` + format check + tests               |
-| `npm run security:audit`                         | Waiver-gated `npm audit` — **blocking**                 |
-| `npm run security:osv` / `:semgrep` / `:secrets` | Binary-backed scans (see Tooling)                       |
-| `npm run security:all`                           | Every security gate in sequence                         |
-| `npm run license:check`                          | License allowlist compliance                            |
+| Script                                           | Purpose                                                        |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| `npm start`                                      | Start the Expo dev server                                      |
+| `npm run ios` / `npm run android`                | Run on a simulator/emulator                                    |
+| `npm run lint` / `npm run lint:fix`              | ESLint (legacy config via `eslint-config-expo`)                |
+| `npm run format` / `npm run format:check`        | Prettier                                                       |
+| `npm run type-check`                             | TypeScript `tsc --noEmit`                                      |
+| `npm run markdownlint`                           | Lint Markdown with `markdownlint-cli2`                         |
+| `npm run dupes`                                  | Duplication check (`jscpd`)                                    |
+| `npm run knip`                                   | Unused files, exports, and dependencies (`knip`)               |
+| `npm test` / `npm run test:coverage`             | Jest unit/integration tests                                    |
+| `npm run test:e2e`                               | Maestro E2E flows on a simulator (see below)                   |
+| `npm run check`                                  | Parallel gate: lint + type-check + markdownlint + dupes + knip |
+| `npm run check:all`                              | Full gate: `check` + format check + tests                      |
+| `npm run security:audit`                         | Waiver-gated `npm audit` — **blocking**                        |
+| `npm run security:osv` / `:semgrep` / `:secrets` | Binary-backed scans (see Tooling)                              |
+| `npm run security:all`                           | Every security gate in sequence                                |
+| `npm run license:check`                          | License allowlist compliance                                   |
 
 `security:audit` is no longer advisory. It runs `scripts/security-audit.mjs`, which
 fails on any high or critical advisory that is not individually waived in
