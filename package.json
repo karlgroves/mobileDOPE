@@ -29,7 +29,7 @@
     "security:secrets": "node scripts/security-secrets.mjs",
     "license:check": "license-checker-rseidelsohn --production --onlyAllow 'MIT;ISC;Apache-2.0;Apache 2.0;BSD-2-Clause;BSD-3-Clause;0BSD;CC0-1.0;Unlicense;Python-2.0;WTFPL;BlueOak-1.0.0;CC-BY-4.0;CC-BY-3.0;Unicode-DFS-2016;Unicode-3.0;MPL-2.0' --excludePrivatePackages --summary",
     "check": "npm-run-all -p lint type-check markdownlint dupes",
-    "check:all": "npm-run-all -s check format:check test",
+    "check:all": "npm-run-all -s check format:check test:coverage",
     "prepare": "husky",
     "security:audit:raw": "npm audit --audit-level=high",
     "security:all": "npm-run-all -s security:audit security:osv security:semgrep security:secrets",
