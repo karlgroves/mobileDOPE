@@ -19,6 +19,25 @@ Nothing else may suppress a finding. In particular: do not lower a threshold in
 `security-thresholds.json` to make a finding disappear, do not delete a rule from
 `security/config/semgrep.yml`, and do not add a blanket `continue-on-error`.
 
+**An `overrides` entry in `package.json` is not an exception** — it is a fix, and it
+belongs in neither register. It pins a transitive dependency forward to a patched
+version when the parent that depends on it has not yet released one, so the advisory
+stops being reported because it stops being true. The entries currently carried, all
+of them build-time-only tooling:
+
+| Override         | Pins forward | Parent that lags                               |
+| ---------------- | ------------ | ---------------------------------------------- |
+| `@xmldom/xmldom` | `^0.8.15`    | `@expo/config-plugins`, via `expo-sharing`     |
+| `fast-uri`       | `^3.1.8`     | `@commitlint/cli`                              |
+| `smol-toml`      | `^1.8.0`     | `markdownlint-cli2`, which pins `1.7.0`        |
+| `js-yaml@3`      | `^3.15.2`    | `babel-plugin-istanbul`, via `@jest/transform` |
+| `js-yaml@4`      | `^4.3.2`     | `@eslint/eslintrc`, `cosmiconfig`              |
+
+`js-yaml` is split by major because the tree legitimately carries 3.x, 4.x and 5.x;
+a single override would force one consumer onto an incompatible major. Drop an entry
+once the parent's own range admits the patched version — an override that is no longer
+doing anything is the same kind of rot as a stale waiver, and nothing warns about it.
+
 ## Required fields
 
 Every exception, in either mechanism, must record:
@@ -56,9 +75,9 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 26 advisories, expire 2026-11-24
+### npm audit — 15 advisories, expire 2026-11-24
 
-All 26 are transitive through the React Native / Expo build toolchain and are
+All 15 are transitive through the React Native / Expo build toolchain and are
 DoS-class (quadratic parsing, unbounded recursion) in code paths the shipped app does
 not reach. The compensating control is structural rather than procedural: **this app
 has no network layer**, issues no requests, runs no server, and parses no untrusted
@@ -68,7 +87,7 @@ test suite (`security/tests/import.security.spec.ts`).
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for all 26 is `blocked-on-upstream`: they clear when Expo SDK ships a
+Disposition for all 15 is `blocked-on-upstream`: they clear when Expo SDK ships a
 dependency set that resolves them. `npm run security:audit` fails the moment a new
 advisory appears that is not on that list, which is the property that matters.
 
