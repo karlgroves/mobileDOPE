@@ -155,7 +155,7 @@ module.exports = {
   //   services/database            77.2   79.1   78.5   81.0   repositories high, runner low
   //   services                     72.7   59.1   73.2   75.7   CSV/Markdown covered; PDF 0%
   //   contexts                     83.3   50.0   83.3   66.6   incidental, via components
-  //   components                   27.0   31.8   27.5   28.5   8 of ~20 suites
+  //   components                   40.0   36.2   40.8   35.7   +touchTargets (#68)
   //   constants                    18.3    9.0   23.6    3.4   data tables
   //   screens / navigation / hooks  0      0      0      0     #28 phase 6, not started
   //
@@ -188,7 +188,7 @@ module.exports = {
     './src/services/database/': { branches: 76, functions: 69, lines: 63, statements: 59 },
     './src/services/': { branches: 56, functions: 66, lines: 63, statements: 61 },
     './src/contexts/': { branches: 48, functions: 38, lines: 75, statements: 65 },
-    './src/components/': { branches: 19, functions: 15, lines: 17, statements: 13 },
+    './src/components/': { branches: 35, functions: 34, lines: 39, statements: 39 },
     './src/constants/': { branches: 6, functions: 1, lines: 12, statements: 9 },
 
     // Not yet started. Declared at 0 so they are visible in this table rather than

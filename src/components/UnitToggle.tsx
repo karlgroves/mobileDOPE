@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export type UnitType = 'angular' | 'distance' | 'velocity' | 'temperature' | 'pressure';
@@ -79,6 +80,13 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
 
   const currentSize = sizeStyles[size];
 
+  // Expand each option's touch area to the 44pt minimum without growing the
+  // control. The `small` variant is 32 high by design, so the missing 12pt is made
+  // up with hitSlop. See __tests__/components/touchTargets.test.tsx (#68).
+  const MIN_TOUCH_TARGET = 44;
+  const verticalSlop = Math.max(0, (MIN_TOUCH_TARGET - currentSize.height) / 2);
+  const optionHitSlop = { top: verticalSlop, bottom: verticalSlop, left: 0, right: 0 };
+
   return (
     <View
       style={[styles.container, { borderColor: colors.border }, disabled && styles.disabled, style]}
@@ -93,6 +101,7 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
         return (
           <TouchableOpacity
             key={option.value}
+            hitSlop={optionHitSlop}
             style={[
               styles.option,
               {
