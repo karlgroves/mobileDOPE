@@ -1,6 +1,6 @@
 {
-  "comment": "Single source of truth for the duplication threshold — the npm scripts (dupes, lint:cpd, lint:cpd:ci) must not override it. Set above the current ~8% duplication so the gate is green today; ratchet it down in follow-ups as duplication in screens/PDF templates is reduced (see docs/adr/010).",
-  "threshold": 10,
+  "comment": "Single source of truth for the duplication threshold -- the npm scripts (dupes, lint:cpd, lint:cpd:ci) must not override it. Measured total is 6.86%, stable to the digit across repeated runs, so 8 leaves ~1.1pp of headroom: enough that a small refactor does not red the build, tight enough that a new duplicated screen does. Ratchet it down as duplication in screens/PDF templates is reduced (ADR-010). ONLY EVER LOWER THIS. Was 10 until #74. CAVEAT on the headline figure: jscpd parses every .tsx file twice, once as `tsx` and again as `javascript` -- every clone in the `javascript` row is in a .tsx file and not one is in a real .js file. Removing `javascript` from `format` below does not stop it; the double-parse is internal to jscpd's .tsx handling. So the Total row is computed over a corpus that contains the same source twice and is inflated against the true figure. The gate compares jscpd's total against this threshold, so ratcheting on it is self-consistent -- but do not quote 6.86% as the codebase's duplication. Tracked separately.",
+  "threshold": 8,
   "minTokens": 50,
   "minLines": 5,
   "maxLines": 1000,
