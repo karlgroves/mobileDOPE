@@ -19,6 +19,38 @@ Nothing else may suppress a finding. In particular: do not lower a threshold in
 `security-thresholds.json` to make a finding disappear, do not delete a rule from
 `security/config/semgrep.yml`, and do not add a blanket `continue-on-error`.
 
+**An `overrides` entry in `package.json` is not an exception** — it is a fix, and it
+belongs in neither register. It pins a transitive dependency forward to a patched
+version when the parent that depends on it has not yet released one, so the advisory
+stops being reported because it stops being true.
+
+**Reach for one only when the parent's own range cannot admit the patched version.**
+Most stale transitives are stale because the _lockfile_ pins them, not because
+anything forbids the fix: `npm update <package>` moves them and leaves no permanent
+configuration behind. An override added where a refresh would have done is dead
+config that still looks load-bearing. The test is mechanical — delete the entry, run
+`npm install --package-lock-only`, and see whether the version moves back.
+
+| Override    | Pins forward | Parent that lags                                                                                                              |
+| ----------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `smol-toml` | `^1.8.0`     | `markdownlint-cli2`, which pins exactly `1.7.0` — and the advisory range is `<=1.7.0`, so the pin _is_ the vulnerable version |
+
+That is the whole list, and it was four entries longer until each was tested this
+way. `@xmldom/xmldom`, `fast-uri` and both `js-yaml` majors all resolve to patched
+versions with no override at all, because `@expo/plist`, `ajv`,
+`@istanbuljs/load-nyc-config`, `cosmiconfig`, `@expo/xcpretty` and `@eslint/eslintrc`
+already allow them. Only `markdownlint-cli2`'s exact pin genuinely blocks npm.
+
+Drop an entry once the parent's own range admits the patched version — an override
+that is no longer doing anything is the same kind of rot as a stale waiver, and
+nothing warns about it.
+
+None of the overridden packages runs in the shipped app bundle. Several are reachable
+through _production_ dependencies rather than devDependencies — `@xmldom/xmldom` via
+`expo-sharing` → `@expo/plist`, `js-yaml` via `expo` → `@expo/cli` and via
+`react-native` → `babel-jest` — so they appear under `npm ls --omit=dev`. They are
+build-time and CLI code paths in every case; nothing reaches the device.
+
 ## Required fields
 
 Every exception, in either mechanism, must record:
@@ -56,9 +88,9 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 26 advisories, expire 2026-11-24
+### npm audit — 15 advisories, expire 2026-11-24
 
-All 26 are transitive through the React Native / Expo build toolchain and are
+All 15 are transitive through the React Native / Expo build toolchain and are
 DoS-class (quadratic parsing, unbounded recursion) in code paths the shipped app does
 not reach. The compensating control is structural rather than procedural: **this app
 has no network layer**, issues no requests, runs no server, and parses no untrusted
@@ -68,7 +100,7 @@ test suite (`security/tests/import.security.spec.ts`).
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for all 26 is `blocked-on-upstream`: they clear when Expo SDK ships a
+Disposition for all 15 is `blocked-on-upstream`: they clear when Expo SDK ships a
 dependency set that resolves them. `npm run security:audit` fails the moment a new
 advisory appears that is not on that list, which is the property that matters.
 
