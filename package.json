@@ -99,7 +99,7 @@
     "jscpd": "^4.0.8",
     "license-checker-rseidelsohn": "5.0.1",
     "lint-staged": "^16.2.7",
-    "markdownlint-cli2": "0.22.1",
+    "markdownlint-cli2": "0.23.2",
     "npm-run-all2": "9.0.1",
     "prettier": "^3.8.1",
     "react-test-renderer": "19.2.0",
@@ -115,6 +115,7 @@
   "overrides": {
     "eslint-plugin-react-native-a11y": {
       "eslint": "$eslint"
-    }
+    },
+    "smol-toml": "^1.8.0"
   }
 }
