@@ -22,21 +22,34 @@ Nothing else may suppress a finding. In particular: do not lower a threshold in
 **An `overrides` entry in `package.json` is not an exception** — it is a fix, and it
 belongs in neither register. It pins a transitive dependency forward to a patched
 version when the parent that depends on it has not yet released one, so the advisory
-stops being reported because it stops being true. The entries currently carried, all
-of them build-time-only tooling:
+stops being reported because it stops being true.
 
-| Override         | Pins forward | Parent that lags                               |
-| ---------------- | ------------ | ---------------------------------------------- |
-| `@xmldom/xmldom` | `^0.8.15`    | `@expo/config-plugins`, via `expo-sharing`     |
-| `fast-uri`       | `^3.1.8`     | `@commitlint/cli`                              |
-| `smol-toml`      | `^1.8.0`     | `markdownlint-cli2`, which pins `1.7.0`        |
-| `js-yaml@3`      | `^3.15.2`    | `babel-plugin-istanbul`, via `@jest/transform` |
-| `js-yaml@4`      | `^4.3.2`     | `@eslint/eslintrc`, `cosmiconfig`              |
+**Reach for one only when the parent's own range cannot admit the patched version.**
+Most stale transitives are stale because the _lockfile_ pins them, not because
+anything forbids the fix: `npm update <package>` moves them and leaves no permanent
+configuration behind. An override added where a refresh would have done is dead
+config that still looks load-bearing. The test is mechanical — delete the entry, run
+`npm install --package-lock-only`, and see whether the version moves back.
 
-`js-yaml` is split by major because the tree legitimately carries 3.x, 4.x and 5.x;
-a single override would force one consumer onto an incompatible major. Drop an entry
-once the parent's own range admits the patched version — an override that is no longer
-doing anything is the same kind of rot as a stale waiver, and nothing warns about it.
+| Override    | Pins forward | Parent that lags                                                                                                              |
+| ----------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `smol-toml` | `^1.8.0`     | `markdownlint-cli2`, which pins exactly `1.7.0` — and the advisory range is `<=1.7.0`, so the pin _is_ the vulnerable version |
+
+That is the whole list, and it was four entries longer until each was tested this
+way. `@xmldom/xmldom`, `fast-uri` and both `js-yaml` majors all resolve to patched
+versions with no override at all, because `@expo/plist`, `ajv`,
+`@istanbuljs/load-nyc-config`, `cosmiconfig`, `@expo/xcpretty` and `@eslint/eslintrc`
+already allow them. Only `markdownlint-cli2`'s exact pin genuinely blocks npm.
+
+Drop an entry once the parent's own range admits the patched version — an override
+that is no longer doing anything is the same kind of rot as a stale waiver, and
+nothing warns about it.
+
+None of the overridden packages runs in the shipped app bundle. Several are reachable
+through _production_ dependencies rather than devDependencies — `@xmldom/xmldom` via
+`expo-sharing` → `@expo/plist`, `js-yaml` via `expo` → `@expo/cli` and via
+`react-native` → `babel-jest` — so they appear under `npm ls --omit=dev`. They are
+build-time and CLI code paths in every case; nothing reaches the device.
 
 ## Required fields
 
