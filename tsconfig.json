@@ -5,6 +5,8 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   }
 }

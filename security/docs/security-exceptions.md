@@ -104,11 +104,24 @@ Disposition for all 15 is `blocked-on-upstream`: they clear when Expo SDK ships 
 dependency set that resolves them. `npm run security:audit` fails the moment a new
 advisory appears that is not on that list, which is the property that matters.
 
-### Semgrep — 1 suppression
+### Semgrep — 0 suppressions
 
-| Rule                                  | Location                                   | Reason                                                                                                                                                                                                                                       | Owner      | Expires                                                    |
-| ------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------- |
-| `mobiledope-sql-string-interpolation` | `src/services/database/DatabaseService.ts` | SQLite does not accept bound parameters in a `PRAGMA` statement. The interpolated value is `DATABASE_VERSION`, a module-level numeric constant that never comes from input. A permanent limitation of the statement type, not deferred work. | karlgroves | Permanent — review if the PRAGMA ever takes a non-constant |
+There are no `nosemgrep` comments in `src/`. `npm run security:semgrep` passes 77
+rules over 280 files on its own merits.
+
+The register carried one entry until #59. `mobiledope-sql-string-interpolation` was
+suppressed on `DatabaseService.setDatabaseVersion()`, which interpolated a constant
+into `PRAGMA user_version` — a real limitation of the statement type, since SQLite
+does not bind parameters in a PRAGMA. Enabling `noUnusedLocals` showed the method
+had no callers at all: `MigrationRunner` had taken over `user_version` and writes it
+on every migrate and rollback. The method was not merely unused but stale, pinned to
+`DATABASE_VERSION = 1` while migrations had reached 5 — calling it would have stamped
+the database backwards and re-run every migration. Deleting it removed the last
+suppression as a side effect.
+
+`MigrationRunner` performs the same interpolation and is not suppressed either: the
+rule's own `paths.exclude` covers `/src/services/database/migrations/`, so the
+exclusion is in the rule where it can be read, not in a comment at the call site.
 
 There was briefly a second entry here, suppressing a real full-precision-GPS
 finding in `EnvironmentInput.tsx` on the grounds that issue #44 fixes it. That was
