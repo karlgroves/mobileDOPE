@@ -2,6 +2,7 @@ import {
   ammoKey,
   describePlan,
   dopeLogKey,
+  environmentKey,
   keyOn,
   planMerge,
   rifleKey,
@@ -51,6 +52,20 @@ describe('keyOn', () => {
     // ("ab","c") must not collide with ("a","bc").
     const key = keyOn('a', 'b');
     expect(key({ a: 'ab', b: 'c' })).not.toBe(key({ a: 'a', b: 'bc' }));
+  });
+
+  it('cannot be confused by a value that looks like the encoding itself', () => {
+    // Length-prefixing has to survive values containing digits and colons, which
+    // a naive separator-free join would not.
+    const key = keyOn('a', 'b');
+    expect(key({ a: '1:x', b: 'y' })).not.toBe(key({ a: '1', b: ':xy' }));
+  });
+
+  it('has no key for a record that is not an object at all', () => {
+    const key = keyOn('name');
+    expect(key(null)).toBeUndefined();
+    expect(key(undefined)).toBeUndefined();
+    expect(key('Tikka')).toBeUndefined();
   });
 
   it('treats a non-finite number as missing rather than as a value', () => {
@@ -161,6 +176,47 @@ describe('ammoKey', () => {
 
   it('keeps different bullet weights apart', () => {
     expect(planMerge([ammo()], [ammo({ bulletWeight: 147 })], ammoKey).created).toBe(1);
+  });
+});
+
+describe('environmentKey', () => {
+  const snapshot = (over: Rec = {}): Rec => ({
+    timestamp: '2026-09-16T10:00:00Z',
+    temperature: 62,
+    humidity: 40,
+    pressure: 29.92,
+    altitude: 1200,
+    windSpeed: 8,
+    windDirection: 270,
+    ...over,
+  });
+
+  it('matches the same reading', () => {
+    expect(planMerge([snapshot()], [snapshot()], environmentKey).skipped).toBe(1);
+  });
+
+  it('matches whether or not latitude was exported', () => {
+    // The export flow lets a user omit latitude for privacy. Including it in the
+    // key would make a privacy-preserving backup re-import as a duplicate.
+    const plan = planMerge([snapshot({ latitude: 38.9 })], [snapshot()], environmentKey);
+
+    expect(plan.skipped).toBe(1);
+  });
+
+  it('keeps two readings a second apart from the same range session apart', () => {
+    const plan = planMerge(
+      [snapshot()],
+      [snapshot({ timestamp: '2026-09-16T10:00:01Z' })],
+      environmentKey
+    );
+
+    expect(plan.created).toBe(1);
+  });
+
+  it('imports a snapshot missing a reading rather than guessing a match', () => {
+    const plan = planMerge([snapshot()], [snapshot({ pressure: undefined })], environmentKey);
+
+    expect(plan.created).toBe(1);
   });
 });
 
