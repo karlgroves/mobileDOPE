@@ -23,7 +23,14 @@
  * Diameters are bullet (groove) diameter in inches, which is what the spin drift
  * term needs -- not bore diameter and not the number in the cartridge name. The
  * two differ often enough that the name is not a safe source: `.30-30` fires a
- * 0.308" bullet, `.22 LR` a 0.223", and `7.92x57mm` a 0.323".
+ * 0.308" bullet and `7.92x57mm` a 0.323".
+ *
+ * Where a caliber also appears in `CALIBER_DIAMETER_MAP` -- the legacy lookup
+ * `spinDrift.ts` still uses for imported profiles -- the two must agree, and a
+ * test enforces it. The .22 rimfire family is 0.224 here for that reason: 0.223
+ * is equally defensible in the literature, but a cartridge resolving one way
+ * from the picker and another from an import is worse than either value, and
+ * the difference is well below what the spin drift term resolves anyway.
  */
 
 /** One selectable caliber. */
@@ -41,15 +48,15 @@ export const CALIBERS: Caliber[] = [
   { value: '.17 HMR', label: '.17 HMR (Hornady Magnum Rimfire)', diameter: 0.172 },
   { value: '.17 WSM', label: '.17 WSM (Winchester Super Magnum)', diameter: 0.172 },
   { value: '.21 Sharp', label: '.21 Sharp', diameter: 0.2105 },
-  { value: '.22 CB', label: '.22 CB', diameter: 0.223 },
+  { value: '.22 CB', label: '.22 CB', diameter: 0.224 },
   { value: '.22 Creedmoor', label: '.22 Creedmoor', diameter: 0.224 },
-  { value: '.22 Long', label: '.22 Long', diameter: 0.223 },
+  { value: '.22 Long', label: '.22 Long', diameter: 0.224 },
   { value: '.22 WMR', label: '.22 Mag (.22 WMR)', diameter: 0.224 },
-  { value: '.22 Short', label: '.22 Short', diameter: 0.223 },
-  { value: '.22 Win Auto', label: '.22 Win Auto', diameter: 0.223 },
+  { value: '.22 Short', label: '.22 Short', diameter: 0.224 },
+  { value: '.22 Win Auto', label: '.22 Win Auto', diameter: 0.224 },
   { value: '.22 WRF', label: '.22 Win Rimfire (.22 WRF)', diameter: 0.224 },
   { value: '.223 Remington', label: '.223 Remington', diameter: 0.224 },
-  { value: '.22LR', label: '.22LR', diameter: 0.223 },
+  { value: '.22LR', label: '.22LR', diameter: 0.224 },
   { value: '.243 Win', label: '.243 Win', diameter: 0.243 },
   { value: '.25 Stevens Short', label: '.25 Stevens Short', diameter: 0.251 },
   { value: '.270 Win', label: '.270 Win', diameter: 0.277 },

@@ -60,6 +60,69 @@ describe('no screen keeps its own caliber list', () => {
   });
 });
 
+describe('the two sources of diameter agree', () => {
+  /**
+   * The test that can actually catch a wrong number.
+   *
+   * Asserting `getBulletDiameter(c.value) === c.diameter` for every entry proves
+   * the solver reads the table -- worth proving -- but it compares the table
+   * against itself, so it would pass just as happily with `7.92x57mm` typed as
+   * 0.223. The plausible-range check would not catch that either: 0.223 is a
+   * perfectly plausible rifle bullet.
+   *
+   * `CALIBER_DIAMETER_MAP` in spinDrift.ts is an independent source for the same
+   * quantity, written at a different time. Where the two name the same
+   * cartridge they must agree, and a typo in either one breaks that. It is the
+   * only cross-check available without leaving the repository.
+   */
+
+  const spinDriftSource = fs.readFileSync(
+    path.resolve(__dirname, '../../src/utils/spinDrift.ts'),
+    'utf8'
+  );
+
+  /** `CALIBER_DIAMETER_MAP`, read from source rather than exported for this. */
+  const legacyMap = (): Record<string, number> => {
+    const start = spinDriftSource.indexOf('CALIBER_DIAMETER_MAP');
+    const block = spinDriftSource.slice(start, spinDriftSource.indexOf('\n};', start));
+    return Object.fromEntries(
+      [...block.matchAll(/'([^']+)':\s*([\d.]+)/g)].map((m) => [m[1], Number(m[2])])
+    );
+  };
+
+  /** Names compared ignoring spacing and case: `.22LR` and `.22 LR` are one cartridge. */
+  const normalise = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  it('finds both sources, so a broken parse cannot pass vacuously', () => {
+    expect(Object.keys(legacyMap()).length).toBeGreaterThan(40);
+    expect(CALIBERS.length).toBeGreaterThan(30);
+  });
+
+  it('assigns the same diameter to every cartridge both of them name', () => {
+    const legacy = new Map(
+      Object.entries(legacyMap()).map(([name, diameter]) => [normalise(name), { name, diameter }])
+    );
+
+    const conflicts = CALIBERS.flatMap((caliber) => {
+      const match = legacy.get(normalise(caliber.value));
+      if (match === undefined) return [];
+      if (Math.abs(match.diameter - caliber.diameter) < 1e-9) return [];
+      return [`${caliber.value}=${caliber.diameter} vs ${match.name}=${match.diameter}`];
+    });
+
+    expect(conflicts).toEqual([]);
+  });
+
+  it('overlaps enough for the comparison to mean something', () => {
+    // If the two lists stopped sharing any names, the test above would pass by
+    // comparing nothing at all.
+    const legacy = new Set(Object.keys(legacyMap()).map(normalise));
+    const shared = CALIBERS.filter((c) => legacy.has(normalise(c.value)));
+
+    expect(shared.length).toBeGreaterThanOrEqual(15);
+  });
+});
+
 describe('caliberDiameter', () => {
   it('resolves a caliber the app offers', () => {
     expect(caliberDiameter('.308 Winchester')).toBe(0.308);
@@ -102,7 +165,7 @@ describe('the solver sees the database, not the estimator', () => {
     expect(getBulletDiameter('5.45x39mm')).toBeCloseTo(0.22, 3);
     expect(getBulletDiameter('7.92x57mm')).toBeCloseTo(0.323, 3);
     expect(getBulletDiameter('.30-30 Win')).toBeCloseTo(0.308, 3);
-    expect(getBulletDiameter('.22LR')).toBeCloseTo(0.223, 3);
+    expect(getBulletDiameter('.22LR')).toBeCloseTo(0.224, 3);
   });
 
   it('still answers for calibers outside the picker, so imports keep working', () => {
