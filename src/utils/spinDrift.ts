@@ -8,6 +8,8 @@
  * Uses the Bryan Litz method with Miller stability formula.
  */
 
+import { caliberDiameter } from '../constants/calibers';
+
 /**
  * Bullet diameter lookup table for common calibers (in inches)
  * Maps caliber string patterns to bullet diameters
@@ -99,6 +101,14 @@ export function parseTwistRate(twistRate: string): number | null {
  * @returns Bullet diameter in inches, or null if not found
  */
 export function getBulletDiameter(caliber: string): number | null {
+  // The app's own caliber database first. Everything the picker can produce is
+  // in there with a diameter that was looked up rather than derived from the
+  // name, so a selectable caliber never reaches the estimation below. That
+  // matters: the estimator read 0.45" out of `5.45x39mm` and 0.92" out of
+  // `7.92x57mm`, against true diameters of 0.220" and 0.323". (Issue #67.)
+  const known = caliberDiameter(caliber);
+  if (known !== undefined) return known;
+
   // Try exact match first
   if (CALIBER_DIAMETER_MAP[caliber]) {
     return CALIBER_DIAMETER_MAP[caliber];
