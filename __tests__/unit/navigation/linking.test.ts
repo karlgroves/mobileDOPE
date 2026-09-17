@@ -54,14 +54,43 @@ const linkedRoutes = (config: unknown, found = new Set<string>()): Set<string> =
   return found;
 };
 
-/** Every path string in the linking config. */
+/**
+ * Every path string in the linking config.
+ *
+ * A route is either a bare path string or a `{ path, parse }` object -- the
+ * parameterised ones carry `parse` so ids arrive as numbers rather than as the
+ * strings React Navigation extracts from the URL.
+ */
 const allPaths = (config: unknown, found: string[] = []): string[] => {
   const screens = (config as { screens?: Record<string, unknown> })?.screens;
   if (!screens) return found;
 
   for (const value of Object.values(screens)) {
-    if (typeof value === 'string') found.push(value);
-    else if (typeof value === 'object' && value !== null) allPaths(value, found);
+    if (typeof value === 'string') {
+      found.push(value);
+    } else if (typeof value === 'object' && value !== null) {
+      const path = (value as { path?: string }).path;
+      if (typeof path === 'string') found.push(path);
+      allPaths(value, found);
+    }
+  }
+  return found;
+};
+
+/** Every route whose config carries a `parse` map, with the params it parses. */
+const parsedParams = (
+  config: unknown,
+  found: Record<string, string[]> = {}
+): Record<string, string[]> => {
+  const screens = (config as { screens?: Record<string, unknown> })?.screens;
+  if (!screens) return found;
+
+  for (const [name, value] of Object.entries(screens)) {
+    if (typeof value === 'object' && value !== null) {
+      const parse = (value as { parse?: Record<string, unknown> }).parse;
+      if (parse) found[name] = Object.keys(parse).sort();
+      parsedParams(value, found);
+    }
   }
   return found;
 };
@@ -162,6 +191,24 @@ describe('the paths themselves', () => {
     expect(paths).toContain('logs/:logId');
     expect(paths).toContain('curve/:rifleId/:ammoId');
     expect(paths).toContain('calculator/wind/:rifleId/:ammoId/:distance');
+  });
+
+  it('parses every parameter it declares, without exception', () => {
+    // The point of parseRouteId. Without a `parse`, React Navigation hands the
+    // screen the raw string -- `{ logId: "7" }` into a screen that does
+    // `find((d) => d.id === logId)`, which is undefined for a log that exists.
+    // A route that declares a :param and forgets to parse it is that bug.
+    const parsed = parsedParams(linking.config);
+
+    const unparsed = paths
+      .filter((path) => path.includes(':'))
+      .filter((path) => {
+        const params = [...path.matchAll(/:([A-Za-z][A-Za-z0-9]*)/g)].map((m) => m[1]).sort();
+        return !Object.values(parsed).some((declared) => declared.join(',') === params.join(','));
+      });
+
+    expect(unparsed).toEqual([]);
+    expect(Object.keys(parsed).length).toBeGreaterThan(5);
   });
 
   it('keeps the scheme and prefixes in step', () => {

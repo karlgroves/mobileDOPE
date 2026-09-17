@@ -82,6 +82,31 @@ export const parseRouteId = (raw: unknown): number | undefined => {
  * after the screens are rearranged. They are not derived from screen names for
  * that reason: a rename should not break every link anyone has saved.
  */
+
+/**
+ * A parameterised path, with every id parsed on the way in.
+ *
+ * This is the whole reason `parseRouteId` exists, and it belongs here rather
+ * than in the screens. React Navigation hands path segments over as strings, so
+ * without a `parse` a link to `logs/7` reaches `DOPELogDetail` as
+ * `{ logId: "7" }` -- and `dopeLogs.find((d) => d.id === "7")` is `undefined`
+ * for a log that plainly exists. The screen shows an empty state and nothing
+ * anywhere reports an error.
+ *
+ * Parsing at the boundary fixes it once for every screen, and leaves in-app
+ * navigation -- which already passes numbers -- completely untouched. Doing it
+ * screen by screen would mean nine edits and one forgotten screen away from the
+ * same bug.
+ *
+ * @param path - The path pattern, with `:name` segments.
+ */
+const withIds = (path: string) => ({
+  path,
+  parse: Object.fromEntries(
+    [...path.matchAll(/:([A-Za-z][A-Za-z0-9]*)/g)].map((match) => [match[1], parseRouteId])
+  ),
+});
+
 export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
   prefixes: PREFIXES,
   config: {
@@ -98,7 +123,7 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
           Calculator: {
             screens: {
               BallisticCalculator: 'calculator',
-              WindTable: 'calculator/wind/:rifleId/:ammoId/:distance',
+              WindTable: withIds('calculator/wind/:rifleId/:ammoId/:distance'),
               MovingTargetCalculator: 'calculator/moving-target',
             },
           },
@@ -106,13 +131,13 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
             screens: {
               RifleProfileList: 'rifles',
               RifleProfileForm: 'rifles/new',
-              RifleProfileDetail: 'rifles/:rifleId',
-              AmmoProfileList: 'rifles/:rifleId/loads',
-              AmmoProfileDetail: 'loads/:ammoId',
+              RifleProfileDetail: withIds('rifles/:rifleId'),
+              AmmoProfileList: withIds('rifles/:rifleId/loads'),
+              AmmoProfileDetail: withIds('loads/:ammoId'),
               AmmoProfileForm: 'loads/new',
-              DOPECardGenerator: 'rifles/:rifleId/card/:ammoId',
-              ChronographInput: 'loads/:ammoId/chronograph',
-              ShotStringHistory: 'loads/:ammoId/strings',
+              DOPECardGenerator: withIds('rifles/:rifleId/card/:ammoId'),
+              ChronographInput: withIds('loads/:ammoId/chronograph'),
+              ShotStringHistory: withIds('loads/:ammoId/strings'),
             },
           },
           Ammo: {
@@ -124,9 +149,9 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
           History: {
             screens: {
               DOPELogList: 'logs',
-              DOPELogDetail: 'logs/:logId',
-              DOPELogEdit: 'logs/:logId/edit',
-              DOPECurve: 'curve/:rifleId/:ammoId',
+              DOPELogDetail: withIds('logs/:logId'),
+              DOPELogEdit: withIds('logs/:logId/edit'),
+              DOPECurve: withIds('curve/:rifleId/:ammoId'),
             },
           },
         },
