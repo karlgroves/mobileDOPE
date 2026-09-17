@@ -115,11 +115,17 @@ on every commit — is where defects are supposed to be caught instead.
 3. Run the full local gate: `npm run lint`, `npm run type-check`, `npm test`,
    `npm run test:coverage`. Per ADR-011 these are the gate — do not wait on GitHub
    checks that may not run.
-4. `APP_ENV=production eas build --profile production` for each platform. EAS
+4. Run `npm run test:perf`, with nothing else running on the machine. It is
+   deliberately **not** part of `npm test`: it asserts on wall-clock time, which is
+   not a property of the code alone, and it flaked about one run in ten when
+   interleaved with the other 70 suites. It runs `--runInBand` so the measurement
+   means something. A release is the moment that wait is worth it — it is the only
+   check that would catch the solver getting an order of magnitude slower.
+5. `APP_ENV=production eas build --profile production` for each platform. EAS
    increments the build number.
-5. Distribute to TestFlight / Play internal testing. Gather feedback, fix, repeat
+6. Distribute to TestFlight / Play internal testing. Gather feedback, fix, repeat
    from step 3.
-6. `eas submit` to each store once `submit.production` is filled in.
-7. On approval: merge `release/x.y.z` to `main` **and** back to `develop`, tag the
+7. `eas submit` to each store once `submit.production` is filled in.
+8. On approval: merge `release/x.y.z` to `main` **and** back to `develop`, tag the
    release on `main`, and update `CHANGELOG.md`.
-8. Hotfixes branch from `main`, and merge back to both `main` and `develop`.
+9. Hotfixes branch from `main`, and merge back to both `main` and `develop`.

@@ -20,6 +20,31 @@ import type { AtmosphericConditions } from '../../src/utils/atmospheric';
  * assertions earn their place only by being loose enough to mean something when
  * they trip.
  *
+ * ## Why this file is not in `npm test`
+ *
+ * That warning turned out to be about this file. It lived in the default suite
+ * and flaked: roughly one failure in ten full-suite runs, while ten instrumented
+ * runs put the scaling ratio between 2.235 and 2.657 against a threshold of 4.5.
+ * It never came close on any run that was looked at, and failed anyway -- a rare
+ * scheduling stall on one half of one measurement, not a threshold set too
+ * tight.
+ *
+ * Loosening the number would not have been principled. A threshold high enough
+ * to swallow that tail is high enough to miss the quadratic regression this test
+ * exists for, which shows up at about 7.5. The problem is not the number; it is
+ * that elapsed time is a property of the code AND of whatever else the machine is
+ * doing, and inside a 71-suite parallel run that second term is noise the test
+ * cannot see.
+ *
+ * So it runs alone and in band:
+ *
+ *     npm run test:perf
+ *
+ * `jest.performance.config.js` holds the config, `docs/RELEASE.md` step 4 puts it
+ * in the release sequence, and `__tests__/unit/performanceSuiteWired.test.ts`
+ * fails the normal suite if any of those goes missing. A suite nobody runs is a
+ * suite that rots; this one is now run on purpose.
+ *
  * Reported as a MEDIAN of several runs. A mean is dragged around by one
  * unlucky sample and a single run is almost pure noise, so both would make the
  * threshold a lottery rather than a statement about the code.
