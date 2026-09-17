@@ -43,9 +43,19 @@ These are blocked on credentials only. Nothing in the repo needs to change first
 - **iOS signing**: `eas credentials` generates and stores the distribution
   certificate and provisioning profile. Let EAS manage them rather than checking
   anything into this repo.
-- **Android signing**: `eas credentials` generates the upload keystore. The keystore
-  is not recoverable — if it is lost, the app can only be republished under a new
-  package name. EAS holds it; do not generate one locally "as a backup" and commit it.
+- **Android signing**: `eas credentials` generates the upload keystore. EAS holds it;
+  do not generate one locally "as a backup" and commit it.
+
+  Two different keys get conflated here, and the difference decides what losing one
+  costs. Under **Play App Signing** — the default for any app registered now —
+  Google holds the _app signing_ key and you hold an _upload_ key. Losing the upload
+  key is recoverable: generate a new one and ask Google to register it. Losing a
+  legacy _self-signed app signing_ key, from before Play App Signing, is not
+  recoverable, and that app can only be republished under a new package name. This
+  app will be on Play App Signing, so the recoverable case is the one that applies
+  — but back the upload keystore up anyway, because the reset goes through
+  support and takes days.
+
 - **Submission**: `eas.json` has `submit.production` as an empty object. It needs
   `ascAppId` (iOS) and a Google service account key path (Android) before
   `eas submit` will work. Both come from the accounts above.
@@ -58,8 +68,10 @@ These are blocked on credentials only. Nothing in the repo needs to change first
 - TestFlight and Play internal/closed track beta rounds, and acting on the feedback.
 - Store review, and responding to it.
 
-Note: **a full Xcode install is required** for `expo prebuild` and local iOS builds.
-Command Line Tools alone are not enough. Nothing in this repository has been run on a
+Note on tooling: `expo prebuild` generates the native `ios/` project and needs little
+more than Node, though CocoaPods wants the Command Line Tools. **Building** — and
+therefore anything on a simulator or a device — needs a full Xcode install; Command
+Line Tools alone are not enough. Nothing in this repository has been run on a
 simulator or a device.
 
 ## Not applicable

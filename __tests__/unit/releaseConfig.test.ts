@@ -91,6 +91,18 @@ describe('the encryption declaration still matches the code', () => {
     // The declaration above, PRIVACY.md and offlineFirst.test.ts all rest on the
     // same fact. #61 asks for Sentry or Crashlytics; docs/RELEASE.md records why
     // that needs a decision first rather than an npm install.
+    //
+    // This deliberately overlaps offlineFirst.test.ts, which sweeps the same tree
+    // for HTTP clients. The questions differ -- "has a reporting SDK appeared"
+    // versus "has a network call appeared" -- and neither should have to wait on
+    // the other's branch to land. Worth folding the two walks together once both
+    // have; until then the duplication is the cheaper of the two problems.
+    //
+    // This deliberately overlaps offlineFirst.test.ts, which sweeps the same tree
+    // for HTTP clients. The questions differ -- "has a reporting SDK appeared"
+    // versus "has a network call appeared" -- and neither should have to wait on
+    // the other's branch. Worth folding the two walks together once both have
+    // landed; until then the duplication is the cheaper of the two problems.
     const srcDir = path.resolve(__dirname, '../../src');
     const walk = (dir: string): string[] =>
       fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
