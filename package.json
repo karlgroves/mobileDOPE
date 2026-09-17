@@ -16,6 +16,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "rm -rf coverage && jest --coverage",
+    "test:perf": "jest --config jest.performance.config.js --runInBand",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
     "markdownlint:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "dupes": "jscpd",
