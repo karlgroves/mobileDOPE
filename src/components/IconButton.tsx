@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export interface IconButtonProps {
@@ -34,6 +35,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
 }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+
+  // Apple HIG minimum, and the figure this project set for itself (#68).
+  const MIN_TOUCH_TARGET = 44;
 
   const sizeMap = {
     small: {
@@ -91,9 +95,17 @@ export const IconButton: React.FC<IconButtonProps> = ({
     color: variantStyle.color,
   };
 
+  // Expand the touch area to the 44x44pt minimum without growing the button.
+  // The `small` variant is 36x36 by design -- it has to fit in list rows and chart
+  // toolbars -- so the missing 8pt is made up with hitSlop rather than by making
+  // the icon bigger. See __tests__/components/touchTargets.test.tsx (#68).
+  const slop = Math.max(0, (MIN_TOUCH_TARGET - sizeStyle.height) / 2);
+  const hitSlop = { top: slop, bottom: slop, left: slop, right: slop };
+
   return (
     <TouchableOpacity
       style={buttonStyles}
+      hitSlop={hitSlop}
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
