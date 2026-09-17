@@ -4,8 +4,12 @@ import ammoProfileRepository from '../../../src/services/database/AmmoProfileRep
 import dopeLogRepository from '../../../src/services/database/DOPELogRepository';
 import environmentRepository from '../../../src/services/database/EnvironmentRepository';
 import rifleProfileRepository from '../../../src/services/database/RifleProfileRepository';
-import { exportFullBackup } from '../../../src/services/ExportService';
-import { importFullBackup } from '../../../src/services/ImportService';
+import {
+  exportAllRifleProfilesJSON,
+  exportFullBackup,
+  exportRifleProfileJSON,
+} from '../../../src/services/ExportService';
+import { importFullBackup, importRifleProfiles } from '../../../src/services/ImportService';
 import { validAmmo, validDopeLog, validEnvironment, validRifle } from '../../helpers/fixtures';
 import { readWritten, resetFileSystem } from '../../helpers/mockFileSystem';
 import { installTestDatabase, uninstallTestDatabase } from '../../helpers/testDatabase';
@@ -593,6 +597,67 @@ describe('Export/Import round trip', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/cancelled/i);
+    });
+  });
+
+  describe('importRifleProfiles', () => {
+    it('imports the file the batch exporter actually writes', async () => {
+      // The exporter writes the profiles as `data` itself; the importer only
+      // ever read `data.rifles`, so every batch export imported zero records
+      // and said it succeeded.
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }));
+      await rifleProfileRepository.create(validRifle({ name: 'Bergara B14' }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(2);
+      expect((await rifleProfileRepository.getAll()).map((r) => r.name).sort()).toEqual([
+        'Bergara B14',
+        'Tikka T3x',
+      ]);
+    });
+
+    it('imports the file the single-profile exporter actually writes', async () => {
+      const [rifle] = [await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }))];
+      const exported = await exportRifleProfileJSON(rifle);
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(1);
+      expect((await rifleProfileRepository.getAll())[0].name).toBe('Tikka T3x');
+    });
+
+    it('does not duplicate a profile that has been shared twice', async () => {
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(0);
+      expect(result.skipped?.rifles).toBe(1);
+      expect(await rifleProfileRepository.getAll()).toHaveLength(1);
+    });
+
+    it('lets the file win under replace-existing', async () => {
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x', zeroDistance: 200 }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await installTestDatabase();
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x', zeroDistance: 100 }));
+
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles('replace-existing');
+
+      const rifles = await rifleProfileRepository.getAll();
+      expect(result.replaced?.rifles).toBe(1);
+      expect(rifles).toHaveLength(1);
+      expect(rifles[0].zeroDistance).toBe(200);
     });
   });
 });

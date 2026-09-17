@@ -262,6 +262,19 @@ function validateBackupData(data: unknown): data is BackupData {
 }
 
 /**
+ * The `id` a record carries, when it has one.
+ *
+ * Reading it is safe: it is used only as a lookup key -- to point a child at the
+ * row its parent actually became, and to address a row a `replace` should
+ * overwrite -- and is never assigned to a new row. `pickAllowedFields` keeps it
+ * out of every insert.
+ */
+const originalId = (record: unknown): number | undefined => {
+  const id = (record as { id?: unknown })?.id;
+  return typeof id === 'number' ? id : undefined;
+};
+
+/**
  * Import full backup (all data).
  *
  * `strategy` decides what happens to records the device already has (#66).
@@ -334,17 +347,12 @@ export async function importFullBackup(
      * `id` is deliberately stripped from every record before insert (mass-assignment
      * hardening), so parents receive fresh AUTOINCREMENT ids. DOPE logs reference their
      * parents by id, so those references have to be translated or every insert violates a
-     * foreign key -- which is exactly what issue #39 was. Reading `record.id` here is safe:
-     * it is used only as a lookup key and never assigned to a new row.
+     * foreign key -- which is exactly what issue #39 was. See `originalId` for why reading
+     * the incoming id is safe.
      */
     const rifleIdMap = new Map<number, number>();
     const ammoIdMap = new Map<number, number>();
     const environmentIdMap = new Map<number, number>();
-
-    const originalId = (record: unknown): number | undefined => {
-      const id = (record as { id?: unknown })?.id;
-      return typeof id === 'number' ? id : undefined;
-    };
 
     // Import rifles (only allowed fields, no ID).
     //
@@ -605,7 +613,9 @@ export async function importFullBackup(
 /**
  * Import rifle profiles only
  */
-export async function importRifleProfiles(): Promise<ImportResult> {
+export async function importRifleProfiles(
+  strategy: MergeStrategy = 'skip-existing'
+): Promise<ImportResult> {
   try {
     const pickResult = await pickImportFile();
 
@@ -627,23 +637,57 @@ export async function importRifleProfiles(): Promise<ImportResult> {
 
     const rifleStore = useRifleStore.getState();
     let riflesImported = 0;
+    let riflesReplaced = 0;
+    let riflesSkipped = 0;
 
-    // Handle single or batch import
-    const rifles = data.data.rifles ?? [];
+    // Handle single or batch import.
+    //
+    // The three shapes are all real files. `exportRifleProfileJSON` writes one
+    // profile as `data`, `exportAllRifleProfilesJSON` writes an array as `data`,
+    // and a full backup nests them under `data.rifles`. This only ever read the
+    // third, so every file the profile exporters actually produce imported zero
+    // records and reported success.
+    const payload: unknown = data.data;
+    const rifles = Array.isArray(payload)
+      ? payload
+      : ((payload as { rifles?: unknown[] })?.rifles ??
+        (payload && typeof payload === 'object' ? [payload] : []));
 
-    for (const rifleData of rifles) {
+    // Planned like the full backup (#66): sharing a profile twice should not
+    // leave two of it. No id translation is needed here -- a profile export
+    // carries no children to re-point.
+    await rifleStore.loadRifles();
+    const plan = planMerge(useRifleStore.getState().rifles, rifles, rifleKey, strategy);
+
+    for (const { record: rifleData, action, existing } of plan.actions) {
+      if (action === 'skip') {
+        riflesSkipped++;
+        continue;
+      }
+
       try {
         const sanitizedRifle = pickAllowedFields(rifleData, RIFLE_ALLOWED_FIELDS);
+        const existingId = originalId(existing);
+
+        if (action === 'replace' && existingId !== undefined) {
+          await rifleStore.updateRifle(existingId, sanitizedRifle);
+          riflesReplaced++;
+          continue;
+        }
+
         await rifleStore.createRifle(sanitizedRifle);
         riflesImported++;
       } catch (error) {
         console.error('Failed to import rifle:', error);
+        riflesSkipped++;
       }
     }
 
     return {
       success: true,
       imported: { rifles: riflesImported },
+      replaced: { rifles: riflesReplaced },
+      skipped: { rifles: riflesSkipped },
     };
   } catch (error) {
     console.error('Error importing rifle profiles:', error);
