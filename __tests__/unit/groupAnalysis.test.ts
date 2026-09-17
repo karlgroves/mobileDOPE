@@ -55,9 +55,14 @@ describe('calculateExtremeSpread', () => {
     expect(calculateExtremeSpread([poi(0, 0), poi(3, 4), poi(1, 1)])).toBeCloseTo(5, 6);
   });
 
-  it('is zero for a single shot and for none', () => {
+  it('is zero for a single shot, which genuinely has no spread', () => {
     expect(calculateExtremeSpread([poi(5, 5)])).toBe(0);
-    expect(calculateExtremeSpread([])).toBe(0);
+  });
+
+  it('is NaN for no shots, because zero would read as a perfect group', () => {
+    // The distinction matters at the display layer: a target with no marks
+    // rendering "0.00 inches" claims a one-hole group.
+    expect(Number.isNaN(calculateExtremeSpread([]))).toBe(true);
   });
 
   it('does not depend on the order the shots were marked', () => {
@@ -152,14 +157,33 @@ describe('analyseGroup', () => {
     expect(stats.meanRadius).toBeLessThanOrEqual(stats.extremeSpread);
   });
 
-  it('handles an empty group without throwing or inventing numbers', () => {
+  it('reports NaN for every measure of an empty group, not zero', () => {
+    // Zero is a real and flattering answer. Every dispersion measure has to
+    // agree that there is no data, or a UI bound to meanRadius shows 0.00" for
+    // an unmarked target while the centre shows NaN.
     const stats = analyseGroup([]);
 
     expect(stats.shotCount).toBe(0);
+    for (const value of [
+      stats.extremeSpread,
+      stats.horizontalSpread,
+      stats.verticalSpread,
+      stats.meanRadius,
+      stats.circularErrorProbable,
+      stats.centre.x,
+      stats.centre.y,
+    ]) {
+      expect(Number.isNaN(value)).toBe(true);
+    }
+  });
+
+  it('still reports zeroes for a single shot, which is a real measurement', () => {
+    const stats = analyseGroup([poi(3, 7)]);
+
+    expect(stats.shotCount).toBe(1);
     expect(stats.extremeSpread).toBe(0);
-    expect(stats.horizontalSpread).toBe(0);
-    expect(stats.verticalSpread).toBe(0);
-    expect(Number.isNaN(stats.centre.x)).toBe(true);
+    expect(stats.meanRadius).toBe(0);
+    expect(stats.centre).toEqual({ x: 3, y: 7 });
   });
 });
 

@@ -21,7 +21,14 @@
 
 import type { POIMarker } from '../models/TargetImage';
 
-/** Everything the group statistics produce, in the markers' own unit. */
+/**
+ * Everything the group statistics produce, in the markers' own unit.
+ *
+ * Every dispersion measure is `NaN` for an empty group, and `shotCount` is 0.
+ * Callers must check one or the other before displaying — `NaN` renders as
+ * "NaN" rather than silently reading as a perfect group, which is the intended
+ * failure mode.
+ */
 export interface GroupStatistics {
   /** Largest centre-to-centre distance between any two shots. */
   extremeSpread: number;
@@ -66,7 +73,12 @@ export const calculateGroupCentre = (markers: POIMarker[]): { x: number; y: numb
  * diameter; doing that here would bake in a calibre this module does not know.
  */
 export const calculateExtremeSpread = (markers: POIMarker[]): number => {
-  if (markers.length < 2) return 0;
+  // No marks is no group: NaN, not zero. Zero is a real and flattering answer --
+  // a perfect one-hole group -- and an empty target must not read as one.
+  if (markers.length === 0) return NaN;
+  // A single shot genuinely has zero spread; there is nothing for it to be far
+  // from. That is a measurement, not an absence of one.
+  if (markers.length === 1) return 0;
   let widest = 0;
   for (let i = 0; i < markers.length; i++) {
     for (let j = i + 1; j < markers.length; j++) {
@@ -86,7 +98,7 @@ export const calculateExtremeSpread = (markers: POIMarker[]): number => {
  * is evenly scattered.
  */
 export const calculateMeanRadius = (markers: POIMarker[]): number => {
-  if (markers.length === 0) return 0;
+  if (markers.length === 0) return NaN;
   const centre = calculateGroupCentre(markers);
   return markers.reduce((a, m) => a + distance(m, centre), 0) / markers.length;
 };
@@ -105,7 +117,7 @@ export const calculateMeanRadius = (markers: POIMarker[]): number => {
  * which is the usual median convention.
  */
 export const calculateCircularErrorProbable = (markers: POIMarker[]): number => {
-  if (markers.length === 0) return 0;
+  if (markers.length === 0) return NaN;
   const centre = calculateGroupCentre(markers);
   const radii = markers.map((m) => distance(m, centre)).sort((a, b) => a - b);
   const mid = Math.floor(radii.length / 2);
@@ -120,8 +132,8 @@ export const analyseGroup = (markers: POIMarker[]): GroupStatistics => {
   return {
     extremeSpread: calculateExtremeSpread(markers),
     centre: calculateGroupCentre(markers),
-    horizontalSpread: markers.length === 0 ? 0 : Math.max(...xs) - Math.min(...xs),
-    verticalSpread: markers.length === 0 ? 0 : Math.max(...ys) - Math.min(...ys),
+    horizontalSpread: markers.length === 0 ? NaN : Math.max(...xs) - Math.min(...xs),
+    verticalSpread: markers.length === 0 ? NaN : Math.max(...ys) - Math.min(...ys),
     meanRadius: calculateMeanRadius(markers),
     circularErrorProbable: calculateCircularErrorProbable(markers),
     shotCount: markers.length,
