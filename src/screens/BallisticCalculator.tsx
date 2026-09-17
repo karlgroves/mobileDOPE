@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 
 import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
-import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
+import { ALTITUDE_HELP, STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+import {
+  hasRequiredEnvironmentalInputs,
+  missingEnvironmentalInputs,
+} from '../utils/calculatorInputs';
 
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
@@ -72,16 +76,15 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (
-      angle === undefined ||
-      temperature === undefined ||
-      pressure === undefined ||
-      humidity === undefined ||
-      altitude === undefined ||
-      windSpeed === undefined ||
-      windDirection === undefined
-    ) {
-      Alert.alert('Missing Data', 'Please fill in all environmental parameters.');
+    // Altitude is deliberately not in this set: the solver does not read it.
+    // See `calculatorInputs`, where the rule lives so it can be tested.
+    const environmentals = { angle, temperature, pressure, humidity, windSpeed, windDirection };
+
+    if (!hasRequiredEnvironmentalInputs(environmentals)) {
+      Alert.alert(
+        'Missing Data',
+        `Please fill in: ${missingEnvironmentalInputs(environmentals).join(', ')}.`
+      );
       return;
     }
 
@@ -104,16 +107,19 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
 
       const targetParams = {
         distance,
-        angle,
-        windSpeed,
-        windDirection,
+        angle: environmentals.angle,
+        windSpeed: environmentals.windSpeed,
+        windDirection: environmentals.windDirection,
       };
 
       const atmosphere = {
-        temperature,
-        pressure,
-        humidity,
-        altitude,
+        temperature: environmentals.temperature,
+        pressure: environmentals.pressure,
+        humidity: environmentals.humidity,
+        // Defaulted rather than made optional throughout: the solver never reads
+        // altitude, and for anything derived from station pressure 0 is the
+        // right value -- the elevation is already in the pressure. See #89.
+        altitude: altitude ?? 0,
       };
 
       const result = calculateBallisticSolution(
@@ -240,6 +246,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             precision={0}
             unit="%"
           />
+          {/* Not required (#89). The solver reads temperature and pressure only;
+              with station pressure entered, elevation is already accounted for
+              and reading altitude too would correct for it twice. Blocking the
+              solve on a field the solver ignores was the misleading part. */}
           <NumberInput
             label="Altitude"
             value={altitude}
@@ -248,6 +258,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             max={15000}
             precision={0}
             unit="feet"
+            helperText={ALTITUDE_HELP}
           />
         </Card>
 
