@@ -10,7 +10,7 @@ interface GlobalSetupModule {
   FORCE_EXIT_MESSAGE: string;
   NOTICE: string;
   isForceExitWarning: (args: unknown[]) => boolean;
-  install: (target: { error: (...args: unknown[]) => void }) => void;
+  install: (target?: { error: (...args: unknown[]) => void }) => void;
 }
 const setup = require('../../jest.globalSetup.js') as GlobalSetupModule;
 /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/naming-convention */
@@ -95,15 +95,51 @@ describe('what the replacement prints', () => {
 
   it('does not stack wrappers when installed twice', () => {
     // globalSetup is a per-project option and jest.config.js sets it on both
-    // projects, so install() runs twice in the same parent process. Without the
-    // marker the second call would wrap the first and the notice would double.
+    // projects, so install() runs twice in the same parent process.
+    //
+    // Asserted on function identity, not on call count. An earlier version of
+    // this test checked that the notice printed once and passed with the guard
+    // removed -- a stacked wrapper does not double the notice, because the
+    // notice does not contain the matched text and so passes straight through
+    // the outer wrapper. What the guard actually prevents is a new frame on
+    // every console.error for each project, forever.
     const target = spyConsole();
+
     setup.install(target);
+    const afterFirst = target.error;
     setup.install(target);
 
-    target.error(`${setup.FORCE_EXIT_MESSAGE} and has been force exited.`);
+    expect(target.error).toBe(afterFirst);
+  });
+});
 
-    expect(target.calls).toHaveLength(1);
+describe('the default target is the real console', () => {
+  it('routes the warning through the replacement on the global console', () => {
+    // The entry point jest actually uses is `install()` with no argument, which
+    // defaults to the global console. Every other test here passes a fake, so
+    // without this the real path would be covered only by a manual experiment
+    // that does not run again.
+    //
+    // A recording sink is installed first, so what the patched function forwards
+    // is observable without writing to the terminal.
+    const original = console.error;
+    const seen: unknown[][] = [];
+
+    try {
+      console.error = (...args: unknown[]) => {
+        seen.push(args);
+      };
+      setup.install();
+
+      console.error(`${setup.FORCE_EXIT_MESSAGE} and has been force exited.`);
+      console.error('something unrelated', 42);
+
+      expect(seen).toHaveLength(2);
+      expect(String(seen[0][0])).toBe(setup.NOTICE);
+      expect(seen[1]).toEqual(['something unrelated', 42]);
+    } finally {
+      console.error = original;
+    }
   });
 });
 

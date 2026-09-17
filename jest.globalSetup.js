@@ -77,8 +77,12 @@ const PATCHED = Symbol.for('mobiledope.workerWarningPatched');
 /**
  * Installs the replacement. Runs in the jest parent process, once per project.
  *
- * Idempotent: `jest.config.js` sets this on both projects, so without the marker
- * the second call would wrap the first wrapper and the notice would print twice.
+ * Idempotent because `jest.config.js` sets this on both projects, so it is
+ * called twice in one process. Note what that guard does and does not buy: a
+ * stacked wrapper would NOT print the notice twice, because the notice does not
+ * itself contain the matched text and so passes straight through the outer
+ * wrapper. What it prevents is unbounded nesting -- one extra frame on every
+ * console.error for each project, forever, for no benefit.
  */
 const install = (target = console) => {
   if (target.error[PATCHED]) return target.error;
