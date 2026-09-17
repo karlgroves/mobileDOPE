@@ -11,6 +11,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: env === 'production' ? 'Mobile DOPE' : `Mobile DOPE (${env})`,
     slug: 'mobiledope',
+    // Registers `mobiledope://` so links can open the app (see
+    // src/navigation/linking.ts). Constant across environments: the scheme is
+    // what any saved or shared link is written against, and an env-dependent one
+    // would mean a link produced by a staging build did not open a production
+    // one. The bundle identifier is what keeps the builds installable together.
+    scheme: 'mobiledope',
     version,
     orientation: 'default',
     icon: './assets/icon.png',

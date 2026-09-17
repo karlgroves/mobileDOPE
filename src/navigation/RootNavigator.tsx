@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TabNavigator } from './TabNavigator';
-import { SettingsScreen } from '../screens/SettingsScreen';
+import React, { useState, useEffect, useRef } from 'react';
+import { Linking } from 'react-native';
+
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+
+import { linking, restoredInitialState } from './linking';
+import { TabNavigator } from './TabNavigator';
+
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -20,8 +25,15 @@ export const RootNavigator: React.FC = () => {
   useEffect(() => {
     const restoreState = async () => {
       try {
-        const savedStateString = await AsyncStorage.getItem(NAVIGATION_PERSISTENCE_KEY);
-        const state = savedStateString ? JSON.parse(savedStateString) : undefined;
+        // Deliberately not just "read the saved state". NavigationContainer
+        // prefers the `initialState` prop over the state it derives from an
+        // incoming URL, so restoring unconditionally would swallow every
+        // cold-start deep link -- the user taps a link to one log and lands on
+        // whatever screen they last closed. See restoredInitialState (#65).
+        const state = await restoredInitialState(
+          () => Linking.getInitialURL(),
+          () => AsyncStorage.getItem(NAVIGATION_PERSISTENCE_KEY)
+        );
 
         if (state !== undefined) {
           setInitialState(state);
@@ -45,6 +57,7 @@ export const RootNavigator: React.FC = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      linking={linking}
       initialState={initialState}
       onStateChange={async (state) => {
         try {
