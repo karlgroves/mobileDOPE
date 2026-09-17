@@ -1,8 +1,24 @@
 # ADR-007: Keep the legacy ESLint config and `eslint-config-expo`
 
-**Status:** Accepted
+**Status:** Superseded by the flat-config migration in #75 (2026-09-16)
 
 **Date:** 2026-06-11
+
+> **Superseded.** The blocker this ADR recorded was that `eslint-config-expo` assumed
+> the eslintrc format. Expo SDK 55 ships `eslint-config-expo/flat`, so it no longer
+> does, and `ESLINT_USE_FLAT_CONFIG=false` is gone along with `.eslintrc.js`.
+>
+> What this ADR decided is otherwise **unchanged and still in force**: the flat config
+> is a faithful translation of the eslintrc, rule for rule. It did not adopt
+> `strictTypeChecked`, did not move rules to `error`, and did not take the wider plugin
+> set from #17 — the second half of this ADR's decision, about which rules belong here,
+> stands as written. Verified rather than asserted: both configs report the same 12
+> rules, the same 570 warnings and the same 0 errors over the same files.
+>
+> Two things flat config does differently were pinned back deliberately rather than
+> absorbed, each with its reasoning in `eslint.config.js`: it lints dotfiles and
+> `.mjs` (the old run was `--ext .js,.jsx,.ts,.tsx`), and it reports unused
+> `eslint-disable` directives. Widening either is worth doing as its own change.
 
 ## Context
 
