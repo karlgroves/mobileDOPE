@@ -262,3 +262,62 @@ describe('import: error messages do not leak internals', () => {
     expect(message).not.toMatch(/\.ts:\d+/);
   });
 });
+
+describe('import: a uri that is not on this device', () => {
+  /**
+   * The picker is asked to copy into the cache directory, so in practice it
+   * returns a local path. But `pickImportFile` passes whatever it gets to
+   * `fetch`, and `fetch` does not care whether the target is on this phone.
+   *
+   * PRIVACY.md tells users the app has no network layer. A picker -- or a
+   * provider behind one -- that returns an `https:` URI would make that untrue
+   * without a line of code changing. (Issue #68.)
+   */
+
+  beforeEach(async () => {
+    await installTestDatabase();
+    jest.clearAllMocks();
+  });
+  afterEach(async () => {
+    await uninstallTestDatabase();
+  });
+
+  /** Stand in for the picker returning `uri`, with fetch recorded rather than stubbed. */
+  const givenPickedUri = (uri: string): jest.Mock => {
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri }],
+    });
+    const fetched = jest.fn(async () => ({ text: async () => wellFormedBackup() }));
+    global.fetch = fetched as unknown as typeof fetch;
+    return fetched;
+  };
+
+  it.each([
+    ['https://example.com/backup.json'],
+    ['http://example.com/backup.json'],
+    ['http://file.example.com/backup.json'],
+    ['data:application/json;base64,e30='],
+  ])('refuses %s without requesting it', async (uri) => {
+    // `not.toHaveBeenCalled` is the assertion that matters. Returning
+    // `success: false` after the request has already gone out would still have
+    // leaked which file the user chose, and to whom.
+    const fetched = givenPickedUri(uri);
+
+    const result = await importFullBackup();
+
+    expect(result.success).toBe(false);
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it('still reads a local file, so the guard has not closed the door entirely', async () => {
+    // The positive control. A guard that rejected everything would pass every
+    // assertion above.
+    const fetched = givenPickedUri('file:///var/mobile/tmp/backup.json');
+
+    const result = await importFullBackup();
+
+    expect(fetched).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+  });
+});
