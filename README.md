@@ -13,6 +13,19 @@ React Native mobile application for the DOPE (motorsports/racing) platform, buil
 - React Native Gesture Handler
 - AsyncStorage for settings persistence
 
+## Using the app
+
+`README.md` and `CONTRIBUTING.md` are developer documentation. If you are looking
+for how to _use_ Mobile DOPE — setting up a rifle, logging DOPE, reading a
+solution — start at [`docs/user/`](./docs/user/README.md):
+
+- [Quick start](./docs/user/quick-start.md) — install to first logged shot
+- [Rifle and ammunition setup](./docs/user/rifle-and-ammo-setup.md)
+- [Logging DOPE](./docs/user/logging-dope.md)
+- [The ballistic calculator](./docs/user/ballistic-calculator.md)
+- [DOPE cards](./docs/user/dope-cards.md)
+- [FAQ](./docs/user/faq.md)
+
 ## Getting Started
 
 ### Prerequisites
