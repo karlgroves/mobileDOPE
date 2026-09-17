@@ -5,20 +5,44 @@
 
 import React, { useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useDOPEStore } from '../store/useDOPEStore';
+
 import { Card, Button } from '../components';
+import { useTheme } from '../contexts/ThemeContext';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
-import type { CalculatorStackScreenProps } from '../navigation/types';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
+import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+import {
+  applyAdvancedCorrections,
+  describeAdvancedCorrections,
+} from '../utils/advancedCorrections';
+
 import type { DOPELogData } from '../models/DOPELog';
+import type { CalculatorStackScreenProps } from '../navigation/types';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
 export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation }) => {
   const { solution, rifleId, ammoId, distance, angularUnit } = route.params;
+  const { settings } = useAppStore();
+
+  /**
+   * The solver computes spin drift and Coriolis but its elevation and windage
+   * fields do not include them (#71). `applyAdvancedCorrections` folds them in
+   * when the setting is on, and reports the breakdown either way so the shooter
+   * can see what the toggle would change.
+   */
+  const adjusted = applyAdvancedCorrections(solution, {
+    enabled: settings.advancedBallisticsEnabled,
+  });
+  const advancedLines = describeAdvancedCorrections(solution, angularUnit);
+  const elevation = angularUnit === 'MIL' ? adjusted.elevationMIL : adjusted.elevationMOA;
+  const windage = angularUnit === 'MIL' ? adjusted.windageMIL : adjusted.windageMOA;
+  const baseElevation =
+    angularUnit === 'MIL' ? adjusted.baseElevationMIL : adjusted.baseElevationMOA;
+  const baseWindage = angularUnit === 'MIL' ? adjusted.baseWindageMIL : adjusted.baseWindageMOA;
   const { theme } = useTheme();
   const { colors } = theme;
 
@@ -95,8 +119,8 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
         environmentId,
         distance,
         distanceUnit: 'yards',
-        elevationCorrection: angularUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA,
-        windageCorrection: angularUnit === 'MIL' ? solution.windageMIL : solution.windageMOA,
+        elevationCorrection: elevation,
+        windageCorrection: windage,
         correctionUnit: angularUnit,
         targetType,
         notes: `Calculated at ${distance} yards with ${rifle?.name} / ${ammo?.name}`,
@@ -144,9 +168,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
               <Text style={[styles.primaryValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.elevationMIL.toFixed(2)}`
-                  : `${solution.elevationMOA.toFixed(2)}`}
+                {elevation.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -156,9 +178,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
               <Text style={[styles.primaryValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.windageMIL.toFixed(2)}`
-                  : `${solution.windageMOA.toFixed(2)}`}
+                {windage.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -166,6 +186,43 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             </View>
           </View>
         </Card>
+
+        {/* Advanced corrections, shown separately from the base solution (#71).
+            Rendered whether or not they are applied: seeing that spin drift is
+            0.3 MIL and NOT in the dialled number is more useful than seeing
+            nothing, and it is how a shooter decides whether to turn it on. */}
+        {advancedLines.length > 0 && (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Advanced Corrections
+            </Text>
+            <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+              {adjusted.applied
+                ? 'Included in the corrections above.'
+                : 'Not included above. Turn on Advanced Ballistics in Settings to apply them.'}
+            </Text>
+            {advancedLines.map((line) => (
+              <View key={line.label} style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  {line.label}:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {line.value.toFixed(2)} {line.unit}
+                </Text>
+              </View>
+            ))}
+            {adjusted.applied && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  Without them:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {baseElevation.toFixed(2)} / {baseWindage.toFixed(2)} {angularUnit}
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Detailed Results */}
         <Card style={styles.card}>

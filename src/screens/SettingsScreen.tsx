@@ -488,6 +488,36 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </Card>
 
+        {/* Advanced Ballistics */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Advanced Ballistics
+          </Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Apply Spin Drift and Coriolis
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Folds both corrections into the dialled solution. Small inside a few hundred yards.
+                Off by default so a DOPE card built against the plain solution does not shift
+                underneath you; the calculator shows both figures either way. Coriolis needs a
+                latitude on the shot.
+              </Text>
+            </View>
+            <Switch
+              value={settings.advancedBallisticsEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ advancedBallisticsEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.advancedBallisticsEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Apply spin drift and Coriolis corrections"
+              accessibilityHint="Includes spin drift and Coriolis in the elevation and windage the calculator tells you to dial"
+            />
+          </View>
+        </Card>
+
         {/* Privacy */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Privacy</Text>
