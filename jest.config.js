@@ -156,7 +156,7 @@ module.exports = {
   //   services                     73.0   59.3   73.5   76.0   CSV/Markdown covered; PDF 0%
   //   contexts                     83.3   50.0   83.3   66.6   incidental, via components
   //   components                   40.0   36.2   40.8   35.7   +touchTargets (#68)
-  //   constants                    18.3    9.0   23.6    3.4   data tables
+  //   constants                    18.0    9.0   23.0    3.4   data tables + field help
   //   screens / navigation / hooks  0      0      0      0     #28 phase 6, not started
   //
   // Next targets, in cost order: the PDF exporters (expo-print ships ESM, which the

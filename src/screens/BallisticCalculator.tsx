@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 
 import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
+import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
@@ -222,7 +223,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
           />
           <NumberInput
             label="Station Pressure"
-            helperText="Station pressure — the reading where you are, not the sea-level 'altimeter setting' a weather app reports."
+            helperText={STATION_PRESSURE_HELP}
             value={pressure}
             onChangeValue={setPressure}
             min={25}

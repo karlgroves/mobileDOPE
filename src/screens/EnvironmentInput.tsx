@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'rea
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
+import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
@@ -344,7 +345,7 @@ export function EnvironmentInput() {
 
           <NumberInput
             label="Station Pressure"
-            helperText="Station pressure — the reading where you are, not the sea-level 'altimeter setting' a weather app reports."
+            helperText={STATION_PRESSURE_HELP}
             value={pressure}
             onChangeValue={setPressure}
             min={20}
