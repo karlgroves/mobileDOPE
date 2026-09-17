@@ -1,10 +1,7 @@
 {
-  "*.{js,jsx}": [
-    "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix --fix-type problem,layout,suggestion \"$@\"' --",
-    "prettier --write"
-  ],
+  "*.{js,jsx}": ["eslint --fix --fix-type problem,layout,suggestion", "prettier --write"],
   "*.{ts,tsx}": [
-    "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix --fix-type problem,layout,suggestion \"$@\"' --",
+    "eslint --fix --fix-type problem,layout,suggestion",
     "prettier --write",
     "tsc-files --noEmit"
   ],
