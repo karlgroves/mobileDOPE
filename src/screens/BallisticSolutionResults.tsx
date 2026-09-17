@@ -3,10 +3,11 @@
  * Displays calculated ballistic solution for a target
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 
 import { Card, Button } from '../components';
+import { RelevantDopeList } from '../components/RelevantDopeList';
 import { useTheme } from '../contexts/ThemeContext';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -19,9 +20,11 @@ import {
   describeAdvancedCorrections,
 } from '../utils/advancedCorrections';
 import { toSolverYards } from '../utils/distanceUnits';
+import { rankMatches } from '../utils/dopeMatching';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { CalculatorStackScreenProps } from '../navigation/types';
+import type { MatchableEnvironment } from '../utils/dopeMatching';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
@@ -49,8 +52,36 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
-  const { current: currentEnv, saveCurrent } = useEnvironmentStore();
-  const { createDopeLog } = useDOPEStore();
+  const { current: currentEnv, saveCurrent, snapshots } = useEnvironmentStore();
+  const { createDopeLog, dopeLogs } = useDOPEStore();
+
+  /**
+   * The shooter's own logged DOPE that resembles this shot (#70).
+   *
+   * Logs carry an `environmentId` rather than the conditions themselves, so the
+   * snapshot is joined on here -- without it every log scores neutral on the
+   * environment factor and the ranking collapses to distance and recency.
+   */
+  const relevantDope = useMemo(() => {
+    if (dopeLogs.length === 0) return [];
+
+    const environmentById = new Map(snapshots.map((snapshot) => [snapshot.id, snapshot]));
+
+    const matchable: (DOPELogData & { environment?: MatchableEnvironment })[] = dopeLogs.map(
+      (log) => ({
+        ...log,
+        environment: environmentById.get(log.environmentId),
+      })
+    );
+
+    return rankMatches(matchable, {
+      rifleId,
+      ammoId,
+      // The solver's unit, because that is what the matcher compares against.
+      distance: toSolverYards(distance, distanceUnit),
+      environment: currentEnv ?? undefined,
+    });
+  }, [dopeLogs, snapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -230,6 +261,17 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </Card>
         )}
 
+        {/* What this shooter actually dialled in conditions like these (#70) */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Your logged DOPE
+          </Text>
+          <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
+            Shown beside the solution, not merged into it.
+          </Text>
+          <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
+        </Card>
+
         {/* Detailed Results */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
@@ -342,6 +384,10 @@ const styles = StyleSheet.create({
   highlightCard: {
     borderWidth: 2,
     borderColor: 'rgba(74, 144, 226, 0.3)',
+  },
+  matchesCaption: {
+    fontSize: 12,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
