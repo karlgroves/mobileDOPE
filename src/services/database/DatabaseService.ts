@@ -3,7 +3,6 @@ import * as SQLite from 'expo-sqlite';
 import { DB_SCHEMA, DB_INDEXES } from '../../types/database.types';
 
 const DATABASE_NAME = 'mobiledope.db';
-const DATABASE_VERSION = 1;
 
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -81,23 +80,6 @@ class DatabaseService {
     } catch (error) {
       console.error('Failed to create indexes:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Set or update database version
-   */
-  private async setDatabaseVersion(): Promise<void> {
-    if (!this.db) return;
-
-    try {
-      // SQLite does not accept bound parameters in a PRAGMA statement, and
-      // DATABASE_VERSION is a module-level numeric constant, never input.
-      // See security/docs/security-exceptions.md.
-      // nosemgrep: mobiledope-sql-string-interpolation
-      await this.db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
-    } catch (error) {
-      console.error('Failed to set database version:', error);
     }
   }
 
