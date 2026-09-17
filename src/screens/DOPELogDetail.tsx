@@ -8,10 +8,12 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { ConfidenceBadge } from '../components/ConfidenceBadge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { calculateConfidence } from '../utils/dopeAnalysis';
 
 import type { LogsStackScreenProps } from '../navigation/types';
 
@@ -29,6 +31,11 @@ export function DOPELogDetail({ route, navigation }: Props) {
   const log = getDopeById(logId);
   const rifle = log ? getRifleById(log.rifleId) : undefined;
   const ammo = log ? getAmmoById(log.ammoId) : undefined;
+
+  // Scored from the evidence this log carries, not from whether it agrees with
+  // the solver -- a log that disagrees may be the most useful one there is.
+  // See src/utils/dopeAnalysis.ts. (#64)
+  const confidence = log ? calculateConfidence(log) : undefined;
 
   useEffect(() => {
     if (!log) {
@@ -121,6 +128,16 @@ export function DOPELogDetail({ route, navigation }: Props) {
             </Text>
           </View>
         </Card>
+
+        {/* How well-evidenced this point is (#64) */}
+        {confidence && (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Confidence in this entry
+            </Text>
+            <ConfidenceBadge confidence={confidence} testID="dope-confidence" />
+          </Card>
+        )}
 
         {/* Performance */}
         {(log.hitCount !== undefined ||
