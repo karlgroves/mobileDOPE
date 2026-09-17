@@ -31,6 +31,7 @@ import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { MergeStrategy } from '../utils/importMerge';
 
 import type { RootStackScreenProps } from '../navigation/types';
 
@@ -274,6 +275,74 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  /**
+   * A full backup restored onto a device that has been in use since has to say
+   * what happens to records it already holds (#66). Asked as its own step rather
+   * than guessed at, because the two answers are not recoverable from each
+   * other: keeping yours can leave the file's edits behind, and letting the file
+   * win overwrites work done since the backup.
+   */
+  const chooseBackupMergeStrategy = () => {
+    Alert.alert(
+      'Restore Full Backup',
+      'Some records in this backup may already be on this device. What should happen to those?',
+      [
+        {
+          text: 'Keep mine',
+          onPress: () => runFullBackupImport('skip-existing'),
+        },
+        {
+          text: "Use the backup's",
+          onPress: () => runFullBackupImport('replace-existing'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const runFullBackupImport = async (strategy: MergeStrategy) => {
+    const result = await importFullBackup(strategy);
+
+    if (!result.success || !result.imported) {
+      Alert.alert('Error', result.error || 'Import failed');
+      return;
+    }
+
+    const { imported, replaced, skipped, warnings } = result;
+    const lines = [
+      `• ${imported.rifles || 0} rifle profiles`,
+      `• ${imported.ammos || 0} ammo profiles`,
+      `• ${imported.logs || 0} DOPE logs`,
+    ];
+
+    const replacedTotal =
+      (replaced?.rifles || 0) +
+      (replaced?.ammos || 0) +
+      (replaced?.environments || 0) +
+      (replaced?.logs || 0);
+    if (replacedTotal > 0) {
+      lines.push(`\n${replacedTotal} existing record(s) were replaced.`);
+    }
+
+    // Reported rather than silent: "0 imported" on a backup full of data looks
+    // like a failure unless it says the records were already here.
+    const skippedTotal =
+      (skipped?.rifles || 0) +
+      (skipped?.ammos || 0) +
+      (skipped?.environments || 0) +
+      (skipped?.logs || 0);
+    if (skippedTotal > 0) {
+      lines.push(`\n${skippedTotal} record(s) were already on this device.`);
+    }
+
+    if (warnings && warnings.length > 0) {
+      lines.push(`\n${warnings.join('\n')}`);
+    }
+
+    Alert.alert('Import Complete', `Imported:\n${lines.join('\n')}`);
+  };
+
   const handleImportData = () => {
     Alert.alert(
       'Import Data',
@@ -281,17 +350,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       [
         {
           text: 'Full Backup',
-          onPress: async () => {
-            const result = await importFullBackup();
-            if (result.success && result.imported) {
-              Alert.alert(
-                'Success',
-                `Imported:\n• ${result.imported.rifles || 0} rifle profiles\n• ${result.imported.ammos || 0} ammo profiles\n• ${result.imported.logs || 0} DOPE logs`
-              );
-            } else {
-              Alert.alert('Error', result.error || 'Import failed');
-            }
-          },
+          onPress: chooseBackupMergeStrategy,
         },
         {
           text: 'Rifle Profiles Only',

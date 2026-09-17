@@ -4,8 +4,12 @@ import ammoProfileRepository from '../../../src/services/database/AmmoProfileRep
 import dopeLogRepository from '../../../src/services/database/DOPELogRepository';
 import environmentRepository from '../../../src/services/database/EnvironmentRepository';
 import rifleProfileRepository from '../../../src/services/database/RifleProfileRepository';
-import { exportFullBackup } from '../../../src/services/ExportService';
-import { importFullBackup } from '../../../src/services/ImportService';
+import {
+  exportAllRifleProfilesJSON,
+  exportFullBackup,
+  exportRifleProfileJSON,
+} from '../../../src/services/ExportService';
+import { importFullBackup, importRifleProfiles } from '../../../src/services/ImportService';
 import { validAmmo, validDopeLog, validEnvironment, validRifle } from '../../helpers/fixtures';
 import { readWritten, resetFileSystem } from '../../helpers/mockFileSystem';
 import { installTestDatabase, uninstallTestDatabase } from '../../helpers/testDatabase';
@@ -102,7 +106,7 @@ describe('Export/Import round trip', () => {
 
     const environmentsIn = async (result: { uri?: string }) => {
       const written = JSON.parse(readWritten(result.uri as string) as string) as {
-        data: { environments: Array<Record<string, unknown>> };
+        data: { environments: Record<string, unknown>[] };
       };
       return written.data.environments;
     };
@@ -253,6 +257,130 @@ describe('Export/Import round trip', () => {
       const after = await snapshotDatabase();
       expect(after.rifles).toEqual(before.rifles);
       expect(after.ammos).toEqual(before.ammos);
+    });
+
+    it('does not duplicate everything when the same backup is imported twice', async () => {
+      // #66: import used to always create new rows, so restoring a backup twice
+      // left two of every rifle, load and log with no way to tell them apart.
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+      const afterFirst = await snapshotDatabase();
+
+      await stageImportFile(exported.uri as string);
+      const second = await importFullBackup();
+      const afterSecond = await snapshotDatabase();
+
+      expect(second.success).toBe(true);
+      expect(afterSecond.rifles).toHaveLength(afterFirst.rifles.length);
+      expect(afterSecond.ammos).toHaveLength(afterFirst.ammos.length);
+    });
+
+    it('imports the logs of a rifle the device already has', async () => {
+      // The subtle half, and the case that actually loses data: restoring onto a
+      // device that already holds the rifle but not its logs. The incoming
+      // rifle is skipped as a duplicate, so its id in the FILE has to map to the
+      // EXISTING row -- otherwise every log referencing it hits the missing-parent
+      // guard and is silently discarded while the import reports success.
+      //
+      // Doing this as a second import of the same backup would prove nothing:
+      // the logs would already be stored from the first pass, so losing them
+      // would not be observable.
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }));
+      await ammoProfileRepository.create(validAmmo({ name: '175gr SMK' }));
+
+      await stageImportFile(exported.uri as string);
+      const result = await importFullBackup();
+
+      expect(result.skipped?.rifles).toBe(1);
+      expect(result.imported?.rifles).toBe(0);
+      expect(result.imported?.logs).toBeGreaterThan(0);
+
+      const rifleIds = new Set((await rifleProfileRepository.getAll()).map((r) => r.id));
+      const logs = await dopeLogRepository.getAll();
+      expect(logs.length).toBeGreaterThan(0);
+      for (const logEntry of logs) {
+        expect(rifleIds.has(logEntry.rifleId)).toBe(true);
+      }
+    });
+
+    it('leaves a re-imported backup exactly as it was', async () => {
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+      const afterFirst = await snapshotDatabase();
+
+      await stageImportFile(exported.uri as string);
+      const second = await importFullBackup();
+      const afterSecond = await snapshotDatabase();
+
+      expect(afterFirst.logs.length).toBeGreaterThan(0);
+      expect(second.imported).toEqual({ rifles: 0, ammos: 0, environments: 0, logs: 0 });
+      expect(afterSecond).toEqual(afterFirst);
+    });
+
+    it('does not tell the user a re-imported backup was missing its parents', async () => {
+      // Duplicate logs and orphaned logs are both "skipped", but only the second
+      // means the file is incomplete. Reporting the first as the second told a
+      // user whose restore worked perfectly that their backup was broken.
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+
+      await stageImportFile(exported.uri as string);
+      const second = await importFullBackup();
+
+      expect(second.skipped?.logs).toBeGreaterThan(0);
+      expect(second.warnings ?? []).toEqual([]);
+    });
+
+    it('lets the file win under replace-existing instead of duplicating', async () => {
+      // The "replace" half of the merge-versus-replace option (#66).
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x', zeroDistance: 200 }));
+
+      await stageImportFile(exported.uri as string);
+      const result = await importFullBackup('replace-existing');
+
+      const rifles = await rifleProfileRepository.getAll();
+      expect(result.replaced?.rifles).toBe(1);
+      expect(rifles).toHaveLength(1);
+      expect(rifles[0].zeroDistance).toBe(validRifle().zeroDistance);
+    });
+
+    it('still duplicates on purpose under create-all', async () => {
+      // The pre-#66 behaviour, kept because it is the only way to deliberately
+      // end up with two of something.
+      await seed();
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      await importFullBackup();
+      const afterFirst = await snapshotDatabase();
+
+      await stageImportFile(exported.uri as string);
+      await importFullBackup('create-all');
+      const afterSecond = await snapshotDatabase();
+
+      expect(afterSecond.rifles.length).toBe(afterFirst.rifles.length * 2);
     });
 
     it('does not re-use the ids from the backup file', async () => {
@@ -469,6 +597,67 @@ describe('Export/Import round trip', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/cancelled/i);
+    });
+  });
+
+  describe('importRifleProfiles', () => {
+    it('imports the file the batch exporter actually writes', async () => {
+      // The exporter writes the profiles as `data` itself; the importer only
+      // ever read `data.rifles`, so every batch export imported zero records
+      // and said it succeeded.
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }));
+      await rifleProfileRepository.create(validRifle({ name: 'Bergara B14' }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(2);
+      expect((await rifleProfileRepository.getAll()).map((r) => r.name).sort()).toEqual([
+        'Bergara B14',
+        'Tikka T3x',
+      ]);
+    });
+
+    it('imports the file the single-profile exporter actually writes', async () => {
+      const [rifle] = [await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }))];
+      const exported = await exportRifleProfileJSON(rifle);
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(1);
+      expect((await rifleProfileRepository.getAll())[0].name).toBe('Tikka T3x');
+    });
+
+    it('does not duplicate a profile that has been shared twice', async () => {
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x' }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles();
+
+      expect(result.imported?.rifles).toBe(0);
+      expect(result.skipped?.rifles).toBe(1);
+      expect(await rifleProfileRepository.getAll()).toHaveLength(1);
+    });
+
+    it('lets the file win under replace-existing', async () => {
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x', zeroDistance: 200 }));
+      const exported = await exportAllRifleProfilesJSON(await rifleProfileRepository.getAll());
+
+      await installTestDatabase();
+      await rifleProfileRepository.create(validRifle({ name: 'Tikka T3x', zeroDistance: 100 }));
+
+      await stageImportFile(exported.uri as string);
+      const result = await importRifleProfiles('replace-existing');
+
+      const rifles = await rifleProfileRepository.getAll();
+      expect(result.replaced?.rifles).toBe(1);
+      expect(rifles).toHaveLength(1);
+      expect(rifles[0].zeroDistance).toBe(200);
     });
   });
 });
