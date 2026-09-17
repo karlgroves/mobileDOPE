@@ -17,7 +17,7 @@ import {
   rifleKey,
 } from '../utils/importMerge';
 
-import { exceedsMaxDepth, exceedsMaxSize, oversizedMessage } from './importGuards';
+import { exceedsMaxDepth, exceedsMaxSize, isLocalFileUri, oversizedMessage } from './importGuards';
 
 export interface ImportResult {
   success: boolean;
@@ -94,7 +94,18 @@ export async function pickImportFile(): Promise<{
       return { success: false, error: 'Import cancelled' };
     }
 
-    const response = await fetch(result.assets[0].uri);
+    const uri = result.assets[0].uri;
+
+    // The picker is asked to copy into the cache directory, so this should always
+    // be a local path -- but `fetch` would just as happily go to a remote host,
+    // and PRIVACY.md promises users the app has no network layer. Checking here
+    // turns that promise from something everyone has been careful about into
+    // something the code enforces. (Issue #68.)
+    if (!isLocalFileUri(uri)) {
+      return { success: false, error: 'That file is not on this device.' };
+    }
+
+    const response = await fetch(uri);
     const content = await response.text();
 
     // Bound the input before parsing it. The file comes from a document picker, so

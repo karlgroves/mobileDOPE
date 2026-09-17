@@ -59,3 +59,40 @@ export const exceedsMaxDepth = (value: unknown, limit: number = MAX_IMPORT_DEPTH
 /** Human-readable refusal for an oversized file. */
 export const oversizedMessage = (): string =>
   `That file is too large to import (limit ${Math.floor(MAX_IMPORT_CHARS / 1_000_000)} MB).`;
+
+/**
+ * Whether a URI points at something already on this device.
+ *
+ * `ImportService` fetches whatever URI the document picker returns. On device
+ * that is a local cache path, because the picker is asked to copy the file
+ * there -- but nothing checked, and `fetch` will happily go to a remote host.
+ *
+ * `PRIVACY.md` promises the app has no network layer. This is what turns that
+ * from a fact everyone has been careful about into one the code enforces.
+ *
+ * Matched on the scheme at the START of the string. A `.includes('file:')`
+ * style check would accept `http://file.example.com/x` and
+ * `https://example.com/?x=content://`, both of which are real hosts. Anchoring
+ * also stops the reverse mistake: a bare path containing a colon --
+ * `/var/mobile/tmp/notes: draft.json` -- has no scheme and must not be read as
+ * having one, or a perfectly local file gets refused.
+ *
+ * @param uri - The URI to check. A bare path counts as local.
+ */
+export const isLocalFileUri = (uri: string | undefined): boolean => {
+  if (typeof uri !== 'string') return false;
+
+  const trimmed = uri.trim();
+  if (trimmed.length === 0) return false;
+
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed)?.[1]?.toLowerCase();
+
+  // No scheme at all is a plain filesystem path, which is what the test file
+  // system uses and what a bare path on device means.
+  if (scheme === undefined) return true;
+
+  // `content:` is Android's document provider. `data:` is deliberately absent:
+  // it does not leave the device, but it is not a file the picker produced, and
+  // an unbounded one is a memory-exhaustion primitive of its own.
+  return scheme === 'file' || scheme === 'content';
+};
