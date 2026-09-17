@@ -39,6 +39,56 @@ const linearSet = (distances: number[], perHundred = 1): DOPELogData[] =>
     log({ distance, elevationCorrection: (distance / 100) * perHundred })
   );
 
+describe("group size in MOA respects the log's unit", () => {
+  /**
+   * A log holds its distance in its own unit (#106). The MOA figure is
+   * `groupSize / (distanceYards / 100)`, so reading 600 metres as 600 yards
+   * divides by a distance 9% too short and reports a group 9% *worse* than it
+   * is -- a metric shooter's whole history rated down, in the one number they
+   * have no independent way to check.
+   *
+   * Group sizes here are chosen to land inside a band `calculateConfidence`
+   * actually reports on; between 1 and 3 MOA it says nothing, so there would be
+   * nothing to assert against.
+   */
+
+  /** The MOA figure calculateConfidence put in its reasons, if it gave one. */
+  const reportedMoa = (over: Partial<DOPELogData>): number | undefined => {
+    const reason = calculateConfidence(log(over)).reasons.find((r) => r.includes('MOA'));
+    return reason === undefined ? undefined : Number.parseFloat(reason);
+  };
+
+  it('rates the same physical group the same way in either unit', () => {
+    // 600 m is 656.168 yd. A 5.5 inch group at that range is the same group
+    // however the shooter wrote the distance down.
+    const metric = reportedMoa({ distance: 600, distanceUnit: 'meters', groupSize: 5.5 });
+    const imperial = reportedMoa({ distance: 656.168, distanceUnit: 'yards', groupSize: 5.5 });
+
+    expect(metric).toBeDefined();
+    expect(metric).toBeCloseTo(imperial as number, 2);
+  });
+
+  it('does not rate a metric group worse than it is', () => {
+    // The defect as the shooter sees it. `calculateConfidence` formats the
+    // figure to one decimal, so these are the printed values, not the raw ones
+    // -- 0.838 and 0.917 before rounding. Asserting the rounded pair is the
+    // point: it is what appears on screen, and the two differ there.
+    const correct = reportedMoa({ distance: 600, distanceUnit: 'meters', groupSize: 5.5 });
+    const naive = reportedMoa({ distance: 600, distanceUnit: 'yards', groupSize: 5.5 });
+
+    expect(correct).toBe(0.8);
+    expect(naive).toBe(0.9);
+  });
+
+  it('treats a log with no recorded unit as yards', () => {
+    const untagged = reportedMoa({ distance: 600, distanceUnit: undefined, groupSize: 5.5 });
+    const explicit = reportedMoa({ distance: 600, distanceUnit: 'yards', groupSize: 5.5 });
+
+    expect(untagged).toBeDefined();
+    expect(untagged).toBeCloseTo(explicit as number, 4);
+  });
+});
+
 describe('calculateConfidence', () => {
   it('rates a well-evidenced point above a thin one', () => {
     const solid = calculateConfidence(

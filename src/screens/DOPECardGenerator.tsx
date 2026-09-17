@@ -16,6 +16,7 @@ import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+import { toSolverYards } from '../utils/distanceUnits';
 import { buildComparison, renderComparisonHtml } from '../utils/dopeCardComparison';
 import { escapeHtml } from '../utils/formatting';
 
@@ -55,7 +56,14 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
 
-  /** The distance axis both card styles are built on. */
+  /**
+   * The distance axis every card style is built on, in the shooter's own unit.
+   *
+   * Round numbers in the unit they chose -- 100, 200 ... 1000 -- because that is
+   * what makes a card usable at the bench. They are converted to the solver's
+   * yards at each call site rather than here, so the axis stays the thing that
+   * gets printed. (#106.)
+   */
   const dopeDistances = useMemo(() => {
     const distances: number[] = [];
     for (let distance = minDistance; distance <= maxDistance; distance += increment) {
@@ -94,8 +102,12 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     };
 
     for (let distance = minDistance; distance <= maxDistance; distance += increment) {
+      // `distance` is what gets printed, in the shooter's unit. The solver only
+      // ever sees yards. (#106)
+      const solverDistance = toSolverYards(distance, distanceUnit);
+
       const targetParams = {
-        distance,
+        distance: solverDistance,
         angle: 0,
         windSpeed: environment.windSpeed || 0,
         windDirection: environment.windDirection || 0,
@@ -112,7 +124,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
       const windData: { [key: number]: { elevation: number; windage: number } } = {};
       windSpeeds.forEach((windSpeed) => {
         const windTargetParams = {
-          distance,
+          distance: solverDistance,
           angle: 0,
           windSpeed,
           windDirection: 90, // 90° = full value wind
@@ -144,7 +156,17 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     }
 
     return data;
-  }, [rifle, ammo, environment, minDistance, maxDistance, increment, angularUnit, windSpeeds]);
+  }, [
+    rifle,
+    ammo,
+    environment,
+    minDistance,
+    maxDistance,
+    increment,
+    angularUnit,
+    distanceUnit,
+    windSpeeds,
+  ]);
 
   /**
    * Every load for this rifle's caliber, solved on the same distance axis.
@@ -194,7 +216,8 @@ export function DOPECardGenerator({ route, navigation }: Props) {
             dragModel: 'G1' as const,
           },
           {
-            distance,
+            // Solved in yards, printed in the shooter's unit. (#106)
+            distance: toSolverYards(distance, distanceUnit),
             angle: 0,
             windSpeed: environment.windSpeed || 0,
             windDirection: environment.windDirection || 0,
@@ -211,7 +234,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
         };
       }),
     }));
-  }, [rifle, environment, getAmmoByCaliber, ammoId, dopeDistances, angularUnit]);
+  }, [rifle, environment, getAmmoByCaliber, ammoId, dopeDistances, angularUnit, distanceUnit]);
 
   const generateHTML = () => {
     if (!rifle || !ammo) return '';
