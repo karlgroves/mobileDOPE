@@ -61,6 +61,7 @@ const bind = (params: readonly unknown[] = []): BindValue[] => params.map(toBind
  */
 export const createTestDatabase = (): TestDatabase => {
   const db = new DatabaseSync(':memory:');
+  let closed = false;
   db.exec('PRAGMA foreign_keys = ON;');
   for (const ddl of Object.values(DB_SCHEMA)) db.exec(ddl);
   for (const ddl of Object.values(DB_INDEXES)) db.exec(ddl);
@@ -81,6 +82,13 @@ export const createTestDatabase = (): TestDatabase => {
     getAllAsync: async <T>(sql: string, params?: readonly unknown[]) =>
       db.prepare(sql).all(...bind(params)) as T[],
     closeAsync: async () => {
+      // Idempotent: `node:sqlite` throws on closing a closed handle, and both
+      // `DatabaseService.close()` and `uninstallTestDatabase()` may reach the
+      // same database. A teardown that throws reports the failure against
+      // whichever test happened to run last, which is the worst possible place
+      // for it to surface.
+      if (closed) return;
+      closed = true;
       db.close();
     },
   };
@@ -122,14 +130,28 @@ const quietly = async (fn: () => Promise<void>): Promise<void> => {
  * fields, so those paths are covered too. Call from `beforeEach` for per-test isolation.
  */
 export const installTestDatabase = async (): Promise<TestDatabase> => {
-  await quietly(() => databaseService.close());
+  // Via uninstall rather than `databaseService.close()` directly, so an
+  // unbalanced hook -- or a second install inside one test -- releases the
+  // previous database instead of stranding it the moment `active` is reassigned.
+  await uninstallTestDatabase();
   active = createTestDatabase();
   await quietly(() => databaseService.initialize());
   return active;
 };
 
-/** Release the active database. Call from `afterEach`. */
+/**
+ * Release the active database. Call from `afterEach`.
+ *
+ * Closes the handle here rather than trusting `databaseService.close()` to reach
+ * it. That method early-returns when its own reference is null, so a test that
+ * closes the service itself would leave a live database with nothing pointing at
+ * it -- `active = null` would drop the last reference to an open connection.
+ * Every service suite runs this once per test, so the harness owning its own
+ * handle is worth more than the one line it costs (#77).
+ */
 export const uninstallTestDatabase = async (): Promise<void> => {
-  await quietly(() => databaseService.close());
+  const handle = active;
   active = null;
+  await quietly(() => databaseService.close());
+  await handle?.closeAsync();
 };
