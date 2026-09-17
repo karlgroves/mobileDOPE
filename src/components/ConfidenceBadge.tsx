@@ -42,6 +42,20 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({ confidence, te
   const band = confidenceBand(confidence.score);
   const percent = Math.round(confidence.score * 100);
 
+  // The bar's colour, not the text's. Measured against both surfaces at 18px
+  // bold -- which is 13.5pt, below WCAG's 14pt-bold large-text threshold, so it
+  // needs 4.5:1 as normal text:
+  //
+  //             on dark #2a2a2a   on light #F5F5F5
+  //   success        5.16              2.55
+  //   warning        6.66              1.98
+  //   error          3.90              3.38
+  //
+  // Four of six fail, every one of them in the light theme. The band word is
+  // therefore drawn in the theme's own text colour, and the tint is kept for the
+  // bar. Nothing is lost: the word already carries the meaning, so the colour
+  // was redundant -- which is what makes it safe to demote rather than fix by
+  // picking six new hex values.
   const tint =
     band === 'Strong' ? colors.success : band === 'Moderate' ? colors.warning : colors.error;
 
@@ -60,7 +74,7 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({ confidence, te
       style={styles.container}
     >
       <View style={styles.header}>
-        <Text style={[styles.band, { color: tint }]}>{band}</Text>
+        <Text style={[styles.band, { color: colors.text.primary }]}>{band}</Text>
         <Text style={[styles.percent, { color: colors.text.secondary }]}>{percent}%</Text>
       </View>
 

@@ -89,6 +89,38 @@ describe('how it reads to a screen reader', () => {
     );
   });
 
+  it('hides the decorative bar from the accessibility tree', () => {
+    // Both props, because iOS reads accessibilityElementsHidden and Android
+    // reads importantForAccessibility. Losing either makes a screen reader
+    // announce a bar inside a node that already states the figure.
+    const { getByTestId } = renderWithProviders(
+      <ConfidenceBadge confidence={confidence(0.85)} testID="badge" />
+    );
+    const bar = getByTestId('badge').props.children[1];
+
+    expect(bar.props.accessibilityElementsHidden).toBe(true);
+    expect(bar.props.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('draws the band word in the theme text colour, not the band tint', () => {
+    // A contrast regression test, expressed as the decision it encodes. The
+    // tints fail WCAG AA at 18px bold -- 2.55:1 for success on the light
+    // surface, 1.98:1 for warning, and error fails on both themes. The word
+    // carries the meaning on its own, so the colour is redundant and the tint
+    // belongs on the bar. Reintroducing it here would fail four of six
+    // theme/band combinations, silently.
+    const { getByTestId } = renderWithProviders(
+      <ConfidenceBadge confidence={confidence(0.2)} testID="badge" />
+    );
+    const header = getByTestId('badge').props.children[0];
+    const bandText = header.props.children[0];
+
+    const flattened = Object.assign({}, ...(bandText.props.style as object[]));
+
+    expect(flattened.color).toBe('#FFFFFF');
+    expect(flattened.color).not.toBe('#f44336');
+  });
+
   it('says what the score means, not just what it is', () => {
     const { getByTestId } = renderWithProviders(
       <ConfidenceBadge confidence={confidence(0.5)} testID="badge" />
