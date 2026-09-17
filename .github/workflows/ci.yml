@@ -89,6 +89,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # __tests__/unit/securitySecrets.test.ts skips its detection cases when
+      # trufflehog is absent, and the pre-push hook runs `npm run check`, which does
+      # not include tests -- so without this step the cases that prove the secret
+      # gate actually detects a key would run nowhere automatically. A guard that
+      # only ever skips is not a guard.
+      #
+      # Pinned by version AND checksum rather than installed from the upstream
+      # install script, which is a curl-to-shell: this repo pins its actions by SHA
+      # for the same reason.
+      - name: Install trufflehog
+        env:
+          TRUFFLEHOG_VERSION: '3.95.2'
+          TRUFFLEHOG_SHA256: 'fded1c139fe4d3872d9fde65e1428d82d5556d655439e82f492d87ae8d846779'
+        run: |
+          curl -sSfL -o trufflehog.tar.gz \
+            "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz"
+          echo "${TRUFFLEHOG_SHA256}  trufflehog.tar.gz" | sha256sum --check --strict
+          tar -xzf trufflehog.tar.gz trufflehog
+          sudo install -m 0755 trufflehog /usr/local/bin/trufflehog
+          rm -f trufflehog.tar.gz trufflehog
+          trufflehog --version
+
       # Runs the same suites as `npm test` plus the coverageThreshold ratchet in
       # jest.config.js, so a coverage regression fails here. Deliberately not added to
       # `npm run check` (the pre-push gate) -- see #28 phase 1 -- to keep the local

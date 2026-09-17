@@ -8,10 +8,9 @@ security/
 ├── config/
 │   ├── audit-waivers.json          # individually waived npm advisories
 │   ├── audit-waivers.schema.json   # what a waiver must contain
-│   ├── gitleaks-baseline.json      # reviewed secret-scan findings (currently empty)
 │   └── semgrep.yml                 # 12 custom SAST rules for this codebase
 ├── docs/
-│   ├── secret-scanning.md          # how gitleaks runs, and the baseline procedure
+│   ├── secret-scanning.md          # how trufflehog runs, and why it runs unfiltered
 │   └── security-exceptions.md      # the exception process, and the live register
 └── tests/
     ├── import.security.spec.ts     # adversarial tests for the only untrusted input
@@ -27,15 +26,15 @@ being mistaken for documentation.
 Per [ADR-011](../docs/adr/011-local-gate-first-no-new-actions.md) the gates are local
 first. No new GitHub Actions workflow was added for any of this.
 
-| Gate                     | Runs in                    | Blocks on                                                   |
-| ------------------------ | -------------------------- | ----------------------------------------------------------- |
-| Waiver-gated `npm audit` | `pre-push`, `security.yml` | Any unwaived high/critical, any expired waiver              |
-| `osv-scanner`            | `pre-push`                 | CRITICAL                                                    |
-| Semgrep                  | `pre-push`                 | ERROR-severity rules                                        |
-| `gitleaks` (staged)      | `pre-commit`               | Any finding, or the binary being absent                     |
-| `gitleaks` (history)     | `pre-push`                 | Any finding not in the baseline, or the binary being absent |
-| Import hardening         | `npm test`                 | Any failing case                                            |
-| Workflow constraints     | `npm test`                 | Unpinned action, missing `permissions:`, write scope        |
+| Gate                     | Runs in                    | Blocks on                                            |
+| ------------------------ | -------------------------- | ---------------------------------------------------- |
+| Waiver-gated `npm audit` | `pre-push`, `security.yml` | Any unwaived high/critical, any expired waiver       |
+| `osv-scanner`            | `pre-push`                 | CRITICAL                                             |
+| Semgrep                  | `pre-push`                 | ERROR-severity rules                                 |
+| `trufflehog` (staged)    | `pre-commit`               | Any finding, or the tool being absent or unrunnable  |
+| `trufflehog` (history)   | `pre-push`                 | Any finding, or the tool being absent or unrunnable  |
+| Import hardening         | `npm test`                 | Any failing case                                     |
+| Workflow constraints     | `npm test`                 | Unpinned action, missing `permissions:`, write scope |
 
 The last two are Jest suites rather than scanner invocations. They need no binary, work
 offline, run inside the gate that already exists, and encode this repository's specific

@@ -1,21 +1,25 @@
+# `set -e` is load-bearing, for the same reason it is in .husky/pre-push: sh returns
+# the status of the LAST command, so without it `npx lint-staged` could fail and the
+# commit would still go through as long as the secret scan below passed. #45 fixed
+# this in pre-push and left it here, so lint, prettier and the staged type-check have
+# never actually blocked a commit. Verified before changing it: a two-line `false;
+# true` script exits 0 without `set -e` and 1 with it.
+set -e
+
 # Format/lint staged files, and type-check the staged TypeScript files.
 # All three run via lint-staged so the staged filenames are actually passed to
 # each tool — `tsc-files` with no file arguments silently checks nothing.
 npx lint-staged
 
-# Secret scan over the staged diff.
+# Secret scan over the staged content.
 #
-# This used to skip silently when gitleaks was absent, which meant a contributor
+# This used to skip silently when the scanner was absent, which meant a contributor
 # who had not run scripts/bootstrap.sh had no secret gate and no way to know it.
 # It now fails. See security/docs/secret-scanning.md. (Issue #45 item 7.)
-if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks protect --staged --no-banner --redact || exit 1
-elif [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
-  echo "⚠  SECRET SCAN SKIPPED — gitleaks is not installed and SKIP_SECRET_SCAN=1."
-  echo "⚠  Nothing checked this commit for credentials. Install it: ./scripts/bootstrap.sh"
-else
-  echo "✖ gitleaks is not installed, so this commit cannot be scanned for secrets."
-  echo "  Install it:      ./scripts/bootstrap.sh"
-  echo "  Or, knowingly:   SKIP_SECRET_SCAN=1 git commit ..."
-  exit 1
-fi
+#
+# The script owns the missing-tool handling, the SKIP_SECRET_SCAN escape hatch, and
+# -- the part a shell `command -v` cannot do -- checking that the binary actually
+# RUNS rather than merely existing. That distinction is what #78 was: a Linux
+# gitleaks build on an arm64 Mac passed `command -v` and then failed to exec,
+# blocking every commit while naming the wrong cause.
+npm run --silent security:secrets:staged

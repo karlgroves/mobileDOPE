@@ -50,12 +50,16 @@
   },
   "secretScanning": {
     "$comment": [
-      "gitleaks. `required` means the pre-push hook fails when the binary is",
-      "absent rather than printing a note and continuing -- a gate that silently",
-      "skips is not a gate. Issue #45 item 7."
+      "trufflehog, via scripts/security-secrets.mjs. `required` means the hooks fail",
+      "when the tool is missing OR cannot execute -- a gate that silently skips is not",
+      "a gate, and neither is one that reports green because its binary is the wrong",
+      "architecture (see #78). The scan runs with NO --results filter: trufflehog's",
+      "`unknown` means 'verification errored', not 'unverified', so both",
+      "--only-verified and --results=verified,unknown let an unverified private key",
+      "through. Issue #45 item 7, revisited by #78."
     ],
-    "required": true,
-    "baselineFile": "security/config/gitleaks-baseline.json"
+    "tool": "trufflehog",
+    "required": true
   },
   "workflows": {
     "$comment": [
