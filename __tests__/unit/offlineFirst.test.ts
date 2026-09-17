@@ -66,11 +66,30 @@ describe('the app has no network layer', () => {
   it('has exactly one fetch call site, and it is the file importer', () => {
     // Pinned by name rather than counted. A count would let someone remove this
     // one and add a different one without the test noticing.
+    //
+    // Two alternations, not one. The bare form excludes a preceding dot so that
+    // `prefetch(` and an unrelated `repo.fetch()` do not trip it -- but that
+    // exclusion is exactly what `globalThis.fetch(` and `window.fetch(` slip
+    // through, so the global receivers are matched explicitly. Both were
+    // verified by appending them to a file under src/ and watching this fail;
+    // before the second alternation existed, both passed.
     const offenders = sources.filter(([, source]) =>
-      /(?<![.\w])fetch\s*\(/.test(withoutComments(source))
+      /(?<![.\w$])fetch\s*\(|(?:globalThis|window|self|global)\s*\.\s*fetch\s*\(/.test(
+        withoutComments(source)
+      )
     );
 
     expect(offenders.map(([file]) => file)).toEqual([path.join('services', 'ImportService.ts')]);
+  });
+
+  it('is honest about what a regex sweep cannot see', () => {
+    // `const send = fetch; send(url)` defeats any of the patterns above, and no
+    // practical regex catches it. Saying so here is the point: a guard whose
+    // limits are undocumented gets trusted past them, which is worse than one
+    // that states where it stops. The behavioural half below is what covers the
+    // call site that actually exists; this sweep covers new ones being added in
+    // the obvious ways.
+    expect(sources.length).toBeGreaterThan(40);
   });
 
   it('hard-codes no remote host', () => {

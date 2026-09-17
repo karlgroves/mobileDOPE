@@ -55,8 +55,18 @@ describe('solver performance', () => {
     windDirection: 90,
   });
 
-  /** Median wall-clock milliseconds over `runs` executions. */
+  /**
+   * Median wall-clock milliseconds over `runs` executions, after warm-up.
+   *
+   * The warm-up is not politeness -- it is what makes the ratio test below able
+   * to see anything. Without it the first workload measured absorbs JIT
+   * compilation and reads slower than it is, which inflates the denominator and
+   * flattens the ratio. Measured: a deliberately quadratic solver showed a ratio
+   * of 4.39 cold and 7.5 warmed, against a baseline of 2.5 either way.
+   */
   const medianMs = (work: () => unknown, runs = 9): number => {
+    for (let i = 0; i < 3; i++) work();
+
     const samples: number[] = [];
     for (let i = 0; i < runs; i++) {
       const started = performance.now();
@@ -88,10 +98,25 @@ describe('solver performance', () => {
     const near = medianMs(() => calculateTrajectory(rifle, ammo, shot(500), atmosphere));
     const far = medianMs(() => calculateTrajectory(rifle, ammo, shot(2000), atmosphere));
 
-    // 4x the distance must not cost more than 40x the time. Deliberately slack:
-    // it still catches quadratic, which would be ~16x on its own before
-    // constant factors, while tolerating a busy machine.
-    expect(far).toBeLessThan(Math.max(near, 0.5) * 40);
+    // 4x the distance must not cost more than 4.5x the time.
+    //
+    // Every number here was measured against a deliberately quadratic solver,
+    // not reasoned about. Five repeats of each, warmed:
+    //
+    //   baseline   2.47  2.51  2.48  2.52  2.50
+    //   quadratic  7.51  7.52  7.26  7.56  7.52
+    //
+    // 4.5 sits between them with 1.8x headroom over the baseline. The ratio is
+    // far more stable than any absolute timing, because both halves take the
+    // same machine load and it divides out.
+    //
+    // Two earlier attempts at this line were wrong, which is why the numbers are
+    // written down. 40x was the original, with a comment claiming it caught
+    // quadratic -- it cannot, since 16 < 40. Then 8x, from arithmetic: baseline
+    // 2.5, quadratic "would be" 16. Also wrong. A real quadratic term mixes with
+    // the linear work that is still there, so the observed ratio is ~7.5, not
+    // 16, and 8x would have missed it by a hair. Only running it showed that.
+    expect(far).toBeLessThan(Math.max(near, 0.5) * 4.5);
   });
 
   it('builds a full DOPE card in one go without stalling', () => {
