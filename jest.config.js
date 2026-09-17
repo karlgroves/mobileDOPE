@@ -57,6 +57,10 @@ const unit = {
     '**/security/tests/**/*.(test|spec).(ts|tsx)',
   ],
   testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
+  // Replaces jest-worker's force-exit warning with one line; see #77 and
+  // docs/adr/013-jest-worker-force-exit.md. Set on both projects because
+  // globalSetup is a per-project option, and made idempotent for that reason.
+  globalSetup: '<rootDir>/jest.globalSetup.js',
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
@@ -81,6 +85,8 @@ const components = {
   },
   testMatch: ['**/__tests__/components/**/*.(test|spec).(ts|tsx)'],
   testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
+  // See the unit project above.
+  globalSetup: '<rootDir>/jest.globalSetup.js',
   // jest.setup.js supplies the expo-sqlite / AsyncStorage mocks these components need.
   // It existed but was never referenced by any config before this change, so it had
   // never run.
