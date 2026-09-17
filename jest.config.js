@@ -149,7 +149,7 @@ module.exports = {
   // `./src/services/` includes `database/` and `database/migrations/`.
   //
   //   directory                      s      b      l      f     state
-  //   utils                        90.5   77.3   90.1   87.5   ballistic math, done
+  //   utils                        91.5   77.8   91.2   90.4   +dopeAnalysis (#64)
   //   store                        92.9   86.6   94.1   92.3   #28 phase 3
   //   models                       86.7   82.6   86.7   84.7   #28 phase 4, mostly done
   //   services/database            77.8   79.6   79.1   81.5   repositories high, runner low
@@ -177,7 +177,7 @@ module.exports = {
     // The real floors are the per-directory ones below.
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
-    './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
+    './src/utils/': { branches: 77, functions: 90, lines: 91, statements: 91 },
     // The store, contexts, components and constants floors were dropped below their
     // observed worst case by #48, as a stopgap while the coverage numbers moved
     // between runs. #54 fixed the cause -- `src/store/useAppStore.ts` was instrumented
