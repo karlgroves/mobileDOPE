@@ -8,18 +8,18 @@ most calculators are quiet about — what it does not.
 
 ## Getting a solution
 
-| Input               | Notes                                                                        |
-| ------------------- | ---------------------------------------------------------------------------- |
-| Rifle Profile       | Supplies twist rate, zero distance, scope height, click value                |
-| Ammunition          | Supplies BC, bullet weight, muzzle velocity                                  |
-| Target Distance     | Yards                                                                        |
-| Shooting Angle      | Degrees. Positive uphill, negative downhill, 0 for level                     |
-| Temperature         | °F                                                                           |
-| Barometric Pressure | inHg — **station pressure**, see below                                       |
-| Humidity            | %                                                                            |
-| Altitude            | Feet                                                                         |
-| Wind Speed          | mph                                                                          |
-| Wind Direction      | Degrees the wind blows **from**. 0 = headwind, 90 = full value left-to-right |
+| Input            | Notes                                                                        |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Rifle Profile    | Supplies twist rate, zero distance, scope height, click value                |
+| Ammunition       | Supplies BC, bullet weight, muzzle velocity                                  |
+| Target Distance  | Yards                                                                        |
+| Shooting Angle   | Degrees. Positive uphill, negative downhill, 0 for level                     |
+| Temperature      | °F                                                                           |
+| Station Pressure | inHg — **not** the altimeter setting, see below                              |
+| Humidity         | %                                                                            |
+| Altitude         | Feet                                                                         |
+| Wind Speed       | mph                                                                          |
+| Wind Direction   | Degrees the wind blows **from**. 0 = headwind, 90 = full value left-to-right |
 
 ## What you get back
 

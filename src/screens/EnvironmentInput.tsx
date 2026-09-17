@@ -3,16 +3,18 @@
  * Manual and sensor-based environmental condition entry
  */
 
+import * as Location from 'expo-location';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
+import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
+import { useTheme } from '../contexts/ThemeContext';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { coarsenLatitude } from '../utils/geoPrecision';
-import * as Location from 'expo-location';
 
 // Wind direction options in degrees
 const WIND_DIRECTION_OPTIONS = [
@@ -342,7 +344,8 @@ export function EnvironmentInput() {
           />
 
           <NumberInput
-            label="Barometric Pressure"
+            label="Station Pressure"
+            helperText={STATION_PRESSURE_HELP}
             value={pressure}
             onChangeValue={setPressure}
             min={20}

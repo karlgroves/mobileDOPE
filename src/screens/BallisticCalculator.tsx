@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+
+import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
+import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
-import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
 // Wind direction options in degrees
@@ -219,7 +222,8 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             unit="°F"
           />
           <NumberInput
-            label="Barometric Pressure"
+            label="Station Pressure"
+            helperText={STATION_PRESSURE_HELP}
             value={pressure}
             onChangeValue={setPressure}
             min={25}
