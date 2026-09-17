@@ -5,13 +5,15 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import type { LogsStackScreenProps } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogDetail'>;
 
@@ -163,6 +165,21 @@ export function DOPELogDetail({ route, navigation }: Props) {
 
         {/* Actions */}
         <View style={styles.buttonContainer}>
+          {/* The only route into DOPECurve (#87). It was registered on the history
+              stack with no caller. This is the natural entry: the curve needs a
+              rifle and a load, and a log entry is where the user already has both
+              in hand. Hidden when either is missing rather than navigating to a
+              screen that would render nothing. */}
+          {rifle?.id !== undefined && ammo?.id !== undefined && (
+            <Button
+              title="View Curve"
+              onPress={() =>
+                navigation.navigate('DOPECurve', { rifleId: rifle.id!, ammoId: ammo.id! })
+              }
+              variant="secondary"
+              size="large"
+            />
+          )}
           <Button title="Edit" onPress={handleEdit} variant="secondary" size="large" />
           <Button title="Delete" onPress={handleDelete} variant="danger" size="large" />
         </View>

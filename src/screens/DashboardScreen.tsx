@@ -6,13 +6,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { IconButton } from '../components/IconButton';
 import { useTheme } from '../contexts/ThemeContext';
-import type { MainTabScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
+import { useAppStore } from '../store';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useAppStore } from '../store';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+
+import type { MainTabScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
 import type { AtmosphericConditions } from '../utils/atmospheric';
 
@@ -247,9 +250,22 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       edges={['top']}
     >
       <ScrollView contentContainerStyle={styles.content}>
-        {/* App Title */}
+        {/* App Title, and the only route into Settings (#87). The Settings screen
+            was registered on the root navigator with no caller, which stranded
+            Export/Import, Clear All Data and Delete Stored Location Data -- the
+            last of which PRIVACY.md commits to offering. Dashboard is the right
+            home for it: it is a tab, so it is reachable from anywhere. */}
         <View style={styles.header}>
           <Text style={[styles.appTitle, { color: colors.text.primary }]}>Mobile DOPE</Text>
+          <IconButton
+            icon="⚙"
+            size="small"
+            variant="ghost"
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityLabel="Settings"
+            accessibilityHint="Opens settings, including data export, import and privacy controls"
+            style={styles.headerAction}
+          />
         </View>
 
         {/* Trust Indicators */}
@@ -466,7 +482,15 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     paddingVertical: 8,
+  },
+  // Absolute so the title stays optically centred rather than being pushed left
+  // by the button's width.
+  headerAction: {
+    position: 'absolute',
+    right: 0,
   },
   appTitle: {
     fontSize: 20,
