@@ -16,9 +16,12 @@ jest.mock('expo-sqlite', () => ({
  *
  * Every service suite installs one of these per test, so a handle the harness
  * forgets is a handle leaked a few hundred times a run. `DatabaseService.close()`
- * early-returns when its `db` is null, which makes that reachable: a test that
- * closes the service itself leaves the harness with nothing to close through,
- * and `active = null` then drops a live database.
+ * early-returns when its `db` is null, which is the state that would strand one:
+ * a test that closed the service itself leaves the harness with nothing to close
+ * through, and `active = null` then drops a live database.
+ *
+ * No suite does that today -- #77 checked. This guards the harness against a
+ * future one, and against the coupling being changed rather than the caller.
  *
  * `node:sqlite`'s `DatabaseSync` is synchronous and holds no libuv handle, so
  * this is not what keeps the event loop open -- it is a correctness gap in the
@@ -58,6 +61,11 @@ describe('test database harness', () => {
     // `active` is about to be reassigned, and nothing else knows about the
     // database.
     const db = await installTestDatabase();
+    // Asserted before the spy goes in: `isOpen` reports false for *any* error,
+    // so without this the test would also pass on a handle that was never
+    // usable in the first place.
+    expect(await isOpen(db)).toBe(true);
+
     const close = jest.spyOn(databaseService, 'close').mockResolvedValue(undefined);
 
     try {
@@ -73,6 +81,8 @@ describe('test database harness', () => {
     // An unbalanced beforeEach/afterEach, or an install inside a test. The first
     // handle is otherwise unreachable the moment `active` is reassigned.
     const first = await installTestDatabase();
+    expect(await isOpen(first)).toBe(true);
+
     const second = await installTestDatabase();
 
     expect(first).not.toBe(second);
