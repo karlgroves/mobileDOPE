@@ -3,20 +3,23 @@
  * Creates printable DOPE cards with ballistic data
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
-import { SegmentedControl } from '../components/SegmentedControl';
-import type { ProfilesStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { calculateBallisticSolution } from '../utils/ballistics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+import { calculateBallisticSolution } from '../utils/ballistics';
+import { buildComparison, renderComparisonHtml } from '../utils/dopeCardComparison';
 import { escapeHtml } from '../utils/formatting';
+
+import type { ProfilesStackScreenProps } from '../navigation/types';
 
 interface DOPEDataRow {
   distance: number;
@@ -36,12 +39,12 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   const { colors } = theme;
 
   const { getRifleById } = useRifleStore();
-  const { getAmmoById } = useAmmoStore();
+  const { getAmmoById, getAmmoByCaliber } = useAmmoStore();
   const { current: environment } = useEnvironmentStore();
 
   const [angularUnit, setAngularUnit] = useState<'MIL' | 'MOA'>('MIL');
   const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>('yards');
-  const [cardFormat, setCardFormat] = useState<'detailed' | 'condensed'>('detailed');
+  const [cardFormat, setCardFormat] = useState<'detailed' | 'condensed' | 'comparison'>('detailed');
   const [colorMode, setColorMode] = useState<'light' | 'nightVision'>('light');
   const [minDistance] = useState(100);
   const [maxDistance] = useState(1000);
@@ -51,6 +54,15 @@ export function DOPECardGenerator({ route, navigation }: Props) {
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
+
+  /** The distance axis both card styles are built on. */
+  const dopeDistances = useMemo(() => {
+    const distances: number[] = [];
+    for (let distance = minDistance; distance <= maxDistance; distance += increment) {
+      distances.push(distance);
+    }
+    return distances;
+  }, [minDistance, maxDistance, increment]);
 
   // Generate DOPE table data
   const dopeData = useMemo(() => {
@@ -134,8 +146,85 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     return data;
   }, [rifle, ammo, environment, minDistance, maxDistance, increment, angularUnit, windSpeeds]);
 
+  /**
+   * Every load for this rifle's caliber, solved on the same distance axis.
+   *
+   * The comparison card answers "at 600, what does each of these dial?", so the
+   * loads have to come from somewhere the user has not been asked to pick from
+   * again -- the caliber they already set on the rifle is the honest default.
+   * Layout and alignment live in dopeCardComparison.ts, which is tested; this
+   * only supplies the rows. (Issue #66.)
+   */
+  const comparisonLoads = useMemo(() => {
+    if (!rifle || !environment) return [];
+
+    const rifleConfig = {
+      zeroDistance: rifle.zeroDistance,
+      sightHeight: rifle.scopeHeight,
+      clickValueType: rifle.clickValueType as 'MIL' | 'MOA',
+      clickValue: rifle.clickValue,
+      twistRate: rifle.twistRate,
+      barrelLength: rifle.barrelLength,
+    };
+
+    const atmosphere = {
+      temperature: environment.temperature || 59,
+      pressure: environment.pressure || 29.92,
+      humidity: environment.humidity || 50,
+      altitude: environment.altitude || 0,
+    };
+
+    // The selected load first, so the card leads with what the user came in
+    // holding rather than with whatever the database returns first.
+    const candidates = getAmmoByCaliber(rifle.caliber);
+    const ordered = [
+      ...candidates.filter((candidate) => candidate.id === ammoId),
+      ...candidates.filter((candidate) => candidate.id !== ammoId),
+    ];
+
+    return ordered.map((candidate) => ({
+      label: `${candidate.name} (${candidate.bulletWeight}gr)`,
+      rows: dopeDistances.map((distance) => {
+        const solution = calculateBallisticSolution(
+          rifleConfig,
+          {
+            bulletWeight: candidate.bulletWeight,
+            ballisticCoefficient: candidate.ballisticCoefficientG1,
+            muzzleVelocity: candidate.muzzleVelocity,
+            dragModel: 'G1' as const,
+          },
+          {
+            distance,
+            angle: 0,
+            windSpeed: environment.windSpeed || 0,
+            windDirection: environment.windDirection || 0,
+          },
+          atmosphere,
+          false
+        );
+
+        return {
+          distance,
+          elevation: angularUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA,
+          windage: angularUnit === 'MIL' ? solution.windageMIL : solution.windageMOA,
+          velocity: solution.velocity,
+        };
+      }),
+    }));
+  }, [rifle, environment, getAmmoByCaliber, ammoId, dopeDistances, angularUnit]);
+
   const generateHTML = () => {
     if (!rifle || !ammo) return '';
+
+    if (cardFormat === 'comparison') {
+      return renderComparisonHtml(
+        buildComparison(comparisonLoads, {
+          rifleName: rifle.name,
+          angularUnit,
+          distanceUnit,
+        })
+      );
+    }
 
     const today = new Date().toLocaleDateString();
     const isNightVision = colorMode === 'nightVision';
@@ -476,9 +565,12 @@ export function DOPECardGenerator({ route, navigation }: Props) {
               options={[
                 { label: 'Detailed', value: 'detailed' },
                 { label: 'Condensed', value: 'condensed' },
+                { label: 'Compare', value: 'comparison' },
               ]}
               selectedValue={cardFormat}
-              onValueChange={(value) => setCardFormat(value as 'detailed' | 'condensed')}
+              onValueChange={(value) =>
+                setCardFormat(value as 'detailed' | 'condensed' | 'comparison')
+              }
             />
           </View>
 
