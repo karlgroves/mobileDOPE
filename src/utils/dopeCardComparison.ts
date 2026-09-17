@@ -42,6 +42,18 @@ export interface ComparisonOptions {
   rifleName: string;
   angularUnit: 'MIL' | 'MOA';
   distanceUnit: 'yards' | 'meters';
+  /**
+   * Red on black for use at night, matching the other card formats.
+   *
+   * Not decoration. A white card read at the bench destroys the dark adaptation
+   * the shooter has spent twenty minutes acquiring, at the moment they need it.
+   *
+   * Required, deliberately. The first version of this module left it out
+   * entirely and the card came out white however the toggle was set; an optional
+   * field with a light default would have failed the same way, silently, the
+   * moment a caller forgot it. Making it required turns that into a type error.
+   */
+  colorMode: 'light' | 'nightVision';
   /** Defaults to today. Injected so the output is deterministic under test. */
   generatedOn?: Date;
 }
@@ -63,6 +75,7 @@ export interface ComparisonCard {
   rifleName: string;
   angularUnit: 'MIL' | 'MOA';
   distanceUnit: 'yards' | 'meters';
+  colorMode: 'light' | 'nightVision';
   generatedOn: Date;
   /** The shared distance axis: every distance any load has, ascending. */
   distances: number[];
@@ -100,6 +113,7 @@ export const buildComparison = (
     rifleName: options.rifleName,
     angularUnit: options.angularUnit,
     distanceUnit: options.distanceUnit,
+    colorMode: options.colorMode,
     generatedOn: options.generatedOn ?? new Date(),
     distances,
     loads: kept,
@@ -127,9 +141,36 @@ export const cellFor = (
   return `${row.elevation.toFixed(precision)} / ${row.windage.toFixed(precision)}`;
 };
 
+/**
+ * The two print palettes, matching the detailed and condensed cards.
+ *
+ * Night vision is red on black because red light preserves dark adaptation;
+ * the point of the card is that reading it does not cost the shooter their
+ * night vision.
+ */
+const PALETTES = {
+  light: {
+    background: '#ffffff',
+    text: '#000000',
+    headerBg: '#e0e0e0',
+    rowHeaderBg: '#f2f2f2',
+    border: '#666666',
+    note: '#333333',
+  },
+  nightVision: {
+    background: '#000000',
+    text: '#ff0000',
+    headerBg: '#330000',
+    rowHeaderBg: '#1a0000',
+    border: '#660000',
+    note: '#cc0000',
+  },
+} as const;
+
 /** Renders the card as printable HTML. */
 export const renderComparisonHtml = (card: ComparisonCard): string => {
   const distanceSuffix = card.distanceUnit === 'yards' ? 'yd' : 'm';
+  const palette = PALETTES[card.colorMode];
 
   const headings = card.loads.map((load) => `<th>${escapeHtml(load.label)}</th>`).join('');
 
@@ -155,12 +196,13 @@ export const renderComparisonHtml = (card: ComparisonCard): string => {
     <meta charset="utf-8" />
     <title>${escapeHtml(card.rifleName)} - load comparison</title>
     <style>
-      body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #000; background: #fff; }
+      body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: ${palette.text}; background: ${palette.background}; }
       table { border-collapse: collapse; width: 100%; }
-      th, td { border: 1px solid #666; padding: 6px 8px; text-align: center; font-variant-numeric: tabular-nums; }
-      thead th { background: #e0e0e0; }
-      .distance { background: #f2f2f2; }
-      .note { font-size: 11px; color: #333; }
+      th, td { border: 1px solid ${palette.border}; padding: 6px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+      thead th { background: ${palette.headerBg}; }
+      .distance { background: ${palette.rowHeaderBg}; }
+      .note { font-size: 11px; color: ${palette.note}; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
   </head>
   <body>

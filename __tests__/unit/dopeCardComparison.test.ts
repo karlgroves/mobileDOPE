@@ -25,6 +25,7 @@ const options = {
   rifleName: 'Tikka T3x',
   angularUnit: 'MIL' as const,
   distanceUnit: 'yards' as const,
+  colorMode: 'light' as const,
   generatedOn: new Date('2026-09-17T12:00:00Z'),
 };
 
@@ -224,6 +225,37 @@ describe('the rendered card', () => {
 
     expect(html).toContain('<th>Federal 175</th>');
     expect(html).toContain('<th>Hornady 168</th>');
+  });
+
+  it('honours night vision, because a white card at the bench costs dark adaptation', () => {
+    // The card exists to be read in the dark. The other two formats already do
+    // this; a comparison card that came out white would undo twenty minutes of
+    // the shooter's dark adaptation at the moment they need it.
+    const night = renderComparisonHtml(
+      buildComparison([load('A', [[100, 1, 0]])], { ...options, colorMode: 'nightVision' })
+    );
+
+    expect(night).toContain('#000000');
+    expect(night).toContain('#ff0000');
+    expect(night).not.toContain('#ffffff');
+  });
+
+  it('uses the light palette for daylight', () => {
+    const light = renderComparisonHtml(buildComparison([load('A', [[100, 1, 0]])], options));
+
+    expect(light).toContain('#ffffff');
+    expect(light).not.toContain('#ff0000');
+  });
+
+  it('tells the print engine to keep the background', () => {
+    // Browsers drop background colours when printing by default. Without this a
+    // night-vision card prints as black text on white paper -- the exact
+    // opposite of what was asked for, which is worse than ignoring the setting.
+    const night = renderComparisonHtml(
+      buildComparison([load('A', [[100, 1, 0]])], { ...options, colorMode: 'nightVision' })
+    );
+
+    expect(night).toContain('print-color-adjust: exact');
   });
 
   it('produces a card with no rows rather than throwing when there is nothing to compare', () => {

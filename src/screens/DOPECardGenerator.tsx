@@ -222,6 +222,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
           rifleName: rifle.name,
           angularUnit,
           distanceUnit,
+          colorMode,
         })
       );
     }
