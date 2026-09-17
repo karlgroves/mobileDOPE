@@ -168,6 +168,13 @@ module.exports = {
     // declared because jest requires it and because a zero here is a deliberate
     // statement -- anything reaching `global` is ungated, and that test is what
     // makes sure nothing does.
+    //
+    // #74 read this zero as "a coverage threshold that can never fail". It is the
+    // opposite: the zero is unreachable, not permissive. A file that landed here
+    // WOULD be ungated, which is exactly why a test asserts none ever does --
+    // `gates every instrumented file under a named directory group` fails the build
+    // if one does. Raising this number would gate nothing and hide that property.
+    // The real floors are the per-directory ones below.
     global: { branches: 0, functions: 0, lines: 0, statements: 0 },
 
     './src/utils/': { branches: 76, functions: 86, lines: 89, statements: 89 },
