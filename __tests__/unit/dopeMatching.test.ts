@@ -13,6 +13,8 @@ import {
   shotQuality,
 } from '../../src/utils/dopeMatching';
 
+import type { MatchableLog } from '../../src/utils/dopeMatching';
+
 /**
  * DOPE matching (#70, section 1).
  *
@@ -23,7 +25,10 @@ import {
  * not just that a number comes back.
  */
 
-type Log = Parameters<typeof logDistanceInYards>[0] & Record<string, unknown>;
+// Anchored to MatchableLog rather than to logDistanceInYards' parameter. That
+// function now lives in distanceUnits and takes the narrower { distance,
+// distanceUnit } shape, which is not what the query functions here want.
+type Log = MatchableLog & Record<string, unknown>;
 
 const log = (over: Partial<Log> = {}): Log =>
   ({

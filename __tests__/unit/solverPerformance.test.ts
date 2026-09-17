@@ -91,12 +91,53 @@ describe('solver performance', () => {
     expect(elapsed).toBeLessThan(500);
   });
 
+  /**
+   * The median of PAIRED near/far ratios, rather than a ratio of two medians.
+   *
+   * This distinction is the difference between a test and a flake. Timing 500
+   * yards nine times and then 2000 yards nine times measures them in two
+   * different windows, and under a full parallel run those windows have
+   * different neighbours competing for the machine. Dividing the results
+   * carries that difference into the ratio.
+   *
+   * Measuring near and far back to back, and taking the median of the
+   * per-pair ratios, keeps both halves inside the same window. Whatever the
+   * machine was doing, it was doing it to both.
+   *
+   * Learned the hard way: the 4.5 threshold below passed in isolation and
+   * failed inside the full suite, which is exactly the failure mode this file's
+   * own header warns about.
+   */
+  const medianRatio = (near: () => unknown, far: () => unknown, pairs = 9): number => {
+    for (let i = 0; i < 3; i++) {
+      near();
+      far();
+    }
+
+    const ratios: number[] = [];
+    for (let i = 0; i < pairs; i++) {
+      const nearStart = performance.now();
+      near();
+      const nearMs = performance.now() - nearStart;
+
+      const farStart = performance.now();
+      far();
+      const farMs = performance.now() - farStart;
+
+      ratios.push(farMs / Math.max(nearMs, 0.001));
+    }
+    ratios.sort((a, b) => a - b);
+    return ratios[Math.floor(ratios.length / 2)];
+  };
+
   it('scales with distance rather than exploding', () => {
     // The shape matters more than any single figure. Integration to 2000 yards
     // is more work than to 500, but it must not be dramatically superlinear --
     // that is the signature of an accidental O(n^2) in the step loop.
-    const near = medianMs(() => calculateTrajectory(rifle, ammo, shot(500), atmosphere));
-    const far = medianMs(() => calculateTrajectory(rifle, ammo, shot(2000), atmosphere));
+    const ratio = medianRatio(
+      () => calculateTrajectory(rifle, ammo, shot(500), atmosphere),
+      () => calculateTrajectory(rifle, ammo, shot(2000), atmosphere)
+    );
 
     // 4x the distance must not cost more than 4.5x the time.
     //
@@ -106,17 +147,16 @@ describe('solver performance', () => {
     //   baseline   2.47  2.51  2.48  2.52  2.50
     //   quadratic  7.51  7.52  7.26  7.56  7.52
     //
-    // 4.5 sits between them with 1.8x headroom over the baseline. The ratio is
-    // far more stable than any absolute timing, because both halves take the
-    // same machine load and it divides out.
+    // 4.5 sits between them with 1.8x headroom over the baseline.
     //
-    // Two earlier attempts at this line were wrong, which is why the numbers are
-    // written down. 40x was the original, with a comment claiming it caught
+    // Three earlier attempts at this line were wrong, which is why the numbers
+    // are written down. 40x was the original, with a comment claiming it caught
     // quadratic -- it cannot, since 16 < 40. Then 8x, from arithmetic: baseline
-    // 2.5, quadratic "would be" 16. Also wrong. A real quadratic term mixes with
-    // the linear work that is still there, so the observed ratio is ~7.5, not
-    // 16, and 8x would have missed it by a hair. Only running it showed that.
-    expect(far).toBeLessThan(Math.max(near, 0.5) * 4.5);
+    // 2.5, quadratic "would be" 16. Also wrong, because a real quadratic term
+    // mixes with the linear work still present, so the observed ratio is ~7.5.
+    // Then 4.5 computed from two separately-medianed timings, which was right
+    // about the number and wrong about how to measure it -- see medianRatio.
+    expect(ratio).toBeLessThan(4.5);
   });
 
   it('builds a full DOPE card in one go without stalling', () => {

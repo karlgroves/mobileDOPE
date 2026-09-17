@@ -12,6 +12,7 @@ import {
   hasRequiredEnvironmentalInputs,
   missingEnvironmentalInputs,
 } from '../utils/calculatorInputs';
+import { toSolverYards } from '../utils/distanceUnits';
 
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
@@ -106,7 +107,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
       };
 
       const targetParams = {
-        distance,
+        // The solver is yards. The toggle above used to change only the label,
+        // so entering 600 with meters selected solved for 600 yards -- a target
+        // 52 m closer than the one being looked at. See #106.
+        distance: toSolverYards(distance, distanceUnit),
         angle: environmentals.angle,
         windSpeed: environmentals.windSpeed,
         windDirection: environmentals.windDirection,
@@ -135,7 +139,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
         solution: result,
         rifleId: selectedRifleId!,
         ammoId: selectedAmmoId!,
+        // Passed as entered, with the unit, so the results screen shows the
+        // shooter the number they asked about rather than its yard equivalent.
         distance,
+        distanceUnit,
         angularUnit,
       });
     } catch (error: unknown) {

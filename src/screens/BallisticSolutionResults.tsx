@@ -18,6 +18,7 @@ import {
   applyAdvancedCorrections,
   describeAdvancedCorrections,
 } from '../utils/advancedCorrections';
+import { toSolverYards } from '../utils/distanceUnits';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { CalculatorStackScreenProps } from '../navigation/types';
@@ -25,7 +26,7 @@ import type { CalculatorStackScreenProps } from '../navigation/types';
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
 export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation }) => {
-  const { solution, rifleId, ammoId, distance, angularUnit } = route.params;
+  const { solution, rifleId, ammoId, distance, distanceUnit, angularUnit } = route.params;
   const { settings } = useAppStore();
 
   /**
@@ -117,13 +118,16 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
         rifleId: rifle!.id!,
         ammoId: ammo!.id!,
         environmentId,
+        // Stored as entered, with its unit beside it -- the contract DOPELogEntry
+        // already uses. Hard-coding 'yards' here mislabelled every metric
+        // solution that reached this screen. (#106)
         distance,
-        distanceUnit: 'yards',
+        distanceUnit,
         elevationCorrection: elevation,
         windageCorrection: windage,
         correctionUnit: angularUnit,
         targetType,
-        notes: `Calculated at ${distance} yards with ${rifle?.name} / ${ammo?.name}`,
+        notes: `Calculated at ${distance} ${distanceUnit === 'yards' ? 'yards' : 'metres'} with ${rifle?.name} / ${ammo?.name}`,
       };
 
       await createDopeLog(dopeData);
@@ -155,7 +159,9 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Distance:</Text>
-            <Text style={[styles.infoValue, { color: colors.text.primary }]}>{distance} yards</Text>
+            <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+              {distance} {distanceUnit === 'yards' ? 'yards' : 'metres'}
+            </Text>
           </View>
         </Card>
 
@@ -294,7 +300,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           />
           <Button
             title="View Wind Table"
-            onPress={() => navigation.navigate('WindTable', { rifleId, ammoId, distance })}
+            onPress={() =>
+              navigation.navigate('WindTable', {
+                rifleId,
+                ammoId,
+                // WindTable solves, so it takes the solver's unit.
+                distance: toSolverYards(distance, distanceUnit),
+              })
+            }
             variant="secondary"
             size="large"
             style={styles.button}

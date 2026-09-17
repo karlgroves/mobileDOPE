@@ -86,7 +86,9 @@ export type CalculatorStackParamList = {
     solution: BallisticSolution;
     rifleId: number;
     ammoId: number;
+    /** As the shooter entered it, in `distanceUnit` -- not normalised to yards. */
     distance: number;
+    distanceUnit: 'yards' | 'meters';
     angularUnit: 'MIL' | 'MOA';
   };
   WindTable: { rifleId: number; ammoId: number; distance: number };

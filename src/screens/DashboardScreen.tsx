@@ -14,6 +14,7 @@ import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+import { toSolverYards } from '../utils/distanceUnits';
 
 import type { MainTabScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
@@ -43,7 +44,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   // Shooting parameters
-  const [distance, setDistance] = useState(300); // yards
+  // In the shooter's own unit -- the quick-solve below converts for the solver,
+  // and the log prefill records this number with `distanceUnit` beside it. It
+  // used to be commented "yards" while being labelled with the user's default
+  // unit on the way out, so a metric user's quick solve was for 300 yards and
+  // their log said 300 m. (#106)
+  const [distance, setDistance] = useState(300);
   const [windSpeed, setWindSpeed] = useState(5); // mph
   const [windDirection, setWindDirection] = useState(180); // degrees (3 o'clock = 90, 9 o'clock = 270)
 
@@ -130,7 +136,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       };
 
       const shotParams: ShotParameters = {
-        distance: distance,
+        distance: toSolverYards(distance, settings.defaultDistanceUnit),
         angle: 0,
         windSpeed: windSpeed,
         windDirection: windDirection,

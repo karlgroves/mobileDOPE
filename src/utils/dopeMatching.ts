@@ -23,7 +23,7 @@
  */
 
 import { calculateDensityAltitude } from './atmospheric';
-import { metersToYards } from './unitConversions';
+import { logDistanceInYards } from './distanceUnits';
 
 /** Distance window around the shot, in yards. The default the issue specifies. */
 export const DEFAULT_DISTANCE_DELTA = 50;
@@ -155,9 +155,12 @@ const unit = (value: number): number => {
  * 600 that is 55 yards, wider than the default delta. A metric user's entire
  * history would sit just outside every query, and the system would report that
  * they have no relevant DOPE.
+ *
+ * Re-exported from `distanceUnits` rather than implemented again here. This
+ * module had the rule right while the calculator and the card generator did not
+ * (#106) -- and two correct copies is how the third one comes to be wrong.
  */
-export const logDistanceInYards = (log: MatchableLog): number =>
-  log.distanceUnit === 'meters' ? metersToYards(log.distance) : log.distance;
+export { logDistanceInYards } from './distanceUnits';
 
 /**
  * The logs worth scoring: same rifle, same load, within the distance window.

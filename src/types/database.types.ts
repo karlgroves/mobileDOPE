@@ -56,7 +56,11 @@ export interface DOPELogRow {
   rifle_id: number;
   ammo_id: number;
   environment_id: number;
-  distance: number; // yards
+  // In `distance_unit`, NOT normalised to yards -- DOPELogEntry stores the
+  // number as typed. This comment said "yards" while the column beside it stored
+  // a unit; both could not be true, and code had been written against each of
+  // them. Use `logDistanceInYards` before computing with it. (#106)
+  distance: number; // in distance_unit
   distance_unit: 'yards' | 'meters';
   elevation_correction: number; // MIL or MOA
   windage_correction: number; // MIL or MOA

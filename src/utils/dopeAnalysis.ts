@@ -22,6 +22,8 @@
  * deviation, which keeps the familiar "about 3 sigma" intuition usable.
  */
 
+import { logDistanceInYards } from './distanceUnits';
+
 import type { DOPELogData } from '../models/DOPELog';
 
 /** MAD → standard-deviation-equivalent for normally distributed data. */
@@ -136,8 +138,13 @@ export const calculateConfidence = (log: DOPELogData): DOPEConfidence => {
   }
 
   // Group size relative to distance, in MOA — roughly 1 inch per 100 yards.
+  //
+  // Through logDistanceInYards, because a log holds its distance in its own
+  // unit. Using the raw number rated a metric group about 9% tighter than it
+  // was, and the rating is what the app tells the shooter about their shooting.
+  // (#106)
   if (log.groupSize !== undefined && log.distance > 0) {
-    const moa = log.groupSize / (log.distance / 100);
+    const moa = log.groupSize / (logDistanceInYards(log) / 100);
     if (moa <= 1) {
       score += 0.15;
       reasons.push(`${moa.toFixed(1)} MOA group`);
