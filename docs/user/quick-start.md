@@ -71,15 +71,15 @@ and the whole reason for logging DOPE is that it will not be exactly right.
 
 Go to **Calculator** tab, or **Session → Environment**.
 
-| Field               | Units                                      |
-| ------------------- | ------------------------------------------ |
-| Temperature         | °F                                         |
-| Humidity            | %                                          |
-| Barometric Pressure | inHg                                       |
-| Altitude            | Feet                                       |
-| Wind Speed          | mph                                        |
-| Wind Direction      | Degrees, where the wind is coming **from** |
-| Latitude            | Degrees — for the Coriolis correction      |
+| Field            | Units                                      |
+| ---------------- | ------------------------------------------ |
+| Temperature      | °F                                         |
+| Humidity         | %                                          |
+| Station Pressure | inHg — see the note below                  |
+| Altitude         | Feet                                       |
+| Wind Speed       | mph                                        |
+| Wind Direction   | Degrees, where the wind is coming **from** |
+| Latitude         | Degrees — for the Coriolis correction      |
 
 **Use station pressure, not the airport's.** Weather apps and METARs report
 _altimeter setting_, which is corrected to sea level so pilots can compare. The
