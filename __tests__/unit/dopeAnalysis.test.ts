@@ -258,6 +258,36 @@ describe('suggestMuzzleVelocity', () => {
     const { rationale } = suggestMuzzleVelocity(comparisons(0.4), 2700)!;
     expect(rationale).toMatch(/chronograph/i);
   });
+
+  describe('MOA', () => {
+    // The unit parameter has its own noise floor and its own scaling, and both
+    // were untested until review. An MOA is about 0.29 MIL, so the same NUMBER
+    // of units is a smaller angle — the floor has to be higher and the implied
+    // velocity change smaller, or a user on MOA turrets gets suggestions from
+    // noise and three times too large when they do fire.
+
+    it('uses a higher noise floor, since an MOA is a smaller angle than a MIL', () => {
+      // 0.2 is above the MIL floor of 0.1 and below the MOA floor of 0.34.
+      expect(suggestMuzzleVelocity(comparisons(0.2), 2700, 'MIL')).toBeDefined();
+      expect(suggestMuzzleVelocity(comparisons(0.2), 2700, 'MOA')).toBeUndefined();
+    });
+
+    it('implies a smaller velocity change than the same number of MILs', () => {
+      const mil = suggestMuzzleVelocity(comparisons(1.0), 2700, 'MIL')!;
+      const moa = suggestMuzzleVelocity(comparisons(1.0), 2700, 'MOA')!;
+
+      // Same direction...
+      expect(mil.suggested).toBeLessThan(2700);
+      expect(moa.suggested).toBeLessThan(2700);
+      // ...but 1 MOA is a much smaller error than 1 MIL, so a smaller change.
+      expect(2700 - moa.suggested).toBeLessThan(2700 - mil.suggested);
+    });
+
+    it('names the unit it was given', () => {
+      const { rationale } = suggestMuzzleVelocity(comparisons(1.0), 2700, 'MOA')!;
+      expect(rationale).toContain('MOA');
+    });
+  });
 });
 
 describe('suggestBallisticCoefficient', () => {
