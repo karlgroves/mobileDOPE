@@ -152,8 +152,8 @@ module.exports = {
   //   utils                        90.5   77.3   90.1   87.5   ballistic math, done
   //   store                        92.9   86.6   94.1   92.3   #28 phase 3
   //   models                       86.7   82.6   86.7   84.7   #28 phase 4, mostly done
-  //   services/database            77.2   79.1   78.5   81.0   repositories high, runner low
-  //   services                     72.7   59.1   73.2   75.7   CSV/Markdown covered; PDF 0%
+  //   services/database            77.8   79.6   79.1   81.5   repositories high, runner low
+  //   services                     73.0   59.3   73.5   76.0   CSV/Markdown covered; PDF 0%
   //   contexts                     83.3   50.0   83.3   66.6   incidental, via components
   //   components                   27.0   31.8   27.5   28.5   8 of ~20 suites
   //   constants                    18.3    9.0   23.6    3.4   data tables
