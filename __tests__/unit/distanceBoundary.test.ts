@@ -38,15 +38,40 @@ describe('the solver is only ever handed yards', () => {
     expect(solverCallers.length).toBeGreaterThan(2);
   });
 
+  /** Screens that offer a distance unit and call the solver. */
+  const convertingScreens = sources
+    .filter(([file]) => file.startsWith('screens'))
+    .filter(([, source]) => /\bdistanceUnit\b/i.test(source))
+    .filter(([, source]) => /\bcalculate(BallisticSolution|Trajectory)\s*\(/.test(source));
+
   it('gives every screen with a distance unit a way to convert', () => {
     // The precise defect. A screen that offers the user a yards/meters choice
     // and then calls the solver must convert; otherwise the toggle changes the
     // label and nothing else, which is what shipped.
-    const offenders = sources
-      .filter(([file]) => file.startsWith('screens'))
-      .filter(([, source]) => /\bdistanceUnit\b/.test(source))
-      .filter(([, source]) => /\bcalculate(BallisticSolution|Trajectory)\s*\(/.test(source))
+    const offenders = convertingScreens
       .filter(([, source]) => !/\btoSolverYards\s*\(/.test(source))
+      .map(([file]) => file);
+
+    expect(convertingScreens.length).toBeGreaterThanOrEqual(3);
+    expect(offenders).toEqual([]);
+  });
+
+  it('converts using the unit the user chose, not a hard-coded one', () => {
+    // Presence of the call is not enough, and this test exists because the
+    // first version of this sweep only checked that. `toSolverYards(distance,
+    // 'yards')` passes a presence check, is exactly what someone writes while
+    // silencing a guard they have not read, and restores the original bug in
+    // full.
+    //
+    // So the second argument has to be an expression, not a string literal.
+    // That is still textual, and something determined could defeat it -- but it
+    // catches the mistake that actually happens.
+    const offenders = convertingScreens
+      .filter(([, source]) =>
+        [...source.matchAll(/\btoSolverYards\s*\(([^)]*)\)/g)].some((match) =>
+          /,\s*['"]/.test(match[1])
+        )
+      )
       .map(([file]) => file);
 
     expect(offenders).toEqual([]);
