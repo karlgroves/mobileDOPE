@@ -14,16 +14,18 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { SegmentedControl } from '../components/SegmentedControl';
-import type { LogsStackScreenProps } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
+import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
+import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+
 import type { DOPELog } from '../models/DOPELog';
-import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogList'>;
 
@@ -199,10 +201,10 @@ export function DOPELogList({ navigation }: Props) {
               </Text>
             </View>
             <View style={styles.correctionBadge}>
-              <Text style={[styles.correctionText, { color: colors.primary }]}>
+              <Text style={[styles.correctionText, { color: colors.primaryText }]}>
                 ↑ {item.elevationCorrection.toFixed(2)}
               </Text>
-              <Text style={[styles.correctionText, { color: colors.primary }]}>
+              <Text style={[styles.correctionText, { color: colors.primaryText }]}>
                 → {item.windageCorrection.toFixed(2)}
               </Text>
             </View>
@@ -249,7 +251,7 @@ export function DOPELogList({ navigation }: Props) {
               accessibilityLabel={`Edit log at ${item.distance} ${item.distanceUnit}`}
               accessibilityHint="Opens this entry for editing"
             >
-              <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.primaryText }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
@@ -351,7 +353,7 @@ export function DOPELogList({ navigation }: Props) {
               accessibilityLabel="Export DOPE logs"
               accessibilityHint="Choose a format and share the exported file"
             >
-              <Text style={[styles.exportFabText, { color: colors.primary }]}>↗</Text>
+              <Text style={[styles.exportFabText, { color: colors.primaryText }]}>↗</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.fab, { backgroundColor: colors.primary }]}

@@ -378,7 +378,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             {/* Elevation Solution - Largest on screen */}
             <View style={[styles.elevationSection, { backgroundColor: colors.surface }]}>
               <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.elevationValue, { color: colors.primary }]}>
+              <Text style={[styles.elevationValue, { color: colors.primaryText }]}>
                 {elevation !== null ? elevation.toFixed(2) : '--'} {settings.defaultCorrectionUnit}
               </Text>
             </View>

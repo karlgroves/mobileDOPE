@@ -105,19 +105,19 @@ export function DOPELogDetail({ route, navigation }: Props) {
           </Text>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Distance:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.distance} {log.distanceUnit}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Elevation:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.elevationCorrection.toFixed(2)} {log.correctionUnit}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Windage:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.windageCorrection.toFixed(2)} {log.correctionUnit}
             </Text>
           </View>
