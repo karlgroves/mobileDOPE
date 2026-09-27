@@ -286,7 +286,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Text
               style={[
                 styles.trustText,
-                { color: hasRifle ? colors.primary : colors.text.secondary },
+                { color: hasRifle ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Rifle {hasRifle ? '✓' : '○'}
@@ -303,7 +303,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Text
               style={[
                 styles.trustText,
-                { color: hasAmmo ? colors.primary : colors.text.secondary },
+                { color: hasAmmo ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Ammo {hasAmmo ? '✓' : '○'}
@@ -320,7 +320,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             accessibilityHint="Opens the range session screen to enter conditions"
           >
             <Text
-              style={[styles.trustText, { color: hasEnv ? colors.primary : colors.text.secondary }]}
+              style={[
+                styles.trustText,
+                { color: hasEnv ? colors.primaryText : colors.text.secondary },
+              ]}
             >
               Env {hasEnv ? '✓' : '○'}
             </Text>

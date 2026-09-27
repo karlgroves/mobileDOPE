@@ -280,7 +280,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                           {
                             color:
                               diff > 0
-                                ? colors.success
+                                ? colors.successText
                                 : diff < 0
                                   ? colors.error
                                   : colors.text.secondary,
@@ -331,7 +331,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                           {
                             color:
                               diff > 0
-                                ? colors.success
+                                ? colors.successText
                                 : diff < 0
                                   ? colors.error
                                   : colors.text.secondary,
@@ -382,7 +382,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                           {
                             color:
                               diff > 0
-                                ? colors.success
+                                ? colors.successText
                                 : diff < 0
                                   ? colors.error
                                   : colors.text.secondary,
@@ -422,7 +422,9 @@ const SpecRow: React.FC<{
 }> = ({ label, value1, value2, colors, highlight }) => (
   <View style={[styles.specsRow, { borderBottomColor: colors.border }]}>
     <Text style={[styles.specsLabel, { color: colors.text.secondary }]}>{label}</Text>
-    <Text style={[styles.specsValue, { color: highlight ? colors.primary : colors.text.primary }]}>
+    <Text
+      style={[styles.specsValue, { color: highlight ? colors.primaryText : colors.text.primary }]}
+    >
       {value1}
     </Text>
     <Text style={[styles.specsValue, { color: highlight ? colors.warning : colors.text.primary }]}>

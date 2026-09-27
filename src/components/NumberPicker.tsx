@@ -147,7 +147,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                       style={[
                         styles.optionText,
                         {
-                          color: isSelected ? colors.primary : colors.text.primary,
+                          color: isSelected ? colors.primaryText : colors.text.primary,
                           fontWeight: isSelected ? '600' : '400',
                         },
                       ]}

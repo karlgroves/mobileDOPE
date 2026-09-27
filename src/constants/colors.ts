@@ -20,6 +20,7 @@ export const Colors = {
     error: '#f44336',
     errorDark: '#d32f2f',
     success: '#4CAF50',
+    successText: '#66BB6A',
     warning: '#FF9800',
     info: '#2196F3',
     text: {
@@ -48,6 +49,7 @@ export const Colors = {
     error: '#f44336',
     errorDark: '#d32f2f',
     success: '#4CAF50',
+    successText: '#1B5E20', // same split as primaryText
     warning: '#FF9800',
     info: '#2196F3',
     text: {
@@ -76,6 +78,7 @@ export const Colors = {
     error: '#ff8888',
     errorDark: '#ff4444',
     success: '#ff4444',
+    successText: '#ff4444',
     warning: '#ff6666',
     info: '#ff8888',
     text: {

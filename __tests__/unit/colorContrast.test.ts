@@ -47,12 +47,18 @@ function over(fill: string, alpha: number, base: string): [number, number, numbe
 
 const MODES: ThemeMode[] = ['dark', 'light', 'nightVision'];
 
-describe('primaryText contrast', () => {
+/** Each fill token and the text token that draws its hue legibly. */
+const TEXT_TOKENS = [
+  ['primary', 'primaryText'],
+  ['success', 'successText'],
+] as const;
+
+describe.each(TEXT_TOKENS)('%s as text', (fill, text) => {
   describe.each(MODES)('%s theme', (mode) => {
     const c = Colors[mode];
 
     it.each(['background', 'surface'] as const)('passes AA on %s', (surface) => {
-      expect(contrast(channels(c.primaryText), channels(c[surface]))).toBeGreaterThanOrEqual(
+      expect(contrast(channels(c[text]), channels(c[surface]))).toBeGreaterThanOrEqual(
         AA_NORMAL_TEXT
       );
     });
@@ -63,21 +69,75 @@ describe('primaryText contrast', () => {
       'passes AA on the selected-row tint over %s',
       (surface) => {
         const tinted = over(c.primary, 0x20 / 255, c[surface]);
-        expect(contrast(channels(c.primaryText), tinted)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        expect(contrast(channels(c[text]), tinted)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
       }
     );
   });
 
-  it('is the regression the issue measured: primary fails as light-theme text', () => {
+  it('is the regression the issue measured: the fill fails as light-theme text', () => {
     // If this ever passes, the fill colour changed and the split may no longer
-    // be needed. Until then, primaryText must differ from primary on light.
+    // be needed. Until then, the text token must differ from the fill on light.
     const l = Colors.light;
-    expect(contrast(channels(l.primary), channels(l.surface))).toBeLessThan(AA_NORMAL_TEXT);
-    expect(l.primaryText).not.toBe(l.primary);
+    expect(contrast(channels(l[fill]), channels(l.surface))).toBeLessThan(AA_NORMAL_TEXT);
+    expect(l[text]).not.toBe(l[fill]);
   });
 });
 
-describe('no text is drawn in the fill colour', () => {
+/**
+ * Every `color:` property value in `source`, with the line it starts on. The
+ * value runs to the first `,` `}` or `]` outside brackets, so a ternary or a
+ * value broken across lines is read whole -- a line-based match missed six
+ * sites written that way (#115 review).
+ */
+function colorValues(source: string): { line: number; value: string }[] {
+  const found: { line: number; value: string }[] = [];
+  // `color:` alone, not borderColor / backgroundColor / tintColor, which are fills.
+  const COLOR_KEY = /(^|[^A-Za-z])color:/g;
+  let m: RegExpExecArray | null;
+  while ((m = COLOR_KEY.exec(source))) {
+    let i = m.index + m[0].length;
+    let depth = 0;
+    const from = i;
+    for (; i < source.length; i++) {
+      const ch = source[i];
+      if ('([{'.includes(ch)) depth++;
+      else if (')]}'.includes(ch)) {
+        if (depth === 0) break;
+        depth--;
+      } else if (ch === ',' && depth === 0) break;
+    }
+    found.push({
+      line: source.slice(0, m.index + m[1].length).split('\n').length,
+      value: source.slice(from, i),
+    });
+  }
+  return found;
+}
+
+// `(?<![.\w])` confines this to the themed `colors` from useTheme(). Components
+// reading the static `theme.colors` (Button, LoadingSpinner) never follow the
+// light theme at all, which is a separate defect.
+const TEXT_IN_FILL = /(?<![.\w])colors\.(primary|success)\b/;
+
+describe('colorValues', () => {
+  it('reads a ternary broken across lines as one value', () => {
+    const src = ['{', '  color:', '    x ? colors.primary : colors.text.secondary,', '}'].join(
+      '\n'
+    );
+    expect(colorValues(src)).toEqual([
+      { line: 2, value: '\n    x ? colors.primary : colors.text.secondary' },
+    ]);
+  });
+
+  it('ignores fill properties and stops at the closing brace', () => {
+    const src = '{ borderColor: colors.primary, color: colors.primaryText }';
+    const values = colorValues(src);
+    expect(values).toHaveLength(1);
+    expect(TEXT_IN_FILL.test(values[0].value)).toBe(false);
+  });
+});
+
+describe('no text is drawn in a fill colour', () => {
   const SRC = path.join(__dirname, '../../src');
 
   function sourceFiles(dir: string): string[] {
@@ -88,18 +148,12 @@ describe('no text is drawn in the fill colour', () => {
     });
   }
 
-  it('uses colors.primaryText, never colors.primary, for a text colour', () => {
-    // `color:` alone, not borderColor / backgroundColor / tintColor, which are
-    // fills. `\b` after `primary` lets primaryText and primaryDark through.
-    const TEXT_IN_FILL = /(^|[^A-Za-z])color:\s*colors\.primary\b/;
-
+  it('uses primaryText / successText, never primary / success, for a text colour', () => {
+    // `\b` after the token lets primaryText, primaryDark and successText through.
     const offenders = sourceFiles(SRC).flatMap((file) =>
-      fs
-        .readFileSync(file, 'utf8')
-        .split('\n')
-        .map((line, i) => ({ line, at: `${path.relative(SRC, file)}:${i + 1}` }))
-        .filter(({ line }) => TEXT_IN_FILL.test(line))
-        .map(({ at }) => at)
+      colorValues(fs.readFileSync(file, 'utf8'))
+        .filter(({ value }) => TEXT_IN_FILL.test(value))
+        .map(({ line }) => `${path.relative(SRC, file)}:${line}`)
     );
 
     expect(offenders).toEqual([]);
