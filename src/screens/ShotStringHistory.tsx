@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AmmoStackParamList } from '../navigation/types';
-import { useAmmoStore } from '../store/useAmmoStore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
+
 import { Card, Button, EmptyState } from '../components';
-import { AmmoProfileData } from '../models/AmmoProfile';
 import { useTheme } from '../contexts/ThemeContext';
+import { AmmoProfileData } from '../models/AmmoProfile';
+import { ShotString } from '../models/ShotString';
+import { AmmoStackParamList } from '../navigation/types';
 import {
   shotStringRepository,
   ShotStringStatistics,
 } from '../services/database/ShotStringRepository';
-import { ShotString } from '../models/ShotString';
+import { useAmmoStore } from '../store/useAmmoStore';
 
 type ShotStringHistoryNavigationProp = NativeStackNavigationProp<
   AmmoStackParamList,
@@ -184,7 +185,7 @@ export const ShotStringHistory: React.FC = () => {
   if (!ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>Ammo profile not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>Ammo profile not found</Text>
       </View>
     );
   }

@@ -95,7 +95,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
         <Text style={[styles.chevron, { color: colors.text.secondary }]}>▼</Text>
       </TouchableOpacity>
 
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>}
       {helperText && !error && (
         <Text style={[styles.helperText, { color: colors.text.secondary }]}>{helperText}</Text>
       )}

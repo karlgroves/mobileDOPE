@@ -3,17 +3,19 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
+import * as Sharing from 'expo-sharing';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
 import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+import { CartesianChart, Line } from 'victory-native';
+
+import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
-import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+
 import type { HistoryStackScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
 import type { AtmosphericConditions } from '../utils/atmospheric';
@@ -318,7 +320,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                     <Text
                       style={[
                         styles.tableCell,
-                        { color: actualPoint ? colors.warning : colors.text.secondary },
+                        { color: actualPoint ? colors.warningText : colors.text.secondary },
                       ]}
                     >
                       {actualPoint ? actualPoint.elevation.toFixed(1) : '-'}

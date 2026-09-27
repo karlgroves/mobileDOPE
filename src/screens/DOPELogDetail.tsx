@@ -71,7 +71,7 @@ export function DOPELogDetail({ route, navigation }: Props) {
   if (!log) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>DOPE log not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>DOPE log not found</Text>
       </View>
     );
   }

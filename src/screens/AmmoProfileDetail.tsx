@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ProfilesStackParamList } from '../navigation/types';
-import { useAmmoStore } from '../store/useAmmoStore';
+import React from 'react';
+import { View, ScrollView, Text, StyleSheet } from 'react-native';
+
 import { Card, Button } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
+import { ProfilesStackParamList } from '../navigation/types';
+import { useAmmoStore } from '../store/useAmmoStore';
 
 type AmmoProfileDetailNavigationProp = NativeStackNavigationProp<
   ProfilesStackParamList,
@@ -46,7 +47,7 @@ export const AmmoProfileDetail: React.FC = () => {
   if (!ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>Ammo profile not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>Ammo profile not found</Text>
       </View>
     );
   }

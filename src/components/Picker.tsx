@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { Modal } from './Modal';
+
 import { useTheme } from '../contexts/ThemeContext';
+
+import { Modal } from './Modal';
 
 export interface PickerOption {
   label: string;
@@ -78,7 +80,7 @@ export const Picker: React.FC<PickerProps> = ({
         <Text style={[styles.arrow, { color: colors.text.secondary }]}>▼</Text>
       </TouchableOpacity>
 
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>}
       {helperText && !error && (
         <Text style={[styles.helperText, { color: colors.text.secondary }]}>{helperText}</Text>
       )}

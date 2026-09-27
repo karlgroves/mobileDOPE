@@ -260,7 +260,7 @@ export function DOPELogList({ navigation }: Props) {
               accessibilityLabel={`Delete log at ${item.distance} ${item.distanceUnit}`}
               accessibilityHint="Asks for confirmation before removing this entry"
             >
-              <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
+              <Text style={[styles.actionText, { color: colors.errorText }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </Card>

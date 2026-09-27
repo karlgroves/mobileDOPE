@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TextInputProps as RNTextInputProps,
 } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export interface TextInputProps extends Omit<RNTextInputProps, 'editable'> {
@@ -79,7 +80,7 @@ export const TextInput: React.FC<TextInputProps> = ({
         {...rest}
       />
 
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>}
       {helperText && !error && (
         <Text style={[styles.helperText, { color: colors.text.secondary }]}>{helperText}</Text>
       )}
