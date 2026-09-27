@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AmmoStackParamList } from '../navigation/types';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { AmmoProfileData } from '../models/AmmoProfile';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+
 import { Card, Button, NumberInput } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
+import { AmmoProfileData } from '../models/AmmoProfile';
+import { ShotStringData } from '../models/ShotString';
+import { AmmoStackParamList } from '../navigation/types';
 import {
   shotStringRepository,
   ShotStringStatistics,
 } from '../services/database/ShotStringRepository';
-import { ShotStringData } from '../models/ShotString';
+import { useAmmoStore } from '../store/useAmmoStore';
 
 type ChronographInputNavigationProp = NativeStackNavigationProp<
   AmmoStackParamList,
@@ -125,7 +126,7 @@ export const ChronographInput: React.FC = () => {
   if (!ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>Ammo profile not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>Ammo profile not found</Text>
       </View>
     );
   }

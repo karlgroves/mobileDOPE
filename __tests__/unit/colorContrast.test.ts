@@ -47,13 +47,22 @@ function over(fill: string, alpha: number, base: string): [number, number, numbe
 
 const MODES: ThemeMode[] = ['dark', 'light', 'nightVision'];
 
-/** Each fill token and the text token that draws its hue legibly. */
+/**
+ * Each fill token, the text token that draws its hue legibly, and the fills
+ * whose `+ '20'` tint that text is drawn on as well as the plain surfaces:
+ *
+ * - primary: NumberPicker's selected row (`colors.primary + '20'`)
+ * - error: DOPELogList's Delete button and DOPELogEntry's missing-environment
+ *   card (`colors.error + '20'`)
+ */
 const TEXT_TOKENS = [
-  ['primary', 'primaryText'],
-  ['success', 'successText'],
+  ['primary', 'primaryText', ['primary']],
+  ['success', 'successText', []],
+  ['warning', 'warningText', []],
+  ['error', 'errorText', ['error']],
 ] as const;
 
-describe.each(TEXT_TOKENS)('%s as text', (fill, text) => {
+describe.each(TEXT_TOKENS)('%s as text', (fill, text, tints) => {
   describe.each(MODES)('%s theme', (mode) => {
     const c = Colors[mode];
 
@@ -63,15 +72,15 @@ describe.each(TEXT_TOKENS)('%s as text', (fill, text) => {
       );
     });
 
-    // NumberPicker draws its checkmark on the selected row, which is
-    // `colors.primary + '20'` (alpha 0x20) over the modal surface.
-    it.each(['background', 'surface'] as const)(
-      'passes AA on the selected-row tint over %s',
-      (surface) => {
-        const tinted = over(c.primary, 0x20 / 255, c[surface]);
-        expect(contrast(channels(c[text]), tinted)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
-      }
+    const tinted = tints.flatMap((tint) =>
+      (['background', 'surface'] as const).map((surface) => [tint, surface] as const)
     );
+    if (tinted.length) {
+      it.each(tinted)('passes AA on the %s tint over %s', (tint, surface) => {
+        const bg = over(c[tint], 0x20 / 255, c[surface]);
+        expect(contrast(channels(c[text]), bg)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      });
+    }
   });
 
   it('is the regression the issue measured: the fill fails as light-theme text', () => {
@@ -117,7 +126,7 @@ function colorValues(source: string): { line: number; value: string }[] {
 // `(?<![.\w])` confines this to the themed `colors` from useTheme(). Components
 // reading the static `theme.colors` (Button, LoadingSpinner) never follow the
 // light theme at all, which is a separate defect.
-const TEXT_IN_FILL = /(?<![.\w])colors\.(primary|success)\b/;
+const TEXT_IN_FILL = /(?<![.\w])colors\.(primary|success|warning|error)\b/;
 
 describe('colorValues', () => {
   it('reads a ternary broken across lines as one value', () => {
@@ -148,8 +157,9 @@ describe('no text is drawn in a fill colour', () => {
     });
   }
 
-  it('uses primaryText / successText, never primary / success, for a text colour', () => {
-    // `\b` after the token lets primaryText, primaryDark and successText through.
+  it('uses the *Text token, never the fill, for a text colour', () => {
+    // `\b` after the token lets primaryText, primaryDark, errorDark and the
+    // other *Text tokens through.
     const offenders = sourceFiles(SRC).flatMap((file) =>
       colorValues(fs.readFileSync(file, 'utf8'))
         .filter(({ value }) => TEXT_IN_FILL.test(value))

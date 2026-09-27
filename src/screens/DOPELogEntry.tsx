@@ -5,19 +5,21 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from '../components/Button';
+import { Card } from '../components/Card';
 import { NumberInput } from '../components/NumberInput';
-import { TextInput } from '../components/TextInput';
 import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
-import { Card } from '../components/Card';
-import type { LogsStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
+import { TextInput } from '../components/TextInput';
+import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+
 import type { DOPELogData } from '../models/DOPELog';
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogEdit'>;
 
@@ -348,7 +350,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
 
         {!currentEnv && (
           <Card style={[styles.card, { backgroundColor: colors.error + '20' }]}>
-            <Text style={[styles.warningText, { color: colors.error }]}>
+            <Text style={[styles.warningText, { color: colors.errorText }]}>
               ⚠️ No environmental data captured. Go to Range → Environmental Conditions to record
               conditions.
             </Text>

@@ -366,7 +366,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {elevationAdjustment !== 0 && (
-                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                <Text style={[styles.adjustmentIndicator, { color: colors.warningText }]}>
                   {elevationAdjustment > 0 ? '+' : ''}
                   {elevationAdjustment.toFixed(1)}
                 </Text>
@@ -419,7 +419,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {windageAdjustment !== 0 && (
-                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                <Text style={[styles.adjustmentIndicator, { color: colors.warningText }]}>
                   {windageAdjustment > 0 ? '+' : ''}
                   {windageAdjustment.toFixed(1)}
                 </Text>

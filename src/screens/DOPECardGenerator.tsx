@@ -523,7 +523,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.centerContainer}>
-          <Text style={[styles.errorText, { color: colors.error }]}>
+          <Text style={[styles.errorText, { color: colors.errorText }]}>
             Rifle or ammunition profile not found
           </Text>
           <Button title="Go Back" onPress={() => navigation.goBack()} />

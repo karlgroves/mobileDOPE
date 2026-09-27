@@ -221,7 +221,7 @@ export function WindTable({ route }: Props) {
   if (!rifle || !ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>
           Rifle or ammunition profile not found
         </Text>
       </View>

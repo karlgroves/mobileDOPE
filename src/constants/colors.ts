@@ -19,9 +19,11 @@ export const Colors = {
     accent: '#2196F3', // Blue for accents
     error: '#f44336',
     errorDark: '#d32f2f',
+    errorText: '#FF7961', // #f44336 is 3.90:1 on surface
     success: '#4CAF50',
     successText: '#66BB6A',
     warning: '#FF9800',
+    warningText: '#FF9800',
     info: '#2196F3',
     text: {
       primary: '#FFFFFF',
@@ -48,9 +50,11 @@ export const Colors = {
     accent: '#2196F3',
     error: '#f44336',
     errorDark: '#d32f2f',
+    errorText: '#B71C1C',
     success: '#4CAF50',
     successText: '#1B5E20', // same split as primaryText
     warning: '#FF9800',
+    warningText: '#9A5B00', // #FF9800 is 1.98:1 on surface
     info: '#2196F3',
     text: {
       primary: '#000000',
@@ -77,9 +81,11 @@ export const Colors = {
     accent: '#ff6666',
     error: '#ff8888',
     errorDark: '#ff4444',
+    errorText: '#ff8888',
     success: '#ff4444',
     successText: '#ff4444',
     warning: '#ff6666',
+    warningText: '#ff6666',
     info: '#ff8888',
     text: {
       primary: '#ff0000',

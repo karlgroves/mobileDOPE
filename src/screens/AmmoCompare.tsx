@@ -170,7 +170,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
 
           <View style={styles.pickerRow}>
             <View style={styles.pickerContainer}>
-              <Text style={[styles.pickerLabel, { color: colors.warning }]}>Ammo 2</Text>
+              <Text style={[styles.pickerLabel, { color: colors.warningText }]}>Ammo 2</Text>
               <Picker
                 label="Second Ammunition"
                 value={selectedAmmo2Id?.toString()}
@@ -195,7 +195,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                 <Text style={[styles.specsHeaderCell, { color: colors.primaryText }]}>
                   {ammo1.name.substring(0, 15)}
                 </Text>
-                <Text style={[styles.specsHeaderCell, { color: colors.warning }]}>
+                <Text style={[styles.specsHeaderCell, { color: colors.warningText }]}>
                   {ammo2.name.substring(0, 15)}
                 </Text>
               </View>
@@ -252,7 +252,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
               <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Dist</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.primaryText }]}>Ammo 1</Text>
-                <Text style={[styles.tableHeaderCell, { color: colors.warning }]}>Ammo 2</Text>
+                <Text style={[styles.tableHeaderCell, { color: colors.warningText }]}>Ammo 2</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
@@ -271,7 +271,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                       <Text style={[styles.tableCell, { color: colors.primaryText }]}>
                         {row.ammo1ElevationMIL.toFixed(1)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                      <Text style={[styles.tableCell, { color: colors.warningText }]}>
                         {row.ammo2ElevationMIL.toFixed(1)}
                       </Text>
                       <Text
@@ -282,7 +282,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                               diff > 0
                                 ? colors.successText
                                 : diff < 0
-                                  ? colors.error
+                                  ? colors.errorText
                                   : colors.text.secondary,
                           },
                         ]}
@@ -303,7 +303,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
               <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Dist</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.primaryText }]}>Ammo 1</Text>
-                <Text style={[styles.tableHeaderCell, { color: colors.warning }]}>Ammo 2</Text>
+                <Text style={[styles.tableHeaderCell, { color: colors.warningText }]}>Ammo 2</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
@@ -322,7 +322,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                       <Text style={[styles.tableCell, { color: colors.primaryText }]}>
                         {row.ammo1Velocity.toFixed(0)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                      <Text style={[styles.tableCell, { color: colors.warningText }]}>
                         {row.ammo2Velocity.toFixed(0)}
                       </Text>
                       <Text
@@ -333,7 +333,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                               diff > 0
                                 ? colors.successText
                                 : diff < 0
-                                  ? colors.error
+                                  ? colors.errorText
                                   : colors.text.secondary,
                           },
                         ]}
@@ -354,7 +354,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
               <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Dist</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.primaryText }]}>Ammo 1</Text>
-                <Text style={[styles.tableHeaderCell, { color: colors.warning }]}>Ammo 2</Text>
+                <Text style={[styles.tableHeaderCell, { color: colors.warningText }]}>Ammo 2</Text>
                 <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>Diff</Text>
               </View>
 
@@ -373,7 +373,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                       <Text style={[styles.tableCell, { color: colors.primaryText }]}>
                         {row.ammo1Energy.toFixed(0)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.warning }]}>
+                      <Text style={[styles.tableCell, { color: colors.warningText }]}>
                         {row.ammo2Energy.toFixed(0)}
                       </Text>
                       <Text
@@ -384,7 +384,7 @@ export const AmmoCompare: React.FC<Props> = ({ route }) => {
                               diff > 0
                                 ? colors.successText
                                 : diff < 0
-                                  ? colors.error
+                                  ? colors.errorText
                                   : colors.text.secondary,
                           },
                         ]}
@@ -427,7 +427,9 @@ const SpecRow: React.FC<{
     >
       {value1}
     </Text>
-    <Text style={[styles.specsValue, { color: highlight ? colors.warning : colors.text.primary }]}>
+    <Text
+      style={[styles.specsValue, { color: highlight ? colors.warningText : colors.text.primary }]}
+    >
       {value2}
     </Text>
   </View>
