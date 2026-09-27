@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+
 import { Card, Button, LoadingSpinner } from '../components';
-import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
+import { useTheme } from '../contexts/ThemeContext';
+import { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import { RangeSession } from '../models/RangeSession';
 import { environmentRepository } from '../services/database/EnvironmentRepository';
+import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
 import {
   exportSessionReportMarkdown,
   exportSessionReportJSON,
   exportSessionReportPDF,
 } from '../services/ExportService';
-import { RangeSession } from '../models/RangeSession';
-import { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useRifleStore } from '../store/useRifleStore';
+
 import type { SessionStackScreenProps } from '../navigation/types';
 
 type Props = SessionStackScreenProps<'RangeSessionSummary'>;
@@ -197,19 +199,19 @@ export const RangeSessionSummary: React.FC<Props> = ({ navigation, route }) => {
         <Card style={styles.statsCard}>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>
+              <Text style={[styles.statValue, { color: colors.primaryText }]}>
                 {session?.shotCount || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Shots Fired</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>
+              <Text style={[styles.statValue, { color: colors.primaryText }]}>
                 {calculateDuration()}
               </Text>
               <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Duration</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>
+              <Text style={[styles.statValue, { color: colors.primaryText }]}>
                 {session?.distance || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Yards</Text>

@@ -307,7 +307,7 @@ export function EnvironmentInput() {
                 accessibilityLabel={preset.name}
                 accessibilityHint="Fills the form with this preset's conditions"
               >
-                <Text style={[styles.presetText, { color: colors.primary }]}>
+                <Text style={[styles.presetText, { color: colors.primaryText }]}>
                   {preset.name.split(' ')[0]}
                 </Text>
               </TouchableOpacity>
@@ -380,7 +380,7 @@ export function EnvironmentInput() {
             <Text style={[styles.densityAltitudeLabel, { color: colors.text.secondary }]}>
               Density Altitude
             </Text>
-            <Text style={[styles.densityAltitudeValue, { color: colors.primary }]}>
+            <Text style={[styles.densityAltitudeValue, { color: colors.primaryText }]}>
               {densityAltitude.toLocaleString()} ft
             </Text>
           </View>

@@ -4,21 +4,23 @@
  * Includes both table view and chart visualization
  */
 
+import * as Sharing from 'expo-sharing';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
 import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
-import { useTheme } from '../contexts/ThemeContext';
-import { UnitToggle } from '../components/UnitToggle';
-import { NumberPicker } from '../components/NumberPicker';
+import { CartesianChart, Line } from 'victory-native';
+
 import { SegmentedControl, Button } from '../components';
-import type { CalculatorStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
+import { NumberPicker } from '../components/NumberPicker';
+import { UnitToggle } from '../components/UnitToggle';
+import { useTheme } from '../contexts/ThemeContext';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { generateComprehensiveWindTable, WindTableEntry } from '../utils/windTable';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateAtmosphericConditions } from '../utils/atmospheric';
+import { generateComprehensiveWindTable, WindTableEntry } from '../utils/windTable';
+
+import type { CalculatorStackScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
 
 // Chart data point interface with index signature for CartesianChart
@@ -449,7 +451,7 @@ export function WindTable({ route }: Props) {
                               styles.cellText,
                               {
                                 color:
-                                  entry.windSpeed === 0 ? colors.text.disabled : colors.primary,
+                                  entry.windSpeed === 0 ? colors.text.disabled : colors.primaryText,
                               },
                             ]}
                           >

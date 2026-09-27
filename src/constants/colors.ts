@@ -11,12 +11,16 @@ export const Colors = {
     surfaceVariant: '#3a3a3a',
     primary: '#4CAF50', // Green for primary actions
     primaryDark: '#388E3C',
+    // `primary` is a fill. Text in that hue uses primaryText, which holds
+    // WCAG AA (4.5:1) on background, surface and the selected-row tint (#114).
+    primaryText: '#66BB6A',
     secondary: '#FF9800', // Orange for secondary actions
     secondaryDark: '#F57C00',
     accent: '#2196F3', // Blue for accents
     error: '#f44336',
     errorDark: '#d32f2f',
     success: '#4CAF50',
+    successText: '#66BB6A',
     warning: '#FF9800',
     info: '#2196F3',
     text: {
@@ -38,12 +42,14 @@ export const Colors = {
     surfaceVariant: '#E0E0E0',
     primary: '#4CAF50',
     primaryDark: '#388E3C',
+    primaryText: '#1B5E20', // #4CAF50 is 2.55:1 on surface here
     secondary: '#FF9800',
     secondaryDark: '#F57C00',
     accent: '#2196F3',
     error: '#f44336',
     errorDark: '#d32f2f',
     success: '#4CAF50',
+    successText: '#1B5E20', // same split as primaryText
     warning: '#FF9800',
     info: '#2196F3',
     text: {
@@ -65,12 +71,14 @@ export const Colors = {
     surfaceVariant: '#2a0000',
     primary: '#ff0000',
     primaryDark: '#cc0000',
+    primaryText: '#ff0000',
     secondary: '#ff4444',
     secondaryDark: '#dd0000',
     accent: '#ff6666',
     error: '#ff8888',
     errorDark: '#ff4444',
     success: '#ff4444',
+    successText: '#ff4444',
     warning: '#ff6666',
     info: '#ff8888',
     text: {

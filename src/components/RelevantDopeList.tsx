@@ -101,7 +101,7 @@ export const RelevantDopeList: React.FC<RelevantDopeListProps> = ({ matches, now
                 {log.distance}
                 {unit}
               </Text>
-              <Text style={[styles.corrections, { color: colors.primary }]}>
+              <Text style={[styles.corrections, { color: colors.primaryText }]}>
                 {log.elevationCorrection.toFixed(1)} / {log.windageCorrection.toFixed(1)}{' '}
                 {log.correctionUnit}
               </Text>

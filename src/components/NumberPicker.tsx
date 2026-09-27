@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export interface NumberPickerProps {
@@ -116,7 +117,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                 accessibilityLabel={`Done choosing ${label.toLowerCase()}`}
                 accessibilityHint="Closes the list and keeps the selected value"
               >
-                <Text style={[styles.closeButtonText, { color: colors.primary }]}>Done</Text>
+                <Text style={[styles.closeButtonText, { color: colors.primaryText }]}>Done</Text>
               </TouchableOpacity>
             </View>
 
@@ -146,7 +147,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                       style={[
                         styles.optionText,
                         {
-                          color: isSelected ? colors.primary : colors.text.primary,
+                          color: isSelected ? colors.primaryText : colors.text.primary,
                           fontWeight: isSelected ? '600' : '400',
                         },
                       ]}
@@ -155,7 +156,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
                       {unit ? ` ${unit}` : ''}
                     </Text>
                     {isSelected && (
-                      <Text style={[styles.checkmark, { color: colors.primary }]}>✓</Text>
+                      <Text style={[styles.checkmark, { color: colors.primaryText }]}>✓</Text>
                     )}
                   </TouchableOpacity>
                 );

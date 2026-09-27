@@ -440,7 +440,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               Distance Presets
             </Text>
             <Pressable accessibilityRole="button" onPress={handleResetPresets}>
-              <Text style={[styles.resetLink, { color: colors.primary }]}>Reset</Text>
+              <Text style={[styles.resetLink, { color: colors.primaryText }]}>Reset</Text>
             </Pressable>
           </View>
           <Text style={[styles.settingHelp, { color: colors.text.secondary, marginBottom: 12 }]}>

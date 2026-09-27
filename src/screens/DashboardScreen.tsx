@@ -286,7 +286,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Text
               style={[
                 styles.trustText,
-                { color: hasRifle ? colors.primary : colors.text.secondary },
+                { color: hasRifle ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Rifle {hasRifle ? '✓' : '○'}
@@ -303,7 +303,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <Text
               style={[
                 styles.trustText,
-                { color: hasAmmo ? colors.primary : colors.text.secondary },
+                { color: hasAmmo ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Ammo {hasAmmo ? '✓' : '○'}
@@ -320,7 +320,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             accessibilityHint="Opens the range session screen to enter conditions"
           >
             <Text
-              style={[styles.trustText, { color: hasEnv ? colors.primary : colors.text.secondary }]}
+              style={[
+                styles.trustText,
+                { color: hasEnv ? colors.primaryText : colors.text.secondary },
+              ]}
             >
               Env {hasEnv ? '✓' : '○'}
             </Text>
@@ -378,7 +381,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             {/* Elevation Solution - Largest on screen */}
             <View style={[styles.elevationSection, { backgroundColor: colors.surface }]}>
               <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.elevationValue, { color: colors.primary }]}>
+              <Text style={[styles.elevationValue, { color: colors.primaryText }]}>
                 {elevation !== null ? elevation.toFixed(2) : '--'} {settings.defaultCorrectionUnit}
               </Text>
             </View>

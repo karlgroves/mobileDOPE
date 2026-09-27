@@ -204,7 +204,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           <View style={styles.primaryResult}>
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.primaryValue, { color: colors.primary }]}>
+              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
                 {elevation.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
@@ -214,7 +214,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
-              <Text style={[styles.primaryValue, { color: colors.primary }]}>
+              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
                 {windage.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>

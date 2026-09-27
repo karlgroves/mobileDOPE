@@ -5,13 +5,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+
 import { Card, Button, SegmentedControl } from '../components';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+
 import type { CalculatorStackScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
 import type { AtmosphericConditions } from '../utils/atmospheric';
@@ -257,7 +259,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
                     LEAD DISTANCE
                   </Text>
-                  <Text style={[styles.resultValue, { color: colors.primary }]}>
+                  <Text style={[styles.resultValue, { color: colors.primaryText }]}>
                     {currentResult.leadDistance.toFixed(1)}
                   </Text>
                   <Text style={[styles.resultUnit, { color: colors.text.secondary }]}>inches</Text>
@@ -269,7 +271,7 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>
                     LEAD ANGLE
                   </Text>
-                  <Text style={[styles.resultValue, { color: colors.primary }]}>
+                  <Text style={[styles.resultValue, { color: colors.primaryText }]}>
                     {correctionUnit === 'MIL'
                       ? currentResult.leadMIL.toFixed(2)
                       : currentResult.leadMOA.toFixed(2)}
@@ -338,10 +340,10 @@ export const MovingTargetCalculator: React.FC<Props> = ({ route }) => {
                     <Text style={[styles.tableCell, { color: colors.text.primary }]}>
                       {row.timeOfFlight.toFixed(2)}s
                     </Text>
-                    <Text style={[styles.tableCell, { color: colors.primary }]}>
+                    <Text style={[styles.tableCell, { color: colors.primaryText }]}>
                       {row.leadDistance.toFixed(1)}
                     </Text>
-                    <Text style={[styles.tableCell, { color: colors.primary }]}>
+                    <Text style={[styles.tableCell, { color: colors.primaryText }]}>
                       {correctionUnit === 'MIL' ? row.leadMIL.toFixed(2) : row.leadMOA.toFixed(2)}
                     </Text>
                   </View>
