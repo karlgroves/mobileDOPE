@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render } from '@testing-library/react-native';
+
 import { ErrorBoundary } from '../../src/components/ErrorBoundary';
+import { renderWithProviders } from '../helpers/renderWithProviders';
 
 // Component that throws an error
 const ThrowError: React.FC<{ shouldThrow?: boolean }> = ({ shouldThrow }) => {
@@ -23,7 +24,7 @@ afterAll(() => {
 
 describe('ErrorBoundary', () => {
   it('should render children when no error occurs', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithProviders(
       <ErrorBoundary>
         <Text>Test Content</Text>
       </ErrorBoundary>
@@ -33,7 +34,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('should render error UI when an error occurs', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithProviders(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -43,7 +44,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('should show error message in error UI', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithProviders(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -54,7 +55,7 @@ describe('ErrorBoundary', () => {
 
   it('should render custom fallback when provided', () => {
     const customFallback = <Text>Custom Error Message</Text>;
-    const { getByText } = render(
+    const { getByText } = renderWithProviders(
       <ErrorBoundary fallback={customFallback}>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>

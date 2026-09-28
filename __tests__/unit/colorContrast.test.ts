@@ -93,6 +93,28 @@ describe.each(TEXT_TOKENS)('%s as text', (fill, text, tints) => {
 });
 
 /**
+ * Text drawn *on* a fill -- a Button's label on its primary or danger
+ * background (#116). `text.inverse` cannot do this job: on the light theme it
+ * is white, 2.78:1 on primary and 3.68:1 on error.
+ */
+const ON_FILL = [
+  ['primary', 'onPrimary'],
+  ['error', 'onError'],
+] as const;
+
+describe.each(ON_FILL)('text on the %s fill', (fill, on) => {
+  it.each(MODES)('passes AA on the %s theme', (mode) => {
+    const c = Colors[mode];
+    expect(contrast(channels(c[on]), channels(c[fill]))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it('is the regression #116 would have introduced: light text.inverse fails here', () => {
+    const l = Colors.light;
+    expect(contrast(channels(l.text.inverse), channels(l[fill]))).toBeLessThan(AA_NORMAL_TEXT);
+  });
+});
+
+/**
  * Every `color:` property value in `source`, with the line it starts on. The
  * value runs to the first `,` `}` or `]` outside brackets, so a ternary or a
  * value broken across lines is read whole -- a line-based match missed six
@@ -123,9 +145,9 @@ function colorValues(source: string): { line: number; value: string }[] {
   return found;
 }
 
-// `(?<![.\w])` confines this to the themed `colors` from useTheme(). Components
-// reading the static `theme.colors` (Button, LoadingSpinner) never follow the
-// light theme at all, which is a separate defect.
+// `(?<![.\w])` matches `colors.x`, the name every component and screen gives
+// the palette from useTheme(). Nothing reads the static theme any more -- the
+// followsTheme test holds that (#116).
 const TEXT_IN_FILL = /(?<![.\w])colors\.(primary|success|warning|error)\b/;
 
 describe('colorValues', () => {

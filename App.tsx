@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { ThemeProvider } from './src/contexts/ThemeContext';
-import { useAppStore } from './src/store';
 import { databaseService, migrationRunner } from './src/services/database';
-import { theme } from './src/constants/theme';
+import { useAppStore } from './src/store';
 
 function AppContent() {
   const {
@@ -17,6 +17,9 @@ function AppContent() {
     settings,
     loadSettings,
   } = useAppStore();
+  // AppContent sits inside ThemeProvider, so the startup screens follow the
+  // saved theme like everything after them (#116).
+  const { colors } = useTheme().theme;
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -49,8 +52,8 @@ function AppContent() {
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={[styles.errorText, { color: theme.colors.error }]}>Error: {error}</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>Error: {error}</Text>
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </View>
     );
@@ -58,11 +61,9 @@ function AppContent() {
 
   if (!isInitialized) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.primary }]}>
-          Initializing...
-        </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text.primary }]}>Initializing...</Text>
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </View>
     );

@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { theme } from '../constants/theme';
+
+import { Sizes } from '../constants/sizes';
+import { Typography } from '../constants/typography';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -12,13 +15,15 @@ interface LoadingSpinnerProps {
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message,
   size = 'large',
-  color = theme.colors.primary,
+  color,
   testID,
 }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color={color} testID={testID} />
-      {message && <Text style={styles.message}>{message}</Text>}
+      <ActivityIndicator size={size} color={color ?? colors.primary} testID={testID} />
+      {message && <Text style={[styles.message, { color: colors.text.secondary }]}>{message}</Text>}
     </View>
   );
 };
@@ -28,12 +33,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    padding: Sizes.spacing.lg,
   },
   message: {
-    marginTop: theme.spacing.md,
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.md,
+    marginTop: Sizes.spacing.md,
+    fontSize: Typography.fontSize.md,
     textAlign: 'center',
   },
 });
