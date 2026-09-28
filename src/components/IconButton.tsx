@@ -60,15 +60,15 @@ export const IconButton: React.FC<IconButtonProps> = ({
   const variantStyles: Record<string, { bg: string; color: string }> = {
     primary: {
       bg: colors.primary,
-      color: colors.text.inverse,
+      color: colors.onPrimary,
     },
     secondary: {
       bg: colors.secondary,
-      color: colors.text.inverse,
+      color: colors.onSecondary,
     },
     danger: {
       bg: colors.error,
-      color: colors.text.inverse,
+      color: colors.onError,
     },
     ghost: {
       bg: 'transparent',

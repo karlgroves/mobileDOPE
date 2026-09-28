@@ -93,12 +93,13 @@ describe.each(TEXT_TOKENS)('%s as text', (fill, text, tints) => {
 });
 
 /**
- * Text drawn *on* a fill -- a Button's label on its primary or danger
- * background (#116). `text.inverse` cannot do this job: on the light theme it
- * is white, 2.78:1 on primary and 3.68:1 on error.
+ * Text drawn *on* a fill -- a Button label, a FAB glyph, the selected segment
+ * or unit (#116, #119). This used to be `text.inverse`, which on the light
+ * theme was white: 2.78:1 on primary, 2.16:1 on secondary, 3.68:1 on error.
  */
 const ON_FILL = [
   ['primary', 'onPrimary'],
+  ['secondary', 'onSecondary'],
   ['error', 'onError'],
 ] as const;
 
@@ -108,9 +109,17 @@ describe.each(ON_FILL)('text on the %s fill', (fill, on) => {
     expect(contrast(channels(c[on]), channels(c[fill]))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 
-  it('is the regression #116 would have introduced: light text.inverse fails here', () => {
-    const l = Colors.light;
-    expect(contrast(channels(l.text.inverse), channels(l[fill]))).toBeLessThan(AA_NORMAL_TEXT);
+  it('is the regression #119 fixed: white fails on the light fill', () => {
+    expect(contrast(channels('#FFFFFF'), channels(Colors.light[fill]))).toBeLessThan(
+      AA_NORMAL_TEXT
+    );
+  });
+});
+
+describe('text.inverse', () => {
+  it('no longer exists, so white-on-fill cannot come back', () => {
+    // Removing the token lets tsc reject any new use; this pins the removal.
+    for (const mode of MODES) expect('inverse' in Colors[mode].text).toBe(false);
   });
 });
 

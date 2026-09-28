@@ -1,10 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Text, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AmmoStackParamList } from '../navigation/types';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { AmmoProfile } from '../models/AmmoProfile';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, FlatList, StyleSheet, TouchableOpacity, Text, TextInput } from 'react-native';
+
 import {
   Card,
   LoadingSpinner,
@@ -15,6 +13,9 @@ import {
   Button,
 } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
+import { AmmoProfile } from '../models/AmmoProfile';
+import { AmmoStackParamList } from '../navigation/types';
+import { useAmmoStore } from '../store/useAmmoStore';
 
 type AllAmmoProfileListNavigationProp = NativeStackNavigationProp<
   AmmoStackParamList,
@@ -234,7 +235,7 @@ export const AllAmmoProfileList: React.FC = () => {
             accessibilityHint="Opens an empty ammunition profile form"
             accessibilityRole="button"
           >
-            <Text style={[styles.fabIcon, { color: colors.text.inverse }]}>+</Text>
+            <Text style={[styles.fabIcon, { color: colors.onPrimary }]}>+</Text>
           </TouchableOpacity>
         </>
       )}

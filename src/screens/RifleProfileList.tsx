@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState, useMemo } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, TextInput, TouchableOpacity } from 'react-native';
+
 import {
   Card,
   EmptyState,
@@ -10,9 +11,9 @@ import {
   ConfirmationDialog,
   SegmentedControl,
 } from '../components';
-import { useRifleStore } from '../store/useRifleStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { RifleProfile } from '../models/RifleProfile';
+import { useRifleStore } from '../store/useRifleStore';
 
 type RootStackParamList = {
   RifleProfileForm: { rifleId?: number };
@@ -235,7 +236,7 @@ export const RifleProfileList: React.FC = () => {
             accessibilityHint="Opens an empty rifle profile form"
             accessibilityRole="button"
           >
-            <Text style={[styles.fabIcon, { color: colors.text.inverse }]}>+</Text>
+            <Text style={[styles.fabIcon, { color: colors.onPrimary }]}>+</Text>
           </TouchableOpacity>
         </>
       )}
