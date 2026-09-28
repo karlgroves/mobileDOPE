@@ -1,7 +1,9 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 
-import { theme } from '../constants/theme';
+import { Sizes } from '../constants/sizes';
+import { Typography } from '../constants/typography';
+import { useTheme } from '../contexts/ThemeContext';
 
 import { Button } from './Button';
 
@@ -15,6 +17,44 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
+/**
+ * The default fallback. A function component so it can read the active theme --
+ * the class boundary cannot call useTheme() itself (#116).
+ */
+const ErrorFallback: React.FC<{ error: Error | null; onReset: () => void }> = ({
+  error,
+  onReset,
+}) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.icon}>⚠️</Text>
+        <Text style={[styles.title, { color: colors.text.primary }]}>Something went wrong</Text>
+        <Text style={[styles.message, { color: colors.text.secondary }]}>
+          An unexpected error occurred. Please try again.
+        </Text>
+        {error && (
+          <View style={[styles.errorDetails, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.errorText, { color: colors.errorText }]}>{error.message}</Text>
+          </View>
+        )}
+        <Button title="Try Again" onPress={onReset} variant="primary" style={styles.button} />
+      </ScrollView>
+    </View>
+  );
+};
+
+/**
+ * Catches render errors below it and shows a recovery screen.
+ *
+ * Mount it **inside** ThemeProvider: the default fallback reads the theme with
+ * useTheme(), which throws outside the provider -- so a boundary wrapped around
+ * ThemeProvider would fail while showing its own error screen. To guard the
+ * provider itself, pass a `fallback` that does not use the theme.
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -48,26 +88,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback;
       }
 
-      return (
-        <View style={styles.container}>
-          <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.icon}>⚠️</Text>
-            <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.message}>An unexpected error occurred. Please try again.</Text>
-            {this.state.error && (
-              <View style={styles.errorDetails}>
-                <Text style={styles.errorText}>{this.state.error.message}</Text>
-              </View>
-            )}
-            <Button
-              title="Try Again"
-              onPress={this.handleReset}
-              variant="primary"
-              style={styles.button}
-            />
-          </ScrollView>
-        </View>
-      );
+      return <ErrorFallback error={this.state.error} onReset={this.handleReset} />;
     }
 
     return this.props.children;
@@ -77,45 +98,40 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: Sizes.spacing.xl,
   },
   icon: {
     fontSize: 64,
-    marginBottom: theme.spacing.md,
+    marginBottom: Sizes.spacing.md,
   },
   title: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: Typography.fontSize.xl,
     fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
+    marginBottom: Sizes.spacing.sm,
     textAlign: 'center',
   },
   message: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
+    fontSize: Typography.fontSize.md,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: Sizes.spacing.lg,
   },
   errorDetails: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
+    padding: Sizes.spacing.md,
+    borderRadius: Sizes.borderRadius.md,
+    marginBottom: Sizes.spacing.lg,
     width: '100%',
   },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.error,
+    fontSize: Typography.fontSize.sm,
     fontFamily: 'monospace',
   },
   button: {
-    marginTop: theme.spacing.md,
+    marginTop: Sizes.spacing.md,
     minWidth: 200,
   },
 });

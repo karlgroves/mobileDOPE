@@ -14,6 +14,9 @@ export const Colors = {
     // `primary` is a fill. Text in that hue uses primaryText, which holds
     // WCAG AA (4.5:1) on background, surface and the selected-row tint (#114).
     primaryText: '#66BB6A',
+    // Text drawn on the primary / error fill, e.g. a Button label (#116).
+    onPrimary: '#000000',
+    onError: '#000000',
     secondary: '#FF9800', // Orange for secondary actions
     secondaryDark: '#F57C00',
     accent: '#2196F3', // Blue for accents
@@ -45,6 +48,8 @@ export const Colors = {
     primary: '#4CAF50',
     primaryDark: '#388E3C',
     primaryText: '#1B5E20', // #4CAF50 is 2.55:1 on surface here
+    onPrimary: '#000000', // text.inverse is white here: 2.78:1 on primary
+    onError: '#000000',
     secondary: '#FF9800',
     secondaryDark: '#F57C00',
     accent: '#2196F3',
@@ -76,6 +81,8 @@ export const Colors = {
     primary: '#ff0000',
     primaryDark: '#cc0000',
     primaryText: '#ff0000',
+    onPrimary: '#000000',
+    onError: '#000000',
     secondary: '#ff4444',
     secondaryDark: '#dd0000',
     accent: '#ff6666',

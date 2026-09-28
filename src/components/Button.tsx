@@ -1,6 +1,9 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle, ActivityIndicator, StyleProp } from 'react-native';
-import { theme } from '../constants/theme';
+
+import { Sizes } from '../constants/sizes';
+import { Typography } from '../constants/typography';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -23,7 +26,21 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   testID,
 }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
   const isDisabled = disabled || loading;
+
+  // Colours come from the active theme at render; the StyleSheet holds layout.
+  const fill = {
+    primary: { backgroundColor: colors.primary },
+    secondary: { borderColor: colors.primary },
+    danger: { backgroundColor: colors.error },
+  }[variant];
+  const labelColor = {
+    primary: colors.onPrimary,
+    secondary: colors.primaryText,
+    danger: colors.onError,
+  }[variant];
 
   const handlePress = () => {
     if (!isDisabled) {
@@ -33,7 +50,8 @@ export const Button: React.FC<ButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    styles[`button_${variant}`],
+    variant === 'secondary' && styles.button_secondary,
+    fill,
     styles[`button_${size}`],
     isDisabled && styles.button_disabled,
     style,
@@ -42,6 +60,7 @@ export const Button: React.FC<ButtonProps> = ({
   const textStyle = [
     styles.text,
     styles[`text_${variant}`],
+    { color: labelColor },
     styles[`text_${size}`],
     isDisabled && styles.text_disabled,
   ];
@@ -58,7 +77,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? theme.colors.text.inverse : theme.colors.primary}
+          color={labelColor}
           testID={testID ? `${testID}-spinner` : 'button-spinner'}
         />
       ) : (
@@ -70,32 +89,25 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: theme.borderRadius.md,
+    borderRadius: Sizes.borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: theme.touchTargets.default,
-  },
-  button_primary: {
-    backgroundColor: theme.colors.primary,
+    minHeight: Sizes.touchTarget.default,
   },
   button_secondary: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  button_danger: {
-    backgroundColor: theme.colors.error,
   },
   button_small: {
-    paddingHorizontal: theme.spacing.sm,
-    minHeight: theme.touchTargets.min,
+    paddingHorizontal: Sizes.spacing.sm,
+    minHeight: Sizes.touchTarget.min,
   },
   button_medium: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: Sizes.spacing.md,
   },
   button_large: {
-    paddingHorizontal: theme.spacing.lg,
-    minHeight: theme.touchTargets.large,
+    paddingHorizontal: Sizes.spacing.lg,
+    minHeight: Sizes.touchTarget.large,
   },
   button_disabled: {
     opacity: 0.5,
@@ -107,25 +119,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   text_primary: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.fontSize.md,
+    fontSize: Typography.fontSize.md,
   },
   text_secondary: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.md,
+    fontSize: Typography.fontSize.md,
   },
   text_danger: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.fontSize.md,
+    fontSize: Typography.fontSize.md,
   },
   text_small: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: Typography.fontSize.sm,
   },
   text_medium: {
-    fontSize: theme.typography.fontSize.md,
+    fontSize: Typography.fontSize.md,
   },
   text_large: {
-    fontSize: theme.typography.fontSize.lg,
+    fontSize: Typography.fontSize.lg,
   },
   text_disabled: {
     opacity: 1,

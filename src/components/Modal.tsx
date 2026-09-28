@@ -7,7 +7,10 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { theme } from '../constants/theme';
+
+import { Sizes } from '../constants/sizes';
+import { Typography } from '../constants/typography';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ModalProps {
   visible: boolean;
@@ -26,6 +29,8 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnBackdropPress = true,
   testID,
 }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
   const handleBackdropPress = () => {
     if (closeOnBackdropPress) {
       onClose();
@@ -53,9 +58,9 @@ export const Modal: React.FC<ModalProps> = ({
         >
           <View style={styles.backdrop} testID={testID ? `${testID}-backdrop` : 'modal-backdrop'} />
         </TouchableWithoutFeedback>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            {title && <Text style={styles.title}>{title}</Text>}
+        <View style={[styles.container, { backgroundColor: colors.surface }]}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            {title && <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>}
             <Pressable
               onPress={onClose}
               style={styles.closeButton}
@@ -64,7 +69,7 @@ export const Modal: React.FC<ModalProps> = ({
               accessibilityLabel={title ? `Close ${title}` : 'Close dialog'}
               accessibilityHint="Dismisses this dialog without saving"
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Text style={[styles.closeButtonText, { color: colors.text.secondary }]}>✕</Text>
             </Pressable>
           </View>
           <View style={styles.content}>{children}</View>
@@ -85,8 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: Sizes.borderRadius.lg,
     width: '90%',
     maxWidth: 500,
     maxHeight: '80%',
@@ -103,25 +107,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    padding: Sizes.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
+    fontSize: Typography.fontSize.lg,
     fontWeight: '600',
-    color: theme.colors.text.primary,
     flex: 1,
   },
   closeButton: {
-    padding: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
+    padding: Sizes.spacing.sm,
+    marginLeft: Sizes.spacing.sm,
   },
   closeButtonText: {
     fontSize: 24,
-    color: theme.colors.text.secondary,
   },
   content: {
-    padding: theme.spacing.md,
+    padding: Sizes.spacing.md,
   },
 });
