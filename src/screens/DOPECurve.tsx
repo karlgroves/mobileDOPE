@@ -10,15 +10,15 @@ import { captureRef } from 'react-native-view-shot';
 import { CartesianChart, Line } from 'victory-native';
 
 import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
+import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
 import { useTheme } from '../contexts/ThemeContext';
+import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { calculateBallisticSolution } from '../utils/ballistics';
+import { predictElevation } from '../utils/solverInputs';
 
 import type { HistoryStackScreenProps } from '../navigation/types';
-import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
-import type { AtmosphericConditions } from '../utils/atmospheric';
 
 type Props = HistoryStackScreenProps<'DOPECurve'>;
 
@@ -82,43 +82,19 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
       distances.push(d);
     }
 
-    // Build configs for ballistic calculator
-    const rifleConfig: RifleConfig = {
-      zeroDistance: rifle.zeroDistance,
-      sightHeight: rifle.scopeHeight,
-      twistRate: rifle.twistRate,
-      barrelLength: rifle.barrelLength,
-    };
-
-    const ammoConfig: AmmoConfig = {
-      bulletWeight: ammo.bulletWeight,
-      ballisticCoefficient: ammo.ballisticCoefficientG7 || ammo.ballisticCoefficientG1,
-      dragModel: ammo.ballisticCoefficientG7 ? 'G7' : 'G1',
-      muzzleVelocity: ammo.muzzleVelocity,
-    };
-
-    const atmosphere: AtmosphericConditions = {
-      temperature: 59,
-      pressure: 29.92,
-      humidity: 50,
-      altitude: 0,
-    };
-
-    return distances.map((distance) => {
-      const shot: ShotParameters = {
-        distance,
-        angle: 0,
-        windSpeed: 0,
-        windDirection: 0,
-      };
-
-      const solution = calculateBallisticSolution(rifleConfig, ammoConfig, shot, atmosphere);
-
-      const correction = correctionUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA;
-
-      return { distance, elevation: correction };
-    });
+    // Standard atmosphere: the curve is a reference line, not any one day.
+    return distances.map((distance) => ({
+      distance,
+      elevation: predictElevation(rifle, ammo, distance, undefined, correctionUnit),
+    }));
   }, [rifle, ammo, correctionUnit, actualDataPoints]);
+
+  const { corrections, applyCorrection } = useInputCorrections({
+    logs: filteredLogs,
+    rifle,
+    ammo,
+    unit: correctionUnit,
+  });
 
   useEffect(() => {
     // Simulate loading
@@ -284,6 +260,8 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             )}
           </View>
         </Card>
+
+        <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
 
         {/* Data Table */}
         <Card style={styles.tableCard}>
