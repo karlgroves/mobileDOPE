@@ -227,3 +227,41 @@ describe('DOPECurve: solver input suggestions', () => {
     error.mockRestore();
   });
 });
+
+describe('DOPECurve: distances in yards (#123)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('plots a meters log at its distance in yards', async () => {
+    // 457.2 m is 500 yd. Read raw, it sat at "457.2" -- more than 25 yd from
+    // any table row, so its row showed "-", and the summary said 457.2.
+    const meters = new DOPELog({
+      id: 1,
+      rifleId: 1,
+      ammoId: 1,
+      environmentId: 5,
+      distance: 457.2,
+      distanceUnit: 'meters',
+      elevationCorrection: 4.8,
+      windageCorrection: 0,
+      correctionUnit: 'MIL',
+      targetType: 'steel',
+    });
+    seed([meters]);
+    const { findByText, getByText, getAllByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    // The table is the only place a logged value is printed, and a table row
+    // only prints one when a log is within 25 yd of it -- so this is the 500 yd
+    // row matching.
+    await findByText('500 yds');
+    expect(getByText('4.8')).toBeTruthy();
+    // The summary's min and max both read it in yards, and say so.
+    expect(getAllByText('500 yd')).toHaveLength(2);
+  });
+});
