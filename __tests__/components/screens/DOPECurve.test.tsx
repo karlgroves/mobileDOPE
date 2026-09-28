@@ -252,16 +252,17 @@ describe('DOPECurve: distances in yards (#123)', () => {
       targetType: 'steel',
     });
     seed([meters]);
-    const { findByText, getByText, getAllByText } = renderWithProviders(
+    const { findAllByText, getByText, getAllByText } = renderWithProviders(
       <DOPECurve route={route} navigation={navigation} />
     );
 
     // The table is the only place a logged value is printed, and a table row
     // only prints one when a log is within 25 yd of it -- so this is the 500 yd
     // row matching.
-    await findByText('500 yds');
+    await findAllByText('500 yds');
     expect(getByText('4.8')).toBeTruthy();
-    // The summary's min and max both read it in yards, and say so.
-    expect(getAllByText('500 yd')).toHaveLength(2);
+    // The table row plus the summary's min and max, all in yards and labelled
+    // the same way.
+    expect(getAllByText('500 yds')).toHaveLength(3);
   });
 });

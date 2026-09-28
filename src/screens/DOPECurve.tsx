@@ -18,6 +18,7 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { logDistanceInYards } from '../utils/distanceUnits';
 import { elevationTable } from '../utils/solverInputs';
+import { milToMoa, moaToMil } from '../utils/unitConversions';
 
 import type { HistoryStackScreenProps } from '../navigation/types';
 
@@ -59,10 +60,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         let correction = log.elevationCorrection || 0;
         // Convert if needed
         if (log.correctionUnit !== correctionUnit) {
-          correction =
-            log.correctionUnit === 'MIL'
-              ? correction * 3.438 // MIL to MOA
-              : correction / 3.438; // MOA to MIL
+          correction = log.correctionUnit === 'MIL' ? milToMoa(correction) : moaToMil(correction);
         }
         return {
           // Yards, like the solver curve it is drawn against. Read raw, a 500 m
@@ -332,7 +330,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {`${Math.min(...actualDataPoints.map((p) => p.distance))} yd`}
+                  {`${Math.min(...actualDataPoints.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Min Distance
@@ -340,7 +338,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {`${Math.max(...actualDataPoints.map((p) => p.distance))} yd`}
+                  {`${Math.max(...actualDataPoints.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Max Distance
