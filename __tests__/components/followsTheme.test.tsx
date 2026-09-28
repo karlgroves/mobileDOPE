@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { fireEvent } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -78,6 +77,24 @@ describe.each(['light', 'nightVision', 'dark'] as ThemeMode[])('%s theme', (mode
     expect(colorOf(getByTestId('li-separator')).backgroundColor).toBe(c.border);
   });
 
+  it('ListItem: pressed row darkens to the background colour', () => {
+    // RNTL's pressIn does not toggle Pressable's internal pressed state, so call
+    // the style function Pressable would call -- found on the nearest ancestor of
+    // the row whose `style` is a function -- with pressed: true.
+    const { getByTestId } = renderWithProviders(
+      <ListItem title="T" onPress={() => {}} testID="li" />
+    );
+    let node = getByTestId('li').parent;
+    while (node && typeof node.props.style !== 'function') node = node.parent;
+    const styleFor = node!.props.style as (s: { pressed: boolean }) => unknown;
+    expect(colorOf({ props: { style: styleFor({ pressed: false }) } }).backgroundColor).toBe(
+      c.surface
+    );
+    expect(colorOf({ props: { style: styleFor({ pressed: true }) } }).backgroundColor).toBe(
+      c.background
+    );
+  });
+
   it('LoadingSpinner: indicator and message', () => {
     const { getByTestId, getByText } = renderWithProviders(
       <LoadingSpinner message="Loading" testID="sp" />
@@ -116,15 +133,17 @@ describe.each(['light', 'nightVision', 'dark'] as ThemeMode[])('%s theme', (mode
     spy.mockRestore();
     expect(colorOf(getByText('Something went wrong')).color).toBe(c.text.primary);
     expect(colorOf(getByText('boom')).color).toBe(c.errorText);
-    fireEvent.press(getByText('Try Again'));
   });
 });
 
 describe('no component reads the static theme', () => {
-  it('nothing outside constants/ imports `theme` or `defaultTheme` from constants/theme', () => {
-    // The static export is createTheme('dark'). Reading colours from it is how
-    // six components ended up ignoring the user's choice; useTheme() is the only
-    // source that follows it. Layout values come from Sizes and Typography.
+  it('nothing but ThemeContext imports from constants/theme', () => {
+    // Its exports -- `theme`, `defaultTheme` and the default export -- are all
+    // createTheme('dark'). Reading colours from them is how six components ended
+    // up ignoring the user's choice; useTheme() is the only source that follows
+    // it. Layout values come from Sizes and Typography. Any import form counts,
+    // named, default or namespace (#120 review).
+    const ALLOWED = path.join('src', 'contexts', 'ThemeContext.tsx');
     const ROOT = path.join(__dirname, '../..');
     const files = (dir: string): string[] =>
       fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -132,13 +151,13 @@ describe('no component reads the static theme', () => {
         if (e.isDirectory()) return files(p);
         return /\.tsx?$/.test(e.name) ? [p] : [];
       });
-    const STATIC =
-      /import\s*\{[^}]*\b(theme|defaultTheme)\b[^}]*\}\s*from\s*['"][./]*(src\/)?constants\/theme['"]/;
+    const STATIC = /(from\s*|require\(\s*)['"][./]*(src\/)?constants\/theme['"]/;
 
     const offenders = [...files(path.join(ROOT, 'src')), path.join(ROOT, 'App.tsx')]
       .filter((f) => !f.includes(`${path.sep}constants${path.sep}`))
       .filter((f) => STATIC.test(fs.readFileSync(f, 'utf8')))
-      .map((f) => path.relative(ROOT, f));
+      .map((f) => path.relative(ROOT, f))
+      .filter((f) => f !== ALLOWED);
 
     expect(offenders).toEqual([]);
   });
