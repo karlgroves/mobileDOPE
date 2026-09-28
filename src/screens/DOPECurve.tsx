@@ -11,12 +11,14 @@ import { CartesianChart, Line } from 'victory-native';
 
 import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
 import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
+import { OutlierList } from '../components/OutlierList';
 import { useTheme } from '../contexts/ThemeContext';
 import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { logDistanceInYards } from '../utils/distanceUnits';
+import { detectOutliers } from '../utils/dopeAnalysis';
 import { elevationTable } from '../utils/solverInputs';
 import { milToMoa, moaToMil } from '../utils/unitConversions';
 
@@ -88,6 +90,11 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
     const table = elevationTable(rifle, ammo, undefined, maxDistance, correctionUnit);
     return distances.map((distance) => ({ distance, elevation: table(distance) ?? 0 }));
   }, [rifle, ammo, correctionUnit, actualDataPoints]);
+
+  const outliers = useMemo(
+    () => detectOutliers(filteredLogs, correctionUnit),
+    [filteredLogs, correctionUnit]
+  );
 
   const { corrections, applyCorrection } = useInputCorrections({
     logs: filteredLogs,
@@ -262,6 +269,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         </Card>
 
         <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
+        <OutlierList outliers={outliers} unit={correctionUnit} />
 
         {/* Data Table */}
         <Card style={styles.tableCard}>

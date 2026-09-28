@@ -266,3 +266,31 @@ describe('DOPECurve: distances in yards (#123)', () => {
     expect(getAllByText('500 yds')).toHaveLength(3);
   });
 });
+
+describe('DOPECurve: entries that disagree (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('lists an entry that sits well off the trend', async () => {
+    const wild = logsAt([600], 6)[0];
+    seed([...logsAt([300, 400, 500, 700, 800], 0), new DOPELog({ ...wild.toJSON(), id: 99 })]);
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+
+    expect(await findByText('Entries that disagree')).toBeTruthy();
+    expect(await findByText(/^600 yds: logged 12\.0 MIL/)).toBeTruthy();
+  });
+
+  it('shows nothing when every entry agrees', async () => {
+    seed(logsAt([300, 400, 500, 600, 700], 0));
+    const { findByText, queryByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    await findByText('Elevation Drop Curve');
+    expect(queryByText('Entries that disagree')).toBeNull();
+  });
+});
