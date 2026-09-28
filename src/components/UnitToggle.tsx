@@ -125,7 +125,7 @@ export const UnitToggle: React.FC<UnitToggleProps> = ({
               style={[
                 styles.optionText,
                 { fontSize: currentSize.fontSize },
-                isSelected ? { color: colors.text.inverse } : { color: colors.text.primary },
+                isSelected ? { color: colors.onPrimary } : { color: colors.text.primary },
               ]}
             >
               {option.label}

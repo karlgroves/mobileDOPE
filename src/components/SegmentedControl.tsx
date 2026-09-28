@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export interface SegmentedControlOption {
@@ -77,7 +78,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             <Text
               style={[
                 styles.label,
-                isSelected ? { color: colors.text.inverse } : { color: colors.text.primary },
+                isSelected ? { color: colors.onPrimary } : { color: colors.text.primary },
               ]}
             >
               {option.label}

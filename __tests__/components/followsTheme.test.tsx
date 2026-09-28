@@ -1,15 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { fireEvent, within } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { Button } from '../../src/components/Button';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ErrorBoundary } from '../../src/components/ErrorBoundary';
+import { IconButton } from '../../src/components/IconButton';
 import { ListItem } from '../../src/components/ListItem';
 import { LoadingSpinner } from '../../src/components/LoadingSpinner';
 import { Modal } from '../../src/components/Modal';
+import { Picker } from '../../src/components/Picker';
+import { SegmentedControl } from '../../src/components/SegmentedControl';
+import { UnitToggle } from '../../src/components/UnitToggle';
 import { Colors, ThemeMode } from '../../src/constants/colors';
 import { useAppStore } from '../../src/store/useAppStore';
 import { renderWithProviders } from '../helpers/renderWithProviders';
@@ -135,6 +140,66 @@ describe.each(['light', 'nightVision', 'dark'] as ThemeMode[])('%s theme', (mode
     expect(colorOf(getByText('boom')).color).toBe(c.errorText);
   });
 });
+
+/**
+ * Text drawn on a coloured fill uses the on-fill token for that fill (#119).
+ * `text.inverse` did this job and was white on the light theme, where it fails
+ * AA on every fill; it no longer exists.
+ */
+describe.each(['light', 'nightVision', 'dark'] as ThemeMode[])(
+  '%s theme: text on fills',
+  (mode) => {
+    const c = Colors[mode];
+    beforeEach(() => setMode(mode));
+
+    const TWO = [
+      { label: 'Yards', value: 'y' },
+      { label: 'Meters', value: 'm' },
+    ];
+
+    it('SegmentedControl: the selected segment', () => {
+      const { getByRole } = renderWithProviders(
+        <SegmentedControl options={TWO} selectedValue="y" onValueChange={() => {}} />
+      );
+      const selected = getByRole('radio', { name: 'Yards' });
+      expect(colorOf(selected).backgroundColor).toBe(c.primary);
+      expect(colorOf(within(selected).getByText('Yards')).color).toBe(c.onPrimary);
+    });
+
+    it('UnitToggle: the selected unit', () => {
+      const { getByRole } = renderWithProviders(
+        <UnitToggle type="distance" options={TWO} value="y" onValueChange={() => {}} />
+      );
+      const selected = getByRole('radio', { name: /Yards/ });
+      expect(colorOf(selected).backgroundColor).toBe(c.primary);
+      expect(colorOf(within(selected).getByText('Yards')).color).toBe(c.onPrimary);
+    });
+
+    it('Picker: the selected option', () => {
+      const { getByRole } = renderWithProviders(
+        <Picker label="Range unit" options={TWO} value="y" onValueChange={() => {}} />
+      );
+      fireEvent.press(getByRole('button', { name: /Range unit/ }));
+      const selected = getByRole('radio', { name: 'Yards' });
+      expect(colorOf(selected).backgroundColor).toBe(c.primary);
+      expect(colorOf(within(selected).getByText('Yards')).color).toBe(c.onPrimary);
+    });
+
+    it.each([
+      ['primary', 'primary', 'onPrimary'],
+      ['secondary', 'secondary', 'onSecondary'],
+      ['danger', 'error', 'onError'],
+    ] as const)('IconButton: %s variant', (variant, fill, on) => {
+      const { getByText } = renderWithProviders(
+        <IconButton icon="+" variant={variant} onPress={() => {}} accessibilityLabel="Add" />
+      );
+      expect(colorOf(getByText('+')).color).toBe(c[on]);
+      let box = getByText('+').parent;
+      while (box && !colorOf(box).backgroundColor) box = box.parent;
+      expect(box && colorOf(box).backgroundColor).toBe(c[fill]);
+    });
+  }
+);
 
 describe('no component reads the static theme', () => {
   it('nothing but ThemeContext imports from constants/theme', () => {

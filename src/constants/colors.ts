@@ -17,6 +17,7 @@ export const Colors = {
     // Text drawn on the primary / error fill, e.g. a Button label (#116).
     onPrimary: '#000000',
     onError: '#000000',
+    onSecondary: '#000000',
     secondary: '#FF9800', // Orange for secondary actions
     secondaryDark: '#F57C00',
     accent: '#2196F3', // Blue for accents
@@ -32,7 +33,6 @@ export const Colors = {
       primary: '#FFFFFF',
       secondary: '#B0B0B0',
       disabled: '#6B6B6B',
-      inverse: '#000000',
     },
     border: '#404040',
     divider: '#333333',
@@ -50,6 +50,7 @@ export const Colors = {
     primaryText: '#1B5E20', // #4CAF50 is 2.55:1 on surface here
     onPrimary: '#000000', // text.inverse is white here: 2.78:1 on primary
     onError: '#000000',
+    onSecondary: '#000000',
     secondary: '#FF9800',
     secondaryDark: '#F57C00',
     accent: '#2196F3',
@@ -65,7 +66,6 @@ export const Colors = {
       primary: '#000000',
       secondary: '#666666',
       disabled: '#9E9E9E',
-      inverse: '#FFFFFF',
     },
     border: '#DDDDDD',
     divider: '#E0E0E0',
@@ -83,6 +83,7 @@ export const Colors = {
     primaryText: '#ff0000',
     onPrimary: '#000000',
     onError: '#000000',
+    onSecondary: '#000000',
     secondary: '#ff4444',
     secondaryDark: '#dd0000',
     accent: '#ff6666',
@@ -98,7 +99,6 @@ export const Colors = {
       primary: '#ff0000',
       secondary: '#cc0000',
       disabled: '#880000',
-      inverse: '#000000',
     },
     border: '#440000',
     divider: '#330000',

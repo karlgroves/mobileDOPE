@@ -97,7 +97,7 @@ export const Picker: React.FC<PickerProps> = ({
               style={[
                 styles.option,
                 {
-                  backgroundColor: item.value === value ? colors.primaryDark : 'transparent',
+                  backgroundColor: item.value === value ? colors.primary : 'transparent',
                 },
               ]}
               onPress={() => handleSelect(item.value)}
@@ -110,7 +110,7 @@ export const Picker: React.FC<PickerProps> = ({
                 style={[
                   styles.optionText,
                   {
-                    color: item.value === value ? colors.text.inverse : colors.text.primary,
+                    color: item.value === value ? colors.onPrimary : colors.text.primary,
                     fontWeight: item.value === value ? '600' : '400',
                   },
                 ]}

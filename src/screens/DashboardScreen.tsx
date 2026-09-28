@@ -448,7 +448,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               accessibilityLabel="Confirm shot"
               accessibilityHint="Saves this solution to your DOPE log at the current distance"
             >
-              <Text style={[styles.confirmButtonText, { color: colors.text.inverse }]}>
+              <Text style={[styles.confirmButtonText, { color: colors.onPrimary }]}>
                 CONFIRM SHOT
               </Text>
             </TouchableOpacity>
