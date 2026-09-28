@@ -7,6 +7,7 @@ import {
   suggestBallisticCoefficient,
   suggestMuzzleVelocity,
 } from '../../src/utils/dopeAnalysis';
+import { milToMoa } from '../../src/utils/unitConversions';
 
 import type { DOPELogData } from '../../src/models/DOPELog';
 
@@ -448,7 +449,7 @@ describe('compareLogsToSolver', () => {
 
   it('converts MOA logs into the requested unit before comparing', () => {
     const [row] = compareLogsToSolver(
-      [log({ distance: 500, elevationCorrection: 5 * 3.438, correctionUnit: 'MOA' })],
+      [log({ distance: 500, elevationCorrection: milToMoa(5), correctionUnit: 'MOA' })],
       (_log, yards) => perHundredYards(yards),
       'MIL'
     );
@@ -472,5 +473,62 @@ describe('compareLogsToSolver', () => {
     const rows = compareLogsToSolver(logs, (_log, yards) => perHundredYards(yards), 'MIL');
     const suggestion = suggestMuzzleVelocity(rows, 2700, 'MIL');
     expect(suggestion?.suggested).toBeLessThan(2700);
+  });
+});
+
+/**
+ * Mixed units (#123). A log carries its own `distanceUnit` and
+ * `correctionUnit`; these functions used to read the raw numbers, so a 500 m
+ * log sat at "500" beside 500 yd ones and MOA was averaged with MIL.
+ */
+describe('mixed units', () => {
+  // 500 yd is 457.2 m. MOA uses the app's own conversion: a rounded 3.438
+  // leaves a residual that a zero-spread synthetic set reads as an outlier.
+  const inMeters = (over: Partial<DOPELogData> = {}) =>
+    log({ distance: 457.2, distanceUnit: 'meters', elevationCorrection: 5, ...over });
+  const inMoa = (over: Partial<DOPELogData> = {}) =>
+    log({ distance: 500, elevationCorrection: milToMoa(5), correctionUnit: 'MOA', ...over });
+
+  describe('detectOutliers', () => {
+    it('does not flag a MOA log that agrees with a MIL set', () => {
+      expect(detectOutliers([...linearSet([300, 400, 600, 700]), inMoa()])).toEqual([]);
+    });
+
+    it('does not flag a meters log that agrees with a yards set', () => {
+      expect(detectOutliers([...linearSet([300, 400, 600, 700]), inMeters()])).toEqual([]);
+    });
+
+    it('still finds a real outlier recorded in other units, and returns the original log', () => {
+      const wild = inMeters({ elevationCorrection: 12 });
+      const [found] = detectOutliers([...linearSet([300, 400, 600, 700]), wild]);
+      expect(found.log).toBe(wild);
+      expect(found.expected).toBeCloseTo(5, 0);
+      expect(found.actual).toBeCloseTo(12, 5);
+    });
+  });
+
+  describe('buildDropCurve', () => {
+    it('buckets a meters log at its distance in yards', () => {
+      const curve = buildDropCurve([log({ distance: 500, elevationCorrection: 5 }), inMeters()]);
+      expect(curve).toEqual([{ distance: 500, correction: 5, sampleCount: 2 }]);
+    });
+
+    it('converts MOA logs into the requested unit', () => {
+      const [mil] = buildDropCurve([inMoa()], 'MIL');
+      expect(mil.correction).toBeCloseTo(5, 5);
+      const [moa] = buildDropCurve([log({ distance: 500, elevationCorrection: 5 })], 'MOA');
+      expect(moa.correction).toBeCloseTo(milToMoa(5), 2);
+    });
+  });
+
+  describe('compareToCalculated', () => {
+    it('asks the solver about a meters log at its distance in yards', () => {
+      const asked: number[] = [];
+      compareToCalculated([inMeters()], (yards) => {
+        asked.push(yards);
+        return 5;
+      });
+      expect(asked).toEqual([500]);
+    });
   });
 });

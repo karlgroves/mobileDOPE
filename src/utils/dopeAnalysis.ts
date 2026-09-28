@@ -45,9 +45,9 @@ export interface DOPEConfidence {
 /** A logged point that disagrees with the trend its neighbours describe. */
 export interface DOPEOutlier {
   log: DOPELogData;
-  /** Correction the surrounding points imply at this distance. */
+  /** Correction the surrounding points imply at this distance, in the requested unit. */
   expected: number;
-  /** What was actually logged. */
+  /** What was actually logged, converted to the requested unit. */
   actual: number;
   /** Modified z-score of the residual. */
   score: number;
@@ -55,8 +55,9 @@ export interface DOPEOutlier {
 
 /** One point on a drop curve fitted to logged data. */
 export interface DropCurvePoint {
+  /** Yards, rounded to the nearest yard. */
   distance: number;
-  /** Correction in the unit the contributing logs used. */
+  /** Correction in the requested unit, whatever the logs were recorded in. */
   correction: number;
   /** How many logs contributed. */
   sampleCount: number;
@@ -88,6 +89,30 @@ const median = (values: number[]): number => {
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 };
+
+/** A correction in `unit`, whatever unit it was logged in. */
+const correctionIn = (log: DOPELogData, unit: 'MIL' | 'MOA'): number =>
+  log.correctionUnit === unit
+    ? log.elevationCorrection
+    : unit === 'MIL'
+      ? moaToMil(log.elevationCorrection)
+      : milToMoa(log.elevationCorrection);
+
+/**
+ * A copy of `log` in yards and `unit` (#123).
+ *
+ * Every log carries its own `distanceUnit` and `correctionUnit`. The fits and
+ * buckets below read `distance` and `elevationCorrection` directly, so they
+ * run on these copies -- otherwise a 500 m log sits at "500" beside 500 yd ones
+ * and MOA is averaged with MIL.
+ */
+const inYardsAnd = (log: DOPELogData, unit: 'MIL' | 'MOA'): DOPELogData => ({
+  ...log,
+  distance: logDistanceInYards(log),
+  distanceUnit: 'yards',
+  elevationCorrection: correctionIn(log, unit),
+  correctionUnit: unit,
+});
 
 /**
  * Median absolute deviation, scaled to be comparable with a standard deviation.
@@ -164,12 +189,23 @@ export const calculateConfidence = (log: DOPELogData): DOPEConfidence => {
 /**
  * Logged points whose correction disagrees with the trend the others describe.
  *
+ * Distances are compared in yards and corrections in `unit`, which is also the
+ * unit of each result's `expected` and `actual`. The `log` on each result is
+ * the caller's original entry.
+ *
  * Fits correction against distance by least squares, then applies a modified
  * z-score to the residuals. Needs at least four points: with three, removing one
  * leaves a perfect two-point fit and everything looks like an outlier.
  */
-export const detectOutliers = (logs: DOPELogData[]): DOPEOutlier[] => {
-  const usable = logs.filter((l) => l.distance > 0);
+export const detectOutliers = (logs: DOPELogData[], unit: 'MIL' | 'MOA' = 'MIL'): DOPEOutlier[] => {
+  const original = new Map<DOPELogData, DOPELogData>();
+  const usable = logs
+    .filter((l) => l.distance > 0)
+    .map((l) => {
+      const copy = inYardsAnd(l, unit);
+      original.set(copy, l);
+      return copy;
+    });
   if (usable.length < 4) return [];
 
   const firstPass = fitLine(usable);
@@ -201,7 +237,10 @@ export const detectOutliers = (logs: DOPELogData[]): DOPEOutlier[] => {
   const scored = scoreAgainst(usable, line, inliers);
   const byLog = new Map(scored.map((o) => [o.log, o]));
 
-  return flagged.map((o) => byLog.get(o.log) ?? o).sort((a, b) => b.score - a.score);
+  return flagged
+    .map((o) => byLog.get(o.log) ?? o)
+    .map((o) => ({ ...o, log: original.get(o.log) ?? o.log }))
+    .sort((a, b) => b.score - a.score);
 };
 
 /**
@@ -288,13 +327,18 @@ const scoreAgainst = (
  * the mean for the same reason as above: one mis-keyed entry should not move the
  * curve everyone else is read off.
  */
-export const buildDropCurve = (logs: DOPELogData[]): DropCurvePoint[] => {
+export const buildDropCurve = (
+  logs: DOPELogData[],
+  unit: 'MIL' | 'MOA' = 'MIL'
+): DropCurvePoint[] => {
   const byDistance = new Map<number, number[]>();
   for (const log of logs) {
-    if (log.distance <= 0) continue;
-    const bucket = byDistance.get(log.distance) ?? [];
-    bucket.push(log.elevationCorrection);
-    byDistance.set(log.distance, bucket);
+    if (!(log.distance > 0)) continue;
+    // Rounded to the yard so a 457.2 m log shares a bucket with 500 yd ones.
+    const yards = Math.round(logDistanceInYards(log));
+    const bucket = byDistance.get(yards) ?? [];
+    bucket.push(correctionIn(log, unit));
+    byDistance.set(yards, bucket);
   }
 
   return [...byDistance.entries()]
@@ -314,9 +358,10 @@ export const buildDropCurve = (logs: DOPELogData[]): DropCurvePoint[] => {
  */
 export const compareToCalculated = (
   logs: DOPELogData[],
-  calculatedAt: (distance: number) => number | undefined
+  calculatedAt: (yards: number) => number | undefined,
+  unit: 'MIL' | 'MOA' = 'MIL'
 ): DropComparison[] =>
-  buildDropCurve(logs)
+  buildDropCurve(logs, unit)
     .map((point) => {
       const calculated = calculatedAt(point.distance);
       if (calculated === undefined || !Number.isFinite(calculated)) return undefined;
@@ -332,12 +377,11 @@ export const compareToCalculated = (
 /**
  * Logged DOPE against the solver, one log at a time, for the suggestions below.
  *
- * {@link compareToCalculated} fits one prediction per distance to a curve built
- * from raw log values. That is not enough to act on, for two reasons:
+ * {@link compareToCalculated} compares one prediction per distance with the
+ * median logged correction there. That is not enough to act on:
  *
- * - **Units.** `buildDropCurve` buckets by the raw `distance` and averages raw
- *   corrections, so a 500 m log lands beside 500 yd ones and MIL and MOA are
- *   averaged together. Here every log is converted to yards and to `unit` first.
+ * - **Units.** Every log is converted to yards and to `unit` first. (The drop
+ *   curve now does the same; it used not to -- #123.)
  * - **Conditions.** Each log was shot in its own air. A muzzle-velocity estimate
  *   only means something once each shot's density is accounted for, so the
  *   caller predicts per log -- typically with that log's environment snapshot --
@@ -359,12 +403,7 @@ export const compareLogsToSolver = (
     const calculated = predict(entry, yards);
     if (calculated === undefined || !Number.isFinite(calculated)) continue;
 
-    const logged =
-      entry.correctionUnit === unit
-        ? entry.elevationCorrection
-        : unit === 'MIL'
-          ? moaToMil(entry.elevationCorrection)
-          : milToMoa(entry.elevationCorrection);
+    const logged = correctionIn(entry, unit);
 
     const bucket = byYards.get(yards) ?? { logged: [], calculated: [], diff: [] };
     bucket.logged.push(logged);
