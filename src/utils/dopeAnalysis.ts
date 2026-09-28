@@ -23,6 +23,7 @@
  */
 
 import { logDistanceInYards } from './distanceUnits';
+import { milToMoa, moaToMil } from './unitConversions';
 
 import type { DOPELogData } from '../models/DOPELog';
 
@@ -327,6 +328,60 @@ export const compareToCalculated = (
       };
     })
     .filter((c): c is DropComparison => c !== undefined);
+
+/**
+ * Logged DOPE against the solver, one log at a time, for the suggestions below.
+ *
+ * {@link compareToCalculated} fits one prediction per distance to a curve built
+ * from raw log values. That is not enough to act on, for two reasons:
+ *
+ * - **Units.** `buildDropCurve` buckets by the raw `distance` and averages raw
+ *   corrections, so a 500 m log lands beside 500 yd ones and MIL and MOA are
+ *   averaged together. Here every log is converted to yards and to `unit` first.
+ * - **Conditions.** Each log was shot in its own air. A muzzle-velocity estimate
+ *   only means something once each shot's density is accounted for, so the
+ *   caller predicts per log -- typically with that log's environment snapshot --
+ *   and the median is taken over the per-log differences.
+ *
+ * Distances are rounded to the nearest yard for grouping. The result is in
+ * yards and `unit`, which is what the suggestion functions expect.
+ */
+export const compareLogsToSolver = (
+  logs: DOPELogData[],
+  predict: (log: DOPELogData, yards: number) => number | undefined,
+  unit: 'MIL' | 'MOA'
+): DropComparison[] => {
+  const byYards = new Map<number, { logged: number[]; calculated: number[]; diff: number[] }>();
+
+  for (const entry of logs) {
+    if (!(entry.distance > 0)) continue;
+    const yards = Math.round(logDistanceInYards(entry));
+    const calculated = predict(entry, yards);
+    if (calculated === undefined || !Number.isFinite(calculated)) continue;
+
+    const logged =
+      entry.correctionUnit === unit
+        ? entry.elevationCorrection
+        : unit === 'MIL'
+          ? moaToMil(entry.elevationCorrection)
+          : milToMoa(entry.elevationCorrection);
+
+    const bucket = byYards.get(yards) ?? { logged: [], calculated: [], diff: [] };
+    bucket.logged.push(logged);
+    bucket.calculated.push(calculated);
+    bucket.diff.push(logged - calculated);
+    byYards.set(yards, bucket);
+  }
+
+  return [...byYards.entries()]
+    .map(([distance, b]) => ({
+      distance,
+      logged: median(b.logged),
+      calculated: median(b.calculated),
+      difference: median(b.diff),
+    }))
+    .sort((a, b) => a.distance - b.distance);
+};
 
 /**
  * Confidence in a suggested correction: more agreeing points, tighter spread.

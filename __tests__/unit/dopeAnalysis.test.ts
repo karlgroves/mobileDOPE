@@ -1,6 +1,7 @@
 import {
   buildDropCurve,
   calculateConfidence,
+  compareLogsToSolver,
   compareToCalculated,
   detectOutliers,
   suggestBallisticCoefficient,
@@ -396,5 +397,80 @@ describe('suggestBallisticCoefficient', () => {
     const suggestion = suggestBallisticCoefficient(extreme, 0.5);
 
     expect(suggestion!.suggested).toBeGreaterThan(0);
+  });
+});
+
+describe('compareLogsToSolver', () => {
+  // A solver stand-in: 1 MIL per 100 yards, whatever the log says.
+  const perHundredYards = (yards: number) => yards / 100;
+
+  it('compares each log with its own prediction and reports the median per distance', () => {
+    const logs = [
+      log({ id: 1, distance: 500, elevationCorrection: 5.4 }),
+      log({ id: 2, distance: 500, elevationCorrection: 5.2 }),
+      log({ id: 3, distance: 500, elevationCorrection: 9.9 }),
+    ];
+    const [row] = compareLogsToSolver(logs, (_log, yards) => perHundredYards(yards), 'MIL');
+
+    expect(row.distance).toBe(500);
+    expect(row.logged).toBeCloseTo(5.4);
+    expect(row.calculated).toBeCloseTo(5);
+    expect(row.difference).toBeCloseTo(0.4);
+  });
+
+  it('passes each log to the predictor, so its own environment can be used', () => {
+    const seen: number[] = [];
+    compareLogsToSolver(
+      [log({ id: 1, environmentId: 7 }), log({ id: 2, environmentId: 9 })],
+      (l) => {
+        seen.push(l.environmentId);
+        return 5;
+      },
+      'MIL'
+    );
+    expect(seen.sort()).toEqual([7, 9]);
+  });
+
+  it('puts a meters log at its distance in yards, not at the raw number', () => {
+    // 457.2 m is 500 yd. buildDropCurve would bucket it at "457.2" and a
+    // 500 m log beside 500 yd ones.
+    const rows = compareLogsToSolver(
+      [
+        log({ distance: 500, distanceUnit: 'yards', elevationCorrection: 5 }),
+        log({ distance: 457.2, distanceUnit: 'meters', elevationCorrection: 5 }),
+      ],
+      (_log, yards) => perHundredYards(yards),
+      'MIL'
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].distance).toBe(500);
+  });
+
+  it('converts MOA logs into the requested unit before comparing', () => {
+    const [row] = compareLogsToSolver(
+      [log({ distance: 500, elevationCorrection: 5 * 3.438, correctionUnit: 'MOA' })],
+      (_log, yards) => perHundredYards(yards),
+      'MIL'
+    );
+    expect(row.logged).toBeCloseTo(5, 1);
+    expect(row.difference).toBeCloseTo(0, 1);
+  });
+
+  it('skips logs the solver cannot predict, and logs with no distance', () => {
+    const rows = compareLogsToSolver(
+      [log({ distance: 300 }), log({ distance: 600 }), log({ distance: 0 })],
+      (_log, yards) => (yards === 600 ? undefined : perHundredYards(yards)),
+      'MIL'
+    );
+    expect(rows.map((r) => r.distance)).toEqual([300]);
+  });
+
+  it('feeds suggestMuzzleVelocity: logs consistently above the solver suggest a lower velocity', () => {
+    const logs = [300, 500, 700, 900].map((distance) =>
+      log({ distance, elevationCorrection: distance / 100 + 0.5 })
+    );
+    const rows = compareLogsToSolver(logs, (_log, yards) => perHundredYards(yards), 'MIL');
+    const suggestion = suggestMuzzleVelocity(rows, 2700, 'MIL');
+    expect(suggestion?.suggested).toBeLessThan(2700);
   });
 });
