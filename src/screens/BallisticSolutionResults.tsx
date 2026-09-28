@@ -9,6 +9,7 @@ import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { Card, Button } from '../components';
 import { RelevantDopeList } from '../components/RelevantDopeList';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSnapshotsFor } from '../hooks/useSnapshotsFor';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
@@ -61,11 +62,24 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
    * Logs carry an `environmentId` rather than the conditions themselves, so the
    * snapshot is joined on here -- without it every log scores neutral on the
    * environment factor and the ranking collapses to distance and recency.
+   *
+   * The store holds only recent snapshots -- the Dashboard loads one -- so each
+   * candidate log's own snapshot is loaded by id and joined over the store's
+   * (#122). Reading the store alone left nearly every log neutral.
    */
+  const candidateLogs = useMemo(
+    () => dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId),
+    [dopeLogs, rifleId, ammoId]
+  );
+  const loadedSnapshots = useSnapshotsFor(candidateLogs);
+
   const relevantDope = useMemo(() => {
     if (dopeLogs.length === 0) return [];
 
-    const environmentById = new Map(snapshots.map((snapshot) => [snapshot.id, snapshot]));
+    const environmentById = new Map<number | undefined, MatchableEnvironment>([
+      ...snapshots.map((snapshot) => [snapshot.id, snapshot] as const),
+      ...(loadedSnapshots ?? []),
+    ]);
 
     const matchable: (DOPELogData & { environment?: MatchableEnvironment })[] = dopeLogs.map(
       (log) => ({
@@ -81,7 +95,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
       distance: toSolverYards(distance, distanceUnit),
       environment: currentEnv ?? undefined,
     });
-  }, [dopeLogs, snapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
+  }, [dopeLogs, snapshots, loadedSnapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);

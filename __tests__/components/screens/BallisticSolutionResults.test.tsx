@@ -1,7 +1,9 @@
+import { waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 import { DOPELog } from '../../../src/models/DOPELog';
 import { BallisticSolutionResults } from '../../../src/screens/BallisticSolutionResults';
+import { environmentRepository } from '../../../src/services/database';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useEnvironmentStore } from '../../../src/store/useEnvironmentStore';
@@ -188,6 +190,40 @@ describe('BallisticSolutionResults shows relevant logged DOPE', () => {
 
     // The log shot at 500 ft density altitude, matching today's air, comes first.
     expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
+  });
+
+  it("ranks by conditions even when the store holds none of the logs' snapshots", async () => {
+    // What the app actually has (#122): the Dashboard loads one snapshot into the
+    // store, so an older log's conditions are only reachable by id. Reading
+    // them from the store alone left both logs neutral on environment.
+    const byId = new Map([
+      [1, snapshot(1, 12000)],
+      [2, snapshot(2, 500)],
+    ]);
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => (byId.get(id) ?? null) as never);
+    seed(
+      [
+        log({ id: 1, environmentId: 1, elevationCorrection: 9.9 }),
+        log({ id: 2, environmentId: 2, elevationCorrection: 1.1 }),
+      ],
+      [],
+      snapshot(3, 500)
+    );
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    await waitFor(() => {
+      const labels = getByTestId('relevant-dope').props.children as {
+        props: { accessibilityLabel: string };
+      }[];
+      expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
+    });
+    expect(environmentRepository.getById).toHaveBeenCalledWith(1);
+    expect(environmentRepository.getById).toHaveBeenCalledWith(2);
   });
 
   it('matches a metric log against a yard shot', () => {
