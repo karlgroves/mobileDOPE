@@ -6,7 +6,9 @@
  * the curve built them inline; now both come through here.
  */
 
-import { calculateBallisticSolution } from './ballistics';
+import { inchesToCorrection } from '../types/ballistic.types';
+
+import { calculateBallisticSolution, calculateTrajectory } from './ballistics';
 
 import type { AtmosphericConditions } from './atmospheric';
 import type { AmmoProfileData } from '../models/AmmoProfile';
@@ -76,4 +78,43 @@ export const predictElevation = (
     atmosphereFor(env)
   );
   return unit === 'MIL' ? solution.elevationMIL : solution.elevationMOA;
+};
+
+/**
+ * The solver's elevation at any distance up to `maxYards`, from one trajectory.
+ *
+ * `predictElevation` runs a full solve -- a zero-angle search plus a trajectory
+ * -- for every distance. Comparing many logs, or drawing a curve, that is one
+ * solve per point: 60 logs took 660 ms on the render path (#124 review). Here
+ * the trajectory is computed once for the conditions and read at each distance,
+ * interpolating linearly between its samples (every 25 yards). It agrees with a
+ * full solve to within ~0.011 MIL, most of which is the full solve's own
+ * end-point quantisation; see solverInputs.test.ts.
+ *
+ * Returns undefined past `maxYards`, where the trajectory has no data.
+ */
+export const elevationTable = (
+  rifle: RifleFields,
+  ammo: AmmoFields,
+  env: ConditionFields | undefined,
+  maxYards: number,
+  unit: 'MIL' | 'MOA'
+): ((yards: number) => number | undefined) => {
+  const points = calculateTrajectory(
+    rifleConfigFor(rifle),
+    ammoConfigFor(ammo),
+    { distance: maxYards, angle: 0, windSpeed: 0, windDirection: 0 },
+    atmosphereFor(env)
+  );
+
+  return (yards) => {
+    if (!(yards > 0) || yards > maxYards) return undefined;
+    const after = points.findIndex((p) => p.distance >= yards);
+    if (after < 0) return undefined;
+    const b = points[after];
+    const a = points[Math.max(0, after - 1)];
+    const span = b.distance - a.distance;
+    const drop = span > 0 ? a.drop + ((yards - a.distance) / span) * (b.drop - a.drop) : b.drop;
+    return inchesToCorrection(-drop, yards, unit);
+  };
 };

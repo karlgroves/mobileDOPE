@@ -16,7 +16,7 @@ import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { predictElevation } from '../utils/solverInputs';
+import { elevationTable } from '../utils/solverInputs';
 
 import type { HistoryStackScreenProps } from '../navigation/types';
 
@@ -82,11 +82,10 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
       distances.push(d);
     }
 
-    // Standard atmosphere: the curve is a reference line, not any one day.
-    return distances.map((distance) => ({
-      distance,
-      elevation: predictElevation(rifle, ammo, distance, undefined, correctionUnit),
-    }));
+    // Standard atmosphere: the curve is a reference line, not any one day. One
+    // trajectory read at every point, rather than a full solve per point.
+    const table = elevationTable(rifle, ammo, undefined, maxDistance, correctionUnit);
+    return distances.map((distance) => ({ distance, elevation: table(distance) ?? 0 }));
   }, [rifle, ammo, correctionUnit, actualDataPoints]);
 
   const { corrections, applyCorrection } = useInputCorrections({
