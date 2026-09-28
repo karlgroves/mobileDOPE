@@ -47,6 +47,14 @@ const ErrorFallback: React.FC<{ error: Error | null; onReset: () => void }> = ({
   );
 };
 
+/**
+ * Catches render errors below it and shows a recovery screen.
+ *
+ * Mount it **inside** ThemeProvider: the default fallback reads the theme with
+ * useTheme(), which throws outside the provider -- so a boundary wrapped around
+ * ThemeProvider would fail while showing its own error screen. To guard the
+ * provider itself, pass a `fallback` that does not use the theme.
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);

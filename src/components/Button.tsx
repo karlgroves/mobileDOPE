@@ -50,7 +50,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    styles[`button_${variant}`],
+    variant === 'secondary' && styles.button_secondary,
     fill,
     styles[`button_${size}`],
     isDisabled && styles.button_disabled,
@@ -94,12 +94,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: Sizes.touchTarget.default,
   },
-  button_primary: {},
   button_secondary: {
     backgroundColor: 'transparent',
     borderWidth: 2,
   },
-  button_danger: {},
   button_small: {
     paddingHorizontal: Sizes.spacing.sm,
     minHeight: Sizes.touchTarget.min,
