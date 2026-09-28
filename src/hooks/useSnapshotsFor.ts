@@ -19,11 +19,14 @@ export const useSnapshotsFor = (
 ): Map<number, EnvironmentSnapshotData> | undefined => {
   // Undefined until loaded: before then every log would look unconditioned.
   const [byId, setById] = useState<Map<number, EnvironmentSnapshotData>>();
-  const ids = useMemo(
-    () => [...new Set(logs.map((log) => log.environmentId))].sort((a, b) => a - b),
+  // Keyed on the ids' values, not the array: a new list of logs that needs the
+  // same snapshots -- e.g. after saving a log -- must not reload them all.
+  const key = useMemo(
+    () => [...new Set(logs.map((log) => log.environmentId))].sort((a, b) => a - b).join(','),
     [logs]
   );
   useEffect(() => {
+    const ids = key ? key.split(',').map(Number) : [];
     let cancelled = false;
     setById(undefined);
     Promise.all(ids.map((id) => environmentRepository.getById(id)))
@@ -44,6 +47,6 @@ export const useSnapshotsFor = (
     return () => {
       cancelled = true;
     };
-  }, [ids]);
+  }, [key]);
   return byId;
 };
