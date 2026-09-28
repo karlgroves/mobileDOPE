@@ -1,3 +1,4 @@
+import * as ballistics from '../../src/utils/ballistics';
 import { inputCorrectionsFor } from '../../src/utils/inputCorrections';
 import { predictElevation } from '../../src/utils/solverInputs';
 import { validAmmo, validDopeLog, validEnvironment, validRifle } from '../helpers/fixtures';
@@ -83,6 +84,31 @@ describe('inputCorrectionsFor', () => {
       )
     );
     expect(run(logs, new Map([[2, cold]])).status).toBe('agrees');
-    expect(run(logs, new Map()).status).toBe('suggests');
+    // The same logs filed under a standard-day snapshot read as a velocity error.
+    const standardDay = { ...validEnvironment(), id: 2 };
+    expect(run(logs, new Map([[2, standardDay]])).status).toBe('suggests');
+  });
+
+  it('leaves out logs with no recorded conditions, and counts them', () => {
+    // Four logs agree in their own conditions. Three more, with no snapshot,
+    // would suggest a large change if predicted in a standard atmosphere --
+    // which is exactly the guess this refuses to make.
+    const withConditions = logsAt([300, 500, 700, 900], () => 0);
+    const without = logsAt([400, 600, 800], () => 1.5).map((log, i) => ({
+      ...log,
+      id: 100 + i,
+      environmentId: 999,
+    }));
+    const result = run([...withConditions, ...without]);
+    expect(result.withoutConditions).toBe(3);
+    expect(result.status).toBe('agrees');
+    expect(result.distanceCount).toBe(4);
+  });
+
+  it('computes one trajectory per snapshot, not one per log', () => {
+    const spy = jest.spyOn(ballistics, 'calculateTrajectory');
+    run(logsAt([300, 400, 500, 600, 700, 800, 900, 1000], () => 0.3));
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });

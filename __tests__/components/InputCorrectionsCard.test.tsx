@@ -17,6 +17,7 @@ const base: Omit<InputCorrections, 'status'> = {
   comparisons: [],
   distanceCount: 4,
   spanYards: 600,
+  withoutConditions: 0,
 };
 
 const suggests: InputCorrections = {
@@ -101,5 +102,33 @@ describe('InputCorrectionsCard', () => {
       />
     );
     expect(getByText(/BC check needs 4 or more distances across 300 yards/)).toBeTruthy();
+  });
+
+  it('says how many logs were left out for having no recorded conditions', () => {
+    const { getByText } = renderWithProviders(
+      <InputCorrectionsCard
+        corrections={{ ...suggests, withoutConditions: 3 }}
+        onApply={() => {}}
+      />
+    );
+    expect(getByText(/3 logs have no recorded conditions and were not used/)).toBeTruthy();
+  });
+
+  it('says nothing about left-out logs when there are none', () => {
+    const { queryByText } = renderWithProviders(
+      <InputCorrectionsCard corrections={suggests} onApply={() => {}} />
+    );
+    expect(queryByText(/no recorded conditions/)).toBeNull();
+  });
+
+  it('reads the change as words, not an arrow', () => {
+    // "2700 → 2650" is announced as "2700 right arrow 2650".
+    const { getByText } = renderWithProviders(
+      <InputCorrectionsCard corrections={suggests} onApply={() => {}} />
+    );
+    expect(getByText('2700 → 2650 fps').props.accessibilityLabel).toBe(
+      'Muzzle velocity: from 2700 to 2650 fps'
+    );
+    expect(getByText('0.258 → 0.249').props.accessibilityLabel).toBe('G7 BC: from 0.258 to 0.249');
   });
 });

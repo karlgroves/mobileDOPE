@@ -8,12 +8,13 @@
  * free of the ballistics engine.
  */
 
+import { logDistanceInYards } from './distanceUnits';
 import {
   compareLogsToSolver,
   suggestBallisticCoefficient,
   suggestMuzzleVelocity,
 } from './dopeAnalysis';
-import { predictElevation } from './solverInputs';
+import { elevationTable } from './solverInputs';
 
 import type { DropComparison, InputCorrection } from './dopeAnalysis';
 import type { AmmoProfileData } from '../models/AmmoProfile';
@@ -38,6 +39,12 @@ export interface InputCorrections {
   comparisons: DropComparison[];
   distanceCount: number;
   spanYards: number;
+  /**
+   * Logs left out because their environment snapshot is missing. Predicting
+   * them in a standard atmosphere would read an unusual day as an input error,
+   * so they are counted and reported instead of guessed at.
+   */
+  withoutConditions: number;
   muzzleVelocity?: InputCorrection;
   /** The coefficient for the drag model the solver is using for this load. */
   ballisticCoefficient?: InputCorrection & { dragModel: 'G1' | 'G7' };
@@ -56,12 +63,26 @@ export const inputCorrectionsFor = ({
   environmentById: Map<number, EnvironmentSnapshotData>;
   unit: 'MIL' | 'MOA';
 }): InputCorrections => {
-  // A log whose snapshot is missing is predicted in the standard atmosphere,
-  // the same fallback the DOPE curve uses.
+  const withConditions = logs.filter((log) => environmentById.has(log.environmentId));
+  const withoutConditions = logs.length - withConditions.length;
+
+  // One trajectory per snapshot, out to the furthest log shot in it, rather
+  // than a full solve per log.
+  const furthest = new Map<number, number>();
+  for (const log of withConditions) {
+    const yards = Math.round(logDistanceInYards(log));
+    furthest.set(log.environmentId, Math.max(furthest.get(log.environmentId) ?? 0, yards));
+  }
+  const tables = new Map(
+    [...furthest].map(([id, maxYards]) => [
+      id,
+      elevationTable(rifle, ammo, environmentById.get(id), maxYards, unit),
+    ])
+  );
+
   const comparisons = compareLogsToSolver(
-    logs,
-    (log, yards) =>
-      predictElevation(rifle, ammo, yards, environmentById.get(log.environmentId), unit),
+    withConditions,
+    (log, yards) => tables.get(log.environmentId)?.(yards),
     unit
   );
   const distances = comparisons.map((c) => c.distance);
@@ -69,7 +90,7 @@ export const inputCorrectionsFor = ({
   const spanYards = distanceCount ? Math.max(...distances) - Math.min(...distances) : 0;
 
   if (distanceCount < MIN_DISTANCES_FOR_VELOCITY) {
-    return { status: 'insufficient', comparisons, distanceCount, spanYards };
+    return { status: 'insufficient', comparisons, distanceCount, spanYards, withoutConditions };
   }
 
   const muzzleVelocity = suggestMuzzleVelocity(comparisons, ammo.muzzleVelocity, unit);
@@ -85,6 +106,7 @@ export const inputCorrectionsFor = ({
     comparisons,
     distanceCount,
     spanYards,
+    withoutConditions,
     muzzleVelocity,
     ballisticCoefficient,
   };

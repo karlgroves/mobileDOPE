@@ -68,19 +68,35 @@ const bcNote = (corrections: InputCorrections): string | undefined =>
       `${MIN_SPAN_YARDS_FOR_BC} yards. ${soFar(corrections)}`
     : undefined;
 
+/** Logs left out for want of a snapshot, when there are any. */
+const leftOutNote = ({ withoutConditions: n }: InputCorrections): string | undefined =>
+  n > 0
+    ? `${plural(n, 'log')} ${n === 1 ? 'has' : 'have'} no recorded conditions and ` +
+      `${n === 1 ? 'was' : 'were'} not used: comparing ${n === 1 ? 'it' : 'them'} with ` +
+      'a standard day would read unusual weather as a velocity or BC error.'
+    : undefined;
+
 /** One suggested change: what, from and to, how sure, why, and the action. */
 const Suggestion: React.FC<{
   label: string;
   change: string;
+  /** The change in words: an arrow is read aloud as "right arrow". */
+  spoken: string;
   correction: InputCorrection;
   action: string;
   onPress: () => void;
-}> = ({ label, change, correction, action, onPress }) => {
+}> = ({ label, change, spoken, correction, action, onPress }) => {
   const { colors } = useTheme().theme;
   return (
     <View style={styles.suggestion}>
       <Text style={[styles.label, { color: colors.text.secondary }]}>{label}</Text>
-      <Text style={[styles.change, { color: colors.primaryText }]}>{change}</Text>
+      <Text
+        style={[styles.change, { color: colors.primaryText }]}
+        accessibilityLabel={`${label}: ${spoken}`}
+        accessibilityHint="Suggested by your logged DOPE. The button below applies it."
+      >
+        {change}
+      </Text>
       <Text style={[styles.meta, { color: colors.text.secondary }]}>
         {`Confidence ${Math.round(correction.confidence * 100)}%`}
       </Text>
@@ -99,6 +115,7 @@ export const InputCorrectionsCard: React.FC<InputCorrectionsCardProps> = ({
   const { muzzleVelocity: mv, ballisticCoefficient: bc } = corrections;
   const message = statusMessage(corrections);
   const note = message ? undefined : bcNote(corrections);
+  const leftOut = leftOutNote(corrections);
 
   return (
     <Card style={styles.card}>
@@ -110,6 +127,7 @@ export const InputCorrectionsCard: React.FC<InputCorrectionsCardProps> = ({
         <Suggestion
           label="Muzzle velocity"
           change={`${mv.current} → ${mv.suggested} fps`}
+          spoken={`from ${mv.current} to ${mv.suggested} fps`}
           correction={mv}
           action={`Use ${mv.suggested} fps`}
           onPress={() => onApply('muzzleVelocity', mv.suggested)}
@@ -119,12 +137,14 @@ export const InputCorrectionsCard: React.FC<InputCorrectionsCardProps> = ({
         <Suggestion
           label={`${bc.dragModel} BC`}
           change={`${bc.current} → ${bc.suggested}`}
+          spoken={`from ${bc.current} to ${bc.suggested}`}
           correction={bc}
           action={`Use ${bc.dragModel} BC ${bc.suggested}`}
           onPress={() => onApply('ballisticCoefficient', bc.suggested)}
         />
       )}
       {note && <Text style={[styles.meta, { color: colors.text.secondary }]}>{note}</Text>}
+      {leftOut && <Text style={[styles.meta, { color: colors.text.secondary }]}>{leftOut}</Text>}
     </Card>
   );
 };

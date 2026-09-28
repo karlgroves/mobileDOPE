@@ -19,14 +19,16 @@ import type { RifleProfile } from '../models/RifleProfile';
  * Without them every log would be predicted in the standard atmosphere, and a
  * cold or high day would read as a muzzle-velocity error.
  */
-const useSnapshotsFor = (logs: DOPELogData[]): Map<number, EnvironmentSnapshotData> => {
-  const [byId, setById] = useState(() => new Map<number, EnvironmentSnapshotData>());
+const useSnapshotsFor = (logs: DOPELogData[]): Map<number, EnvironmentSnapshotData> | undefined => {
+  // Undefined until loaded: before then every log would look unconditioned.
+  const [byId, setById] = useState<Map<number, EnvironmentSnapshotData>>();
   const ids = useMemo(
     () => [...new Set(logs.map((log) => log.environmentId))].sort((a, b) => a - b),
     [logs]
   );
   useEffect(() => {
     let cancelled = false;
+    setById(undefined);
     Promise.all(ids.map((id) => environmentRepository.getById(id)))
       .then((snapshots) => {
         if (cancelled) return;
@@ -36,7 +38,12 @@ const useSnapshotsFor = (logs: DOPELogData[]): Map<number, EnvironmentSnapshotDa
         });
         setById(loaded);
       })
-      .catch((error) => console.error('Failed to load environment snapshots:', error));
+      .catch((error) => {
+        // Nothing loaded: the card reports every log as unconditioned rather
+        // than guessing at a standard day.
+        console.error('Failed to load environment snapshots:', error);
+        if (!cancelled) setById(new Map());
+      });
     return () => {
       cancelled = true;
     };
@@ -69,7 +76,7 @@ export const useInputCorrections = ({
 
   const corrections = useMemo(
     () =>
-      rifle && ammo
+      rifle && ammo && environmentById
         ? inputCorrectionsFor({
             logs: filteredLogs,
             rifle,

@@ -32,19 +32,35 @@ import { renderWithProviders } from '../../helpers/renderWithProviders';
  * more elevation. The real mapping is covered in solverInputs.test.ts and
  * inputCorrections.test.ts.
  */
-jest.mock('../../../src/utils/solverInputs', () => ({
-  ...jest.requireActual('../../../src/utils/solverInputs'),
-  predictElevation: (
-    _rifle: unknown,
-    _ammo: unknown,
+jest.mock('../../../src/utils/solverInputs', () => {
+  const standIn = (
     yards: number,
     env: { temperature: number } | undefined,
     unit: 'MIL' | 'MOA'
   ) => {
     const mil = (yards / 100) * (1 + (59 - (env?.temperature ?? 59)) / 200);
     return unit === 'MIL' ? mil : mil * 3.438;
-  },
-}));
+  };
+  return {
+    ...jest.requireActual('../../../src/utils/solverInputs'),
+    predictElevation: (
+      _rifle: unknown,
+      _ammo: unknown,
+      yards: number,
+      env: { temperature: number } | undefined,
+      unit: 'MIL' | 'MOA'
+    ) => standIn(yards, env, unit),
+    elevationTable:
+      (
+        _rifle: unknown,
+        _ammo: unknown,
+        env: { temperature: number } | undefined,
+        maxYards: number,
+        unit: 'MIL' | 'MOA'
+      ) =>
+      (yards: number) => (yards > maxYards ? undefined : standIn(yards, env, unit)),
+  };
+});
 jest.mock('victory-native', () => {
   const mockNothing = () => null;
   return { CartesianChart: mockNothing, Line: mockNothing };
@@ -99,7 +115,10 @@ const seed = (logs: DOPELog[]) => {
 describe('DOPECurve: solver input suggestions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(environmentRepository, 'getById').mockResolvedValue(null);
+    // Every log's snapshot exists and is a standard day, unless a test says otherwise.
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
   });
 
   it('suggests a lower muzzle velocity when logs need more elevation than predicted', async () => {
@@ -167,5 +186,44 @@ describe('DOPECurve: solver input suggestions', () => {
     expect(data.ballisticCoefficientG7).toBeLessThan(ammoData.ballisticCoefficientG7);
     expect(data.ballisticCoefficientG1).toBe(ammoData.ballisticCoefficientG1);
     expect(data.muzzleVelocity).toBe(ammoData.muzzleVelocity);
+  });
+
+  it('leaves out a log whose snapshot is gone, and says so', async () => {
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) =>
+        id === 404 ? null : new EnvironmentSnapshot({ ...validEnvironment(), id })
+      );
+    seed([...logsAt([300, 500, 700], 0.5), ...logsAt([900], 3, standard, 404)]);
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+
+    expect(await findByText(/1 log has no recorded conditions and was not used/)).toBeTruthy();
+  });
+
+  it('shows no suggestion until the snapshots have loaded', async () => {
+    // Before they arrive every log would look unconditioned; the card waits
+    // rather than flash "not used" at the shooter.
+    jest.spyOn(environmentRepository, 'getById').mockReturnValue(new Promise(() => {}));
+    seed(logsAt([300, 500, 700], 0.5));
+    const { findByText, queryByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    expect(await findByText('Elevation Drop Curve')).toBeTruthy();
+    expect(queryByText('Solver inputs')).toBeNull();
+  });
+
+  it('reports every log as unused when the snapshots cannot be read', async () => {
+    // A failed load must not fall back to guessing a standard day for all of them.
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(environmentRepository, 'getById').mockRejectedValue(new Error('disk'));
+    seed(logsAt([300, 500, 700], 0.5));
+    const { findByText, queryByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    expect(await findByText(/3 logs have no recorded conditions and were not used/)).toBeTruthy();
+    expect(queryByText(/fps$/)).toBeNull();
+    error.mockRestore();
   });
 });
