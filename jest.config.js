@@ -32,11 +32,13 @@
 // map did. That moved `src/store/` between 198/212 = 93.39% and 204/234 = 87.17% --
 // exactly the two readings in #54 -- while the tests themselves were identical.
 //
-// Splitting ownership removes the merge entirely: `components` owns the three
+// Splitting ownership removes the merge entirely: `components` owns the
 // directories its suites render, `unit` owns everything else. Nothing is instrumented
 // twice, so nothing depends on which project finishes first. It is also the honest
 // attribution -- a file is now measured by the transformer that actually ran it.
-const COMPONENT_OWNED = '<rootDir>/src/(components|contexts|constants)/';
+// `hooks` joined in #64: a hook only runs inside a rendered component, so ts-jest
+// never executes it and would report it at 0%.
+const COMPONENT_OWNED = '<rootDir>/src/(components|contexts|constants|hooks)/';
 const NODE_MODULES = '/node_modules/';
 
 const unit = {
@@ -79,7 +81,10 @@ const components = {
   // See COVERAGE OWNERSHIP above: only the directories these suites render. The
   // negative lookahead is the complement of `unit`'s pattern, so the two partition
   // `src/` with no file in both and none in neither.
-  coveragePathIgnorePatterns: [NODE_MODULES, '<rootDir>/src/(?!components/|contexts/|constants/)'],
+  coveragePathIgnorePatterns: [
+    NODE_MODULES,
+    '<rootDir>/src/(?!components/|contexts/|constants/|hooks/)',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
@@ -163,7 +168,8 @@ module.exports = {
   //   contexts                     83.3   50.0   83.3   66.6   incidental, via components
   //   components                   40.0   36.2   40.8   35.7   +touchTargets (#68)
   //   constants                    18.0    9.0   23.0    3.4   data tables + field help
-  //   screens / navigation / hooks  0      0      0      0     #28 phase 6, not started
+  //   hooks                        87.2   70.8   81.3   93.8   useInputCorrections (#64)
+  //   screens / navigation          0      0      0      0     #28 phase 6, not started
   //
   // Next targets, in cost order: the PDF exporters (expo-print ships ESM, which the
   // ts-jest/node `unit` project cannot parse -- they need the `components` project
@@ -218,11 +224,9 @@ module.exports = {
     },
     './src/screens/': { branches: 0, functions: 0, lines: 0, statements: 0 },
     './src/navigation/': { branches: 0, functions: 0, lines: 0, statements: 0 },
-    // `./src/hooks/` was here until #60 removed its only file, `useOrientation.ts`,
-    // which Knip found orphaned -- no importer, and no open issue that wanted one.
-    // Jest fails with "Coverage data for ./src/hooks/ was not found" when a threshold
-    // path matches no instrumented file, so the group goes with it. Adding a hook back
-    // means adding the floor back, and `coverageThresholds.test.ts` fails the build
-    // until you do: an ungated directory is exactly what it watches for.
+    // Back with #64's `useInputCorrections`, after #60 removed the directory's only
+    // file. Owned by the `components` project, which is the one that renders it --
+    // see COMPONENT_OWNED. Floors sit just under the first measurement.
+    './src/hooks/': { branches: 70, functions: 81, lines: 93, statements: 87 },
   },
 };
