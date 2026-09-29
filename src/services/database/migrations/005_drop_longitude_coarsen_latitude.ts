@@ -1,3 +1,4 @@
+import { hasColumn } from './hasColumn';
 import { Migration } from './MigrationRunner';
 
 /**
@@ -40,6 +41,17 @@ export const migration005: Migration = {
   name: 'drop_longitude_coarsen_latitude',
 
   async up(db) {
+    // A device stuck by #128 was created from a DB_SCHEMA that had already
+    // dropped longitude. Its latitudes still get coarsened.
+    if (!(await hasColumn(db, 'environment_snapshots', 'longitude'))) {
+      await db.execAsync(`
+        UPDATE environment_snapshots
+           SET latitude = ROUND(latitude, 1)
+         WHERE latitude IS NOT NULL;
+      `);
+      return;
+    }
+
     // ROUND(x, 1) matches coarsenLatitude()'s precision. NULL rounds to NULL, so a
     // snapshot that never had a coordinate is left alone rather than becoming 0.
     await db.execAsync(`
