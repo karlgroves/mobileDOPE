@@ -42,24 +42,18 @@ export const migration005: Migration = {
 
   async up(db) {
     // A device stuck by #128 was created from a DB_SCHEMA that had already
-    // dropped longitude. Its latitudes still get coarsened.
-    if (!(await hasColumn(db, 'environment_snapshots', 'longitude'))) {
-      await db.execAsync(`
-        UPDATE environment_snapshots
-           SET latitude = ROUND(latitude, 1)
-         WHERE latitude IS NOT NULL;
-      `);
-      return;
-    }
+    // dropped longitude; there is nothing to clear, but its latitudes still
+    // get coarsened.
+    const longitude = await hasColumn(db, 'environment_snapshots', 'longitude');
 
     // ROUND(x, 1) matches coarsenLatitude()'s precision. NULL rounds to NULL, so a
     // snapshot that never had a coordinate is left alone rather than becoming 0.
     await db.execAsync(`
       UPDATE environment_snapshots
-         SET longitude = NULL,
+         SET ${longitude ? 'longitude = NULL,' : ''}
              latitude  = ROUND(latitude, 1)
-       WHERE longitude IS NOT NULL
-          OR latitude IS NOT NULL;
+       WHERE ${longitude ? 'longitude IS NOT NULL OR' : ''}
+             latitude IS NOT NULL;
     `);
 
     console.log('Cleared stored longitudes and coarsened stored latitudes');

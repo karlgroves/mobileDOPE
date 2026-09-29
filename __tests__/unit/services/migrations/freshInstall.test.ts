@@ -3,13 +3,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { migrationRunner } from '../../../../src/services/database/migrations';
 import { DB_INDEXES, DB_SCHEMA } from '../../../../src/types/database.types';
 
-import type * as SQLite from 'expo-sqlite';
-
-// The migration registry pulls in DatabaseService, which imports expo-sqlite at
-// module scope. These tests drive migrations directly against node:sqlite and
-// never touch the singleton, so a bare stub is enough.
-jest.mock('expo-sqlite', () => ({ openDatabaseAsync: jest.fn() }));
-
 /**
  * A new user's database: empty, then every migration in order (#128).
  *
@@ -18,31 +11,65 @@ jest.mock('expo-sqlite', () => ({ openDatabaseAsync: jest.fn() }));
  * 001 built `ammo_profiles` with `caliber`, and 002 then failed adding it again,
  * so a fresh install never got past launch. Nothing ran the migrations from an
  * empty database, which is the only path a new user takes.
+ *
+ * These drive the real `MigrationRunner.runPendingMigrations()`, transaction and
+ * all, with `DatabaseService` pointed at an in-memory node:sqlite database.
  */
 
-/** Adapter matching how MigrationRunner drives a migration. */
-const adapt = (db: DatabaseSync): SQLite.SQLiteDatabase =>
-  ({
-    execAsync: async (sql: string) => {
-      db.exec(sql);
-    },
-    getAllAsync: async <T>(sql: string) => db.prepare(sql).all() as T[],
-  }) as unknown as SQLite.SQLiteDatabase;
+// The database the stand-in DatabaseService serves. Each test sets its own.
+let mockDb: DatabaseSync;
 
-/** Run every registered migration above `fromVersion`, as the runner does. */
-const migrate = async (db: DatabaseSync, fromVersion = 0): Promise<void> => {
-  for (const migration of migrationRunner.getMigrations()) {
-    if (migration.version <= fromVersion) continue;
-    await migration.up(adapt(db));
-    db.exec(`PRAGMA user_version = ${migration.version};`);
-  }
+jest.mock('expo-sqlite', () => ({ openDatabaseAsync: jest.fn() }));
+jest.mock('../../../../src/services/database/DatabaseService', () => {
+  const adapter = {
+    execAsync: async (sql: string) => {
+      mockDb.exec(sql);
+    },
+    getAllAsync: async (sql: string) => mockDb.prepare(sql).all(),
+  };
+  const service = {
+    getDatabase: () => adapter,
+    getDatabaseVersion: async () =>
+      (mockDb.prepare('PRAGMA user_version').get() as { user_version: number }).user_version,
+    // The same shape as DatabaseService.transaction.
+    transaction: async <T>(work: (db: typeof adapter) => Promise<T>): Promise<T> => {
+      await adapter.execAsync('BEGIN TRANSACTION;');
+      try {
+        const result = await work(adapter);
+        await adapter.execAsync('COMMIT;');
+        return result;
+      } catch (error) {
+        await adapter.execAsync('ROLLBACK;');
+        throw error;
+      }
+    },
+  };
+  const module = { default: service, databaseService: service };
+  // Marks it as an ES module so the default import resolves to `service`.
+  Object.defineProperty(module, '__esModule', { value: true });
+  return module;
+});
+
+/** Open `db` the way DatabaseService.initialize() does, and run the migrations. */
+const migrate = async (db: DatabaseSync): Promise<void> => {
+  mockDb = db;
+  db.exec('PRAGMA foreign_keys = ON;');
+  await migrationRunner.runPendingMigrations();
 };
+
+const version = (db: DatabaseSync): number =>
+  (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+
+const latest = Math.max(...migrationRunner.getMigrations().map((m) => m.version));
 
 const TABLES = Object.values(DB_SCHEMA).map(
   (ddl) => /CREATE TABLE IF NOT EXISTS (\w+)/.exec(ddl)?.[1] as string
 );
 
-/** Column names of every table, and every index name. Order-insensitive. */
+/**
+ * Column names of every table, and every index with the table and columns it
+ * covers. Order-insensitive.
+ */
 const shapeOf = (db: DatabaseSync) => ({
   columns: Object.fromEntries(
     TABLES.map((table) => [
@@ -54,10 +81,17 @@ const shapeOf = (db: DatabaseSync) => ({
   ),
   indexes: (
     db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'")
-      .all() as { name: string }[]
+      .prepare(
+        "SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'"
+      )
+      .all() as { name: string; tbl_name: string }[]
   )
-    .map((i) => i.name)
+    .map((index) => {
+      const columns = (
+        db.prepare(`PRAGMA index_info(${index.name})`).all() as { name: string }[]
+      ).map((c) => c.name);
+      return `${index.name} ON ${index.tbl_name}(${columns.join(', ')})`;
+    })
     .sort(),
 });
 
@@ -69,28 +103,27 @@ const current = (): DatabaseSync => {
   return db;
 };
 
-describe('migrations on a fresh install (#128)', () => {
-  let log: typeof console.log;
-  beforeEach(() => {
-    log = console.log;
-    console.log = () => {};
-  });
-  afterEach(() => {
-    console.log = log;
-  });
+let log: typeof console.log;
+beforeEach(() => {
+  log = console.log;
+  console.log = () => {};
+});
+afterEach(() => {
+  console.log = log;
+});
 
+describe('migrations on a fresh install (#128)', () => {
   it('runs every migration on an empty database', async () => {
     const db = new DatabaseSync(':memory:');
-    db.exec('PRAGMA foreign_keys = ON;');
 
     await expect(migrate(db)).resolves.toBeUndefined();
+    expect(version(db)).toBe(latest);
 
     db.close();
   });
 
   it('ends with the schema the repositories expect', async () => {
     const db = new DatabaseSync(':memory:');
-    db.exec('PRAGMA foreign_keys = ON;');
     await migrate(db);
 
     // Migration 005 empties `longitude` rather than dropping it, and says why;
@@ -102,25 +135,43 @@ describe('migrations on a fresh install (#128)', () => {
     expected.close();
     db.close();
   });
+
+  it('does nothing on the next launch', async () => {
+    const db = new DatabaseSync(':memory:');
+    await migrate(db);
+    const before = shapeOf(db);
+
+    await expect(migrate(db)).resolves.toBeUndefined();
+    expect(version(db)).toBe(latest);
+    expect(shapeOf(db)).toEqual(before);
+
+    db.close();
+  });
 });
 
-describe('a device already stuck by #128', () => {
-  let log: typeof console.log;
-  beforeEach(() => {
-    log = console.log;
-    console.log = () => {};
-  });
-  afterEach(() => {
-    console.log = log;
-  });
+/**
+ * What the old migration 001 left behind: the then-current schema, marked as
+ * version 1. Every launch since has failed at 002.
+ *
+ * There are two such shapes. `DB_SCHEMA` still had `longitude` until d952654
+ * (2026-08-26) -- which is also `main`'s shape -- and has not had it since.
+ */
+const STUCK_SHAPES = [
+  { name: 'installed before longitude was dropped', withLongitude: true },
+  { name: 'installed after longitude was dropped', withLongitude: false },
+];
 
-  /**
-   * What the old migration 001 left behind: the then-current schema, marked as
-   * version 1. Every launch since has failed at 002.
-   */
-  const stuck = (): DatabaseSync => {
+describe.each(STUCK_SHAPES)('a device stuck by #128, $name', ({ withLongitude }) => {
+  const shape = (): DatabaseSync => {
     const db = current();
-    db.exec('PRAGMA foreign_keys = ON;');
+    if (withLongitude) {
+      db.exec('ALTER TABLE environment_snapshots ADD COLUMN longitude REAL;');
+    }
+    return db;
+  };
+
+  const stuck = (): DatabaseSync => {
+    const db = shape();
     db.exec('PRAGMA user_version = 1;');
     return db;
   };
@@ -128,12 +179,24 @@ describe('a device already stuck by #128', () => {
   it('moves forward instead of failing at 002 again', async () => {
     const db = stuck();
 
-    await expect(migrate(db, 1)).resolves.toBeUndefined();
+    await expect(migrate(db)).resolves.toBeUndefined();
+    expect(version(db)).toBe(latest);
 
     db.close();
   });
 
-  it('still coarsens its latitudes, with no longitude column to clear', async () => {
+  it('keeps the schema it already had', async () => {
+    const db = stuck();
+    await migrate(db);
+
+    const expected = shape();
+    expect(shapeOf(db)).toEqual(shapeOf(expected));
+
+    expected.close();
+    db.close();
+  });
+
+  it('still coarsens its latitudes', async () => {
     const db = stuck();
     db.exec(`
       INSERT INTO environment_snapshots
@@ -142,23 +205,12 @@ describe('a device already stuck by #128', () => {
       VALUES (59, 50, 29.92, 1000, 1200, 5, 90, 39.739236, '2026-01-01T00:00:00.000Z');
     `);
 
-    await migrate(db, 1);
+    await migrate(db);
 
     const row = db.prepare('SELECT latitude FROM environment_snapshots').get() as {
       latitude: number;
     };
     expect(row.latitude).toBe(39.7);
-    db.close();
-  });
-
-  it('keeps the schema it already had', async () => {
-    const db = stuck();
-    await migrate(db, 1);
-
-    const expected = current();
-    expect(shapeOf(db)).toEqual(shapeOf(expected));
-
-    expected.close();
     db.close();
   });
 });
