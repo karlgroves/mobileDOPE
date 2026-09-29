@@ -11,6 +11,8 @@ import { environmentRepository } from '../../../src/services/database';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useRifleStore } from '../../../src/store/useRifleStore';
+import { confidenceOpacity } from '../../../src/utils/chartConfidence';
+import { calculateConfidence } from '../../../src/utils/dopeAnalysis';
 import { predictElevation } from '../../../src/utils/solverInputs';
 import { validAmmo, validEnvironment, validRifle } from '../../helpers/fixtures';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
@@ -61,9 +63,48 @@ jest.mock('../../../src/utils/solverInputs', () => {
       (yards: number) => (yards > maxYards ? undefined : standIn(yards, env, unit)),
   };
 });
+
+/**
+ * The chart is Skia, which cannot draw here. The stand-in runs the chart's
+ * render callback with one point per datum -- enough to see which distances get
+ * a marker and how each marker is drawn -- and records what was drawn.
+ */
+const mockDrawn: { lines: Record<string, unknown>[]; circles: Record<string, unknown>[] } = {
+  lines: [],
+  circles: [],
+};
 jest.mock('victory-native', () => {
-  const mockNothing = () => null;
-  return { CartesianChart: mockNothing, Line: mockNothing };
+  const mockChart = ({
+    data,
+    xKey,
+    yKeys,
+    children,
+  }: {
+    data: Record<string, number | undefined>[];
+    xKey: string;
+    yKeys: string[];
+    children: (arg: { points: Record<string, unknown[]> }) => React.ReactNode;
+  }) => {
+    const points = Object.fromEntries(
+      yKeys.map((key) => [
+        key,
+        data.map((d) => ({ x: d[xKey], xValue: d[xKey], y: d[key], yValue: d[key] })),
+      ])
+    );
+    return children({ points });
+  };
+  const mockLine = (props: Record<string, unknown>) => {
+    mockDrawn.lines.push(props);
+    return null;
+  };
+  return { CartesianChart: mockChart, Line: mockLine };
+});
+jest.mock('@shopify/react-native-skia', () => {
+  const mockCircle = (props: Record<string, unknown>) => {
+    mockDrawn.circles.push(props);
+    return null;
+  };
+  return { Circle: mockCircle };
 });
 jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
@@ -292,5 +333,90 @@ describe('DOPECurve: entries that disagree (#64)', () => {
 
     await findByText('Elevation Drop Curve');
     expect(queryByText('Entries that disagree')).toBeNull();
+  });
+});
+
+describe('DOPECurve: logged drop curve and confidence (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDrawn.lines.length = 0;
+    mockDrawn.circles.length = 0;
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  /** A well-evidenced log at 300 yd and a thin one at 600 yd. */
+  const solidAndThin = () => {
+    const [at300, at600] = logsAt([300, 600], 0);
+    return [
+      new DOPELog({ ...at300.toJSON(), shotCount: 5, hitCount: 5, groupSize: 1.5 }),
+      new DOPELog({ ...at600.toJSON(), shotCount: 1 }),
+    ];
+  };
+
+  /** The filled markers. The stand-in chart puts each point's x at its distance. */
+  const fills = () => mockDrawn.circles.filter((c) => c.style !== 'stroke');
+
+  it('draws a line through the logged points, separate from the calculated one', async () => {
+    seed(logsAt([300, 500, 700], 0.5));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    // The calculated curve has a value at every distance; the logged one only
+    // where something was logged.
+    const logged = mockDrawn.lines.find((l) =>
+      (l.points as { yValue?: number }[]).some((p) => p.yValue === undefined)
+    );
+    expect(logged).toBeDefined();
+    const drawnAt = (logged?.points as { xValue: number; yValue?: number }[])
+      .filter((p) => p.yValue !== undefined)
+      .map((p) => p.xValue);
+    expect(drawnAt).toEqual([300, 500, 700]);
+    // Gaps between logged distances are bridged, not left as breaks.
+    expect(logged?.connectMissingData).toBe(true);
+  });
+
+  it('marks each logged distance with opacity from its confidence', async () => {
+    const logs = solidAndThin();
+    seed(logs);
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const byDistance = new Map(fills().map((c) => [c.cx, c.opacity as number]));
+    expect([...byDistance.keys()]).toEqual([300, 600]);
+    expect(byDistance.get(300)).toBeCloseTo(
+      confidenceOpacity(calculateConfidence(logs[0]).score),
+      10
+    );
+    expect(byDistance.get(600)).toBeCloseTo(
+      confidenceOpacity(calculateConfidence(logs[1]).score),
+      10
+    );
+    expect(byDistance.get(300)).toBeGreaterThan(byDistance.get(600) as number);
+  });
+
+  it('outlines every marker at full opacity, so a faint one is still findable', async () => {
+    seed(solidAndThin());
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const outlines = mockDrawn.circles.filter((c) => c.style === 'stroke');
+    expect(outlines).toHaveLength(2);
+    for (const outline of outlines) {
+      expect(outline.opacity ?? 1).toBe(1);
+    }
+  });
+
+  it('describes every logged point and its confidence to a screen reader', async () => {
+    seed(solidAndThin());
+    const { findByLabelText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    const chart = await findByLabelText(/^Elevation drop curve/);
+    const label = chart.props.accessibilityLabel as string;
+    expect(label).toMatch(/300 yards, 3\.0 MIL, 1 log, strong confidence/);
+    expect(label).toMatch(/600 yards, 6\.0 MIL, 1 log, weak confidence/);
   });
 });

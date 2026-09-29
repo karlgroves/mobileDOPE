@@ -61,6 +61,8 @@ export interface DropCurvePoint {
   correction: number;
   /** How many logs contributed. */
   sampleCount: number;
+  /** 0–1: the mean {@link calculateConfidence} score of the logs that contributed. */
+  confidence: number;
 }
 
 /** How logged DOPE compares with what the solver predicted. */
@@ -325,27 +327,31 @@ const scoreAgainst = (
  *
  * Averages the corrections logged at each distance. Uses the median rather than
  * the mean for the same reason as above: one mis-keyed entry should not move the
- * curve everyone else is read off.
+ * curve everyone else is read off. Each point also carries how well the logs
+ * behind it are evidenced, which the DOPE Curve draws as the point's opacity.
  */
 export const buildDropCurve = (
   logs: DOPELogData[],
   unit: 'MIL' | 'MOA' = 'MIL'
 ): DropCurvePoint[] => {
-  const byDistance = new Map<number, number[]>();
+  const byDistance = new Map<number, DOPELogData[]>();
   for (const log of logs) {
     if (!(log.distance > 0)) continue;
     // Rounded to the yard so a 457.2 m log shares a bucket with 500 yd ones.
     const yards = Math.round(logDistanceInYards(log));
     const bucket = byDistance.get(yards) ?? [];
-    bucket.push(correctionIn(log, unit));
+    bucket.push(log);
     byDistance.set(yards, bucket);
   }
 
   return [...byDistance.entries()]
-    .map(([distance, corrections]) => ({
+    .map(([distance, bucket]) => ({
       distance,
-      correction: median(corrections),
-      sampleCount: corrections.length,
+      correction: median(bucket.map((l) => correctionIn(l, unit))),
+      sampleCount: bucket.length,
+      // The mean, not the median: a point's confidence is about how well the
+      // whole bucket is evidenced, and a thin log should pull it down.
+      confidence: bucket.reduce((sum, l) => sum + calculateConfidence(l).score, 0) / bucket.length,
     }))
     .sort((a, b) => a.distance - b.distance);
 };

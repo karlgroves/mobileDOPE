@@ -3,13 +3,15 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
+import { Circle } from '@shopify/react-native-skia';
 import * as Sharing from 'expo-sharing';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
-import { CartesianChart, Line } from 'victory-native';
+import { CartesianChart, Line, type PointsArray } from 'victory-native';
 
 import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
+import { confidenceBand } from '../components/ConfidenceBadge';
 import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
 import { OutlierList } from '../components/OutlierList';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,10 +19,9 @@ import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { logDistanceInYards } from '../utils/distanceUnits';
-import { detectOutliers } from '../utils/dopeAnalysis';
+import { confidenceOpacity } from '../utils/chartConfidence';
+import { buildDropCurve, detectOutliers, type DropCurvePoint } from '../utils/dopeAnalysis';
 import { elevationTable } from '../utils/solverInputs';
-import { milToMoa, moaToMil } from '../utils/unitConversions';
 
 import type { HistoryStackScreenProps } from '../navigation/types';
 
@@ -29,8 +30,101 @@ type Props = HistoryStackScreenProps<'DOPECurve'>;
 interface DataPoint {
   distance: number;
   elevation: number;
-  [key: string]: number; // Index signature for CartesianChart compatibility
 }
+
+/**
+ * One x position on the chart. `logged` is set only where DOPE was logged, so
+ * the logged line and its markers sit at real distances rather than on the
+ * calculated curve's 50-yard grid.
+ */
+type ChartPoint = {
+  distance: number;
+  elevation: number;
+  logged: number | undefined;
+};
+
+/** Radius of a logged-point marker, in chart pixels. */
+const MARKER_RADIUS = 6;
+
+/** "1 log", "3 logs". */
+const logsLabel = (count: number): string => `${count} ${count === 1 ? 'log' : 'logs'}`;
+
+/**
+ * What the chart shows, in words. The chart is a Skia canvas, which a screen
+ * reader cannot see into, and the markers show confidence only as opacity.
+ */
+const describeChart = (
+  loggedCurve: DropCurvePoint[],
+  maxDistance: number,
+  unit: 'MIL' | 'MOA'
+): string => {
+  const calculated = `Elevation drop curve. Calculated curve from 100 to ${maxDistance} yards.`;
+  if (loggedCurve.length === 0) return `${calculated} No logged DOPE.`;
+  const points = loggedCurve.map(
+    (p) =>
+      `${p.distance} yards, ${p.correction.toFixed(1)} ${unit}, ` +
+      `${logsLabel(p.sampleCount)}, ` +
+      `${confidenceBand(p.confidence).toLowerCase()} confidence`
+  );
+  return `${calculated} Logged DOPE: ${points.join('; ')}.`;
+};
+
+/**
+ * A marker at each logged point: filled at an opacity from its confidence, and
+ * outlined at full strength so a faint point is still found.
+ */
+const loggedMarkers = (
+  points: PointsArray,
+  confidenceAt: Map<number, number>,
+  color: string
+): React.ReactNode[] =>
+  points.map((point) => {
+    if (point.y === undefined || point.y === null) return null;
+    const opacity = confidenceOpacity(confidenceAt.get(Number(point.xValue)) ?? 0);
+    return (
+      <React.Fragment key={point.xValue}>
+        <Circle cx={point.x} cy={point.y} r={MARKER_RADIUS} color={color} opacity={opacity} />
+        <Circle
+          cx={point.x}
+          cy={point.y}
+          r={MARKER_RADIUS}
+          color={color}
+          style="stroke"
+          strokeWidth={2}
+        />
+      </React.Fragment>
+    );
+  });
+
+/** Key to the chart's two lines, and what a marker's opacity means. */
+const ChartLegend: React.FC<{ loggedCount: number }> = ({ loggedCount }) => {
+  const { colors } = useTheme().theme;
+  return (
+    <>
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendLine, { backgroundColor: colors.primary }]} />
+          <Text style={[styles.legendText, { color: colors.text.secondary }]}>
+            Calculated Curve
+          </Text>
+        </View>
+        {loggedCount > 0 && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+            <Text style={[styles.legendText, { color: colors.text.secondary }]}>
+              Actual DOPE ({logsLabel(loggedCount)})
+            </Text>
+          </View>
+        )}
+      </View>
+      {loggedCount > 0 && (
+        <Text style={[styles.legendNote, { color: colors.text.secondary }]}>
+          Fainter points rest on less evidence: fewer shots, fewer hits or a wider group.
+        </Text>
+      )}
+    </>
+  );
+};
 
 export const DOPECurve: React.FC<Props> = ({ route }) => {
   const { theme } = useTheme();
@@ -54,42 +148,61 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
     return dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId);
   }, [dopeLogs, rifleId, ammoId]);
 
-  // Convert DOPE logs to data points
-  const actualDataPoints: DataPoint[] = useMemo(() => {
-    return filteredLogs
-      .filter((log) => log.distance && log.elevationCorrection !== undefined)
-      .map((log) => {
-        let correction = log.elevationCorrection || 0;
-        // Convert if needed
-        if (log.correctionUnit !== correctionUnit) {
-          correction = log.correctionUnit === 'MIL' ? milToMoa(correction) : moaToMil(correction);
-        }
-        return {
-          // Yards, like the solver curve it is drawn against. Read raw, a 500 m
-          // log sat at "500" -- 47 yd short of where it was shot (#123).
-          distance: Math.round(logDistanceInYards(log)),
-          elevation: correction,
-        };
-      })
-      .sort((a, b) => a.distance - b.distance);
-  }, [filteredLogs, correctionUnit]);
+  // The drop curve the logs themselves describe: one point per distance, in
+  // yards and the selected unit, the median correction there, and how well the
+  // logs behind it are evidenced (#64, #123).
+  const loggedCurve = useMemo(
+    () => buildDropCurve(filteredLogs, correctionUnit),
+    [filteredLogs, correctionUnit]
+  );
+  const loggedCount = loggedCurve.reduce((sum, p) => sum + p.sampleCount, 0);
+
+  const maxDistance = Math.max(1000, ...loggedCurve.map((p) => p.distance));
+
+  // Standard atmosphere: the curve is a reference line, not any one day. One
+  // trajectory read at every point, rather than a full solve per point.
+  const table = useMemo(
+    () =>
+      rifle && ammo
+        ? elevationTable(rifle, ammo, undefined, maxDistance, correctionUnit)
+        : undefined,
+    [rifle, ammo, maxDistance, correctionUnit]
+  );
 
   // Generate calculated ballistic curve
   const calculatedCurve: DataPoint[] = useMemo(() => {
-    if (!rifle || !ammo) return [];
-
+    if (!table) return [];
     const distances: number[] = [];
-    const maxDistance = Math.max(1000, ...actualDataPoints.map((p) => p.distance));
-
     for (let d = 100; d <= maxDistance; d += 50) {
       distances.push(d);
     }
-
-    // Standard atmosphere: the curve is a reference line, not any one day. One
-    // trajectory read at every point, rather than a full solve per point.
-    const table = elevationTable(rifle, ammo, undefined, maxDistance, correctionUnit);
     return distances.map((distance) => ({ distance, elevation: table(distance) ?? 0 }));
-  }, [rifle, ammo, correctionUnit, actualDataPoints]);
+  }, [table, maxDistance]);
+
+  // The calculated grid plus every logged distance, so both lines share one x
+  // axis and each logged point is drawn where it was shot.
+  const chartData: ChartPoint[] = useMemo(() => {
+    if (!table) return [];
+    const loggedAt = new Map(loggedCurve.map((p) => [p.distance, p.correction]));
+    const distances = [
+      ...new Set([...calculatedCurve.map((p) => p.distance), ...loggedAt.keys()]),
+    ].sort((a, b) => a - b);
+    return distances.map((distance) => ({
+      distance,
+      elevation: table(distance) ?? 0,
+      logged: loggedAt.get(distance),
+    }));
+  }, [table, calculatedCurve, loggedCurve]);
+
+  const confidenceAt = useMemo(
+    () => new Map(loggedCurve.map((p) => [p.distance, p.confidence])),
+    [loggedCurve]
+  );
+
+  const chartLabel = useMemo(
+    () => describeChart(loggedCurve, maxDistance, correctionUnit),
+    [loggedCurve, maxDistance, correctionUnit]
+  );
 
   const outliers = useMemo(
     () => detectOutliers(filteredLogs, correctionUnit),
@@ -210,15 +323,19 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             <View
               ref={chartRef}
               collapsable={false}
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={chartLabel}
+              accessibilityHint="The Drop Table below lists the same values."
               style={[
                 styles.chartContainer,
                 { height: chartHeight, backgroundColor: colors.background },
               ]}
             >
-              <CartesianChart<DataPoint, 'distance', 'elevation'>
-                data={calculatedCurve}
+              <CartesianChart<ChartPoint, 'distance', 'elevation' | 'logged'>
+                data={chartData}
                 xKey="distance"
-                yKeys={['elevation']}
+                yKeys={['elevation', 'logged']}
                 domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
                 axisOptions={{
                   font: null,
@@ -226,7 +343,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                   lineColor: colors.border,
                   labelColor: colors.text.secondary,
                   formatXLabel: (value: number) => `${value}`,
-                  formatYLabel: (value: number) => `${value.toFixed(1)}`,
+                  formatYLabel: (value?: number) => (value === undefined ? '' : value.toFixed(1)),
                 }}
               >
                 {({ points }) => (
@@ -237,6 +354,14 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                       strokeWidth={2}
                       curveType="natural"
                     />
+                    <Line
+                      points={points.logged}
+                      color={colors.warning}
+                      strokeWidth={2}
+                      curveType="linear"
+                      connectMissingData
+                    />
+                    {loggedMarkers(points.logged, confidenceAt, colors.warning)}
                   </>
                 )}
               </CartesianChart>
@@ -249,23 +374,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             </View>
           )}
 
-          {/* Legend */}
-          <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendLine, { backgroundColor: colors.primary }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>
-                Calculated Curve
-              </Text>
-            </View>
-            {actualDataPoints.length > 0 && (
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-                <Text style={[styles.legendText, { color: colors.text.secondary }]}>
-                  Actual DOPE ({actualDataPoints.length} points)
-                </Text>
-              </View>
-            )}
-          </View>
+          <ChartLegend loggedCount={loggedCount} />
         </Card>
 
         <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
@@ -279,7 +388,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>
               Calculated ({correctionUnit})
             </Text>
-            {actualDataPoints.length > 0 && (
+            {loggedCurve.length > 0 && (
               <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>
                 Actual ({correctionUnit})
               </Text>
@@ -288,7 +397,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
           {calculatedCurve
             .filter((_, i) => i % 2 === 0)
             .map((point) => {
-              const actualPoint = actualDataPoints.find(
+              const actualPoint = loggedCurve.find(
                 (ap) => Math.abs(ap.distance - point.distance) < 25
               );
               return (
@@ -302,14 +411,14 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                   <Text style={[styles.tableCell, { color: colors.text.primary }]}>
                     {point.elevation.toFixed(1)}
                   </Text>
-                  {actualDataPoints.length > 0 && (
+                  {loggedCurve.length > 0 && (
                     <Text
                       style={[
                         styles.tableCell,
                         { color: actualPoint ? colors.warningText : colors.text.secondary },
                       ]}
                     >
-                      {actualPoint ? actualPoint.elevation.toFixed(1) : '-'}
+                      {actualPoint ? actualPoint.correction.toFixed(1) : '-'}
                     </Text>
                   )}
                 </View>
@@ -321,7 +430,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         <Card style={styles.summaryCard}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Summary</Text>
 
-          {actualDataPoints.length === 0 ? (
+          {loggedCurve.length === 0 ? (
             <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
               No DOPE logs recorded for this rifle/ammo combination.
               {'\n'}Log some shots to see your actual data compared to the calculated curve.
@@ -330,7 +439,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             <View style={styles.summaryGrid}>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {actualDataPoints.length}
+                  {loggedCount}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Data Points
@@ -338,7 +447,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {`${Math.min(...actualDataPoints.map((p) => p.distance))} yds`}
+                  {`${Math.min(...loggedCurve.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Min Distance
@@ -346,7 +455,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {`${Math.max(...actualDataPoints.map((p) => p.distance))} yds`}
+                  {`${Math.max(...loggedCurve.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Max Distance
@@ -445,6 +554,11 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
+  },
+  legendNote: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
   },
   tableCard: {
     marginBottom: 16,
