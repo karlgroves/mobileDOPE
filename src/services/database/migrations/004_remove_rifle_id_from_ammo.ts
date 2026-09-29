@@ -46,6 +46,11 @@ export const migration004: Migration = {
 
       -- Rename new table
       ALTER TABLE ammo_profiles_new RENAME TO ammo_profiles;
+
+      -- Dropping the old table took idx_ammo_rifle with it. DB_SCHEMA indexes
+      -- ammo by caliber instead, which nothing had created on a migrated
+      -- database (#128).
+      CREATE INDEX IF NOT EXISTS idx_ammo_caliber ON ammo_profiles(caliber);
     `);
 
     console.log('Removed rifle_id from ammo_profiles table');

@@ -60,6 +60,8 @@ const adapt = (db: DatabaseSync): SQLite.SQLiteDatabase =>
     execAsync: async (sql: string) => {
       db.exec(sql);
     },
+    // For the column check a device stuck by #128 needs.
+    getAllAsync: async <T>(sql: string) => db.prepare(sql).all() as T[],
   }) as unknown as SQLite.SQLiteDatabase;
 
 interface Row {
