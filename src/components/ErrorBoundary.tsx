@@ -38,7 +38,8 @@ const ErrorFallback: React.FC<{ error: Error | null; onReset: () => void }> = ({
         <Text style={[styles.message, { color: colors.text.secondary }]}>
           An unexpected error occurred. Please try again.
         </Text>
-        {error && (
+        {/* The raw message is for the developer; to a shooter it is noise. */}
+        {__DEV__ && error && (
           <View style={[styles.errorDetails, { backgroundColor: colors.surface }]}>
             <Text style={[styles.errorText, { color: colors.errorText }]}>{error.message}</Text>
           </View>
