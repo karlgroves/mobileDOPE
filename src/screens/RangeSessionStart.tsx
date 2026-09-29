@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useAppStore } from '../store/useAppStore';
+
 import { Card, Picker, NumberPicker, Button, EmptyState, LoadingSpinner } from '../components';
+import { useTheme } from '../contexts/ThemeContext';
 import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+
 import type { SessionStackScreenProps } from '../navigation/types';
 
 type Props = SessionStackScreenProps<'RangeSessionStart'>;
@@ -124,9 +126,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
           title="No Rifle Profiles"
           message="Create a rifle profile to start a range session."
           actionLabel="Go to Rifles"
-          onAction={() => {
-            // Navigate to rifles tab
-          }}
+          onAction={() => navigation.navigate('Rifles')}
         />
       </View>
     );

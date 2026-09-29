@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -172,6 +173,26 @@ export function DOPELogEntry({ route, navigation }: Props) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save DOPE log');
     }
   };
+
+  // A new log needs a rifle and a load to log against. Without them the form
+  // was all there, with nothing to pick in either picker (#132).
+  if (!existingLog && (rifles.length === 0 || ammoProfiles.length === 0)) {
+    const noRifle = rifles.length === 0;
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <EmptyState
+          title={noRifle ? 'No Rifle Profiles' : 'No Ammunition Profiles'}
+          message={
+            noRifle
+              ? 'Create a rifle profile before logging DOPE.'
+              : 'Create an ammunition profile before logging DOPE.'
+          }
+          actionLabel={noRifle ? 'Go to Rifles' : 'Go to Ammo'}
+          onAction={() => navigation.navigate(noRifle ? 'Rifles' : 'Ammo')}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
