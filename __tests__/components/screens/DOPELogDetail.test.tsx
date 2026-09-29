@@ -115,3 +115,57 @@ describe('DOPELogDetail shows how well-evidenced the entry is', () => {
     expect(queryByTestId('dope-confidence')).toBeNull();
   });
 });
+
+describe('DOPELogDetail with a log saved without group size or hit data', () => {
+  /**
+   * The shape the database actually returns: empty columns are NULL, read
+   * through the real `fromRow`. This crashed the screen on the iOS Simulator
+   * (`groupSize.toFixed` of null) and took the whole app down with it.
+   */
+  const fromDatabase = () =>
+    DOPELog.fromRow({
+      id: 7,
+      rifle_id: 1,
+      ammo_id: 1,
+      environment_id: 1,
+      distance: 600,
+      distance_unit: 'yards',
+      elevation_correction: 5.7,
+      windage_correction: 0,
+      correction_unit: 'MIL',
+      target_type: 'steel',
+      group_size: null,
+      hit_count: null,
+      shot_count: 1,
+      notes: null,
+      timestamp: '2026-09-29T12:15:00.000Z',
+    } as never);
+
+  it('renders, and shows no group size or hit rate it does not have', () => {
+    useDOPEStore.setState({ dopeLogs: [fromDatabase()] });
+    useRifleStore.setState({ rifles: [{ id: 1, name: 'Tikka T3x' }] as never });
+    useAmmoStore.setState({ ammoProfiles: [{ id: 1, name: 'Federal 175' }] as never });
+
+    const { getByText, queryByText } = renderWithProviders(
+      <DOPELogDetail route={route(7)} navigation={navigation} />
+    );
+
+    expect(getByText('5.70 MIL')).toBeTruthy();
+    expect(queryByText('Group Size:')).toBeNull();
+    expect(queryByText('Hit Rate:')).toBeNull();
+  });
+
+  it('does not score a missing group as a tight one, or missing hits as misses', () => {
+    useDOPEStore.setState({ dopeLogs: [fromDatabase()] });
+    useRifleStore.setState({ rifles: [{ id: 1, name: 'Tikka T3x' }] as never });
+    useAmmoStore.setState({ ammoProfiles: [{ id: 1, name: 'Federal 175' }] as never });
+
+    const { getByText, queryByText } = renderWithProviders(
+      <DOPELogDetail route={route(7)} navigation={navigation} />
+    );
+
+    expect(getByText('no group size recorded')).toBeTruthy();
+    expect(queryByText(/0\.0 MOA group/)).toBeNull();
+    expect(queryByText(/0% hits/)).toBeNull();
+  });
+});

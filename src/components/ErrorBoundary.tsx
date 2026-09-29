@@ -10,6 +10,8 @@ import { Button } from './Button';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Called once with the error that was caught, e.g. to clear state that would reproduce it. */
+  onError?: (error: Error) => void;
 }
 
 interface ErrorBoundaryState {
@@ -36,7 +38,8 @@ const ErrorFallback: React.FC<{ error: Error | null; onReset: () => void }> = ({
         <Text style={[styles.message, { color: colors.text.secondary }]}>
           An unexpected error occurred. Please try again.
         </Text>
-        {error && (
+        {/* The raw message is for the developer; to a shooter it is noise. */}
+        {__DEV__ && error && (
           <View style={[styles.errorDetails, { backgroundColor: colors.surface }]}>
             <Text style={[styles.errorText, { color: colors.errorText }]}>{error.message}</Text>
           </View>
@@ -73,6 +76,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.props.onError?.(error);
   }
 
   handleReset = (): void => {

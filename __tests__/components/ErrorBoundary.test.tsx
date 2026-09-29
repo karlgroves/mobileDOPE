@@ -44,14 +44,39 @@ describe('ErrorBoundary', () => {
     expect(getByText('Something went wrong')).toBeTruthy();
   });
 
-  it('should show error message in error UI', () => {
-    const { getByText } = renderWithProviders(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
+  describe('the error message', () => {
+    // React Native's build flag; the global is not a name this codebase chose.
+    const DEV_FLAG = '__DEV__';
+    const setDev = (value: boolean): void => {
+      Object.defineProperty(globalThis, DEV_FLAG, { value, configurable: true, writable: true });
+    };
+    const dev = Reflect.get(globalThis, DEV_FLAG) as boolean;
+    afterEach(() => setDev(dev));
 
-    expect(getByText(/Test error/)).toBeTruthy();
+    it('is shown in a development build, where it helps', () => {
+      setDev(true);
+      const { getByText } = renderWithProviders(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
+
+      expect(getByText(/Test error/)).toBeTruthy();
+    });
+
+    it('is not shown to a shooter in a release build', () => {
+      // "Cannot read property 'toFixed' of null" means nothing to them, and the
+      // boundary is now mounted around every screen.
+      setDev(false);
+      const { getByText, queryByText } = renderWithProviders(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
+
+      expect(getByText('Something went wrong')).toBeTruthy();
+      expect(queryByText(/Test error/)).toBeNull();
+    });
   });
 
   it('Try Again clears the error and renders the children again', () => {
@@ -75,6 +100,19 @@ describe('ErrorBoundary', () => {
 
     expect(getByText('Recovered')).toBeTruthy();
     expect(queryByText('Something went wrong')).toBeNull();
+  });
+
+  it('reports what it caught through onError', () => {
+    const onError = jest.fn();
+
+    renderWithProviders(
+      <ErrorBoundary onError={onError}>
+        <ThrowError shouldThrow />
+      </ErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0]).toEqual(expect.objectContaining({ message: 'Test error' }));
   });
 
   it('should render custom fallback when provided', () => {

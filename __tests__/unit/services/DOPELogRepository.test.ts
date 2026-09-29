@@ -87,6 +87,49 @@ describe('DOPELogRepository', () => {
     });
   });
 
+  describe('optional performance fields', () => {
+    it('keeps a recorded miss: 0 hits of 5 reads back as 0, not as unrecorded', async () => {
+      // `hitCount || null` stored a 0 as NULL, so a string of misses read back
+      // as "no hit data" and the confidence score never saw it.
+      const created = await dopeLogRepository.create(
+        validDopeLog(ids(), { hitCount: 0, shotCount: 5 })
+      );
+
+      const fetched = await dopeLogRepository.getById(created.id as number);
+      expect(fetched?.hitCount).toBe(0);
+      expect(fetched?.shotCount).toBe(5);
+    });
+
+    it('keeps a 0 hit count through an update', async () => {
+      const created = await dopeLogRepository.create(
+        validDopeLog(ids(), { hitCount: 3, shotCount: 5 })
+      );
+
+      await dopeLogRepository.update(created.id as number, { hitCount: 0 });
+
+      expect((await dopeLogRepository.getById(created.id as number))?.hitCount).toBe(0);
+    });
+
+    it('reads back a log saved without them as undefined, not null', async () => {
+      // A null here crashed DOPE Log Details (`groupSize.toFixed`) and was
+      // scored as a 0.0 MOA group with 0% hits.
+      const created = await dopeLogRepository.create(
+        validDopeLog(ids(), {
+          groupSize: undefined,
+          hitCount: undefined,
+          shotCount: undefined,
+          notes: undefined,
+        })
+      );
+
+      const fetched = await dopeLogRepository.getById(created.id as number);
+      expect(fetched?.groupSize).toBeUndefined();
+      expect(fetched?.hitCount).toBeUndefined();
+      expect(fetched?.shotCount).toBeUndefined();
+      expect(fetched?.notes).toBeUndefined();
+    });
+  });
+
   describe('timestamp handling', () => {
     it('preserves a caller-supplied engagement time', async () => {
       const engaged = '2026-05-20T13:45:00.000Z';

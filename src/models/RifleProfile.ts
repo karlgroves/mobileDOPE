@@ -1,5 +1,7 @@
 import { RifleProfileRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface RifleProfileData {
   id?: number;
   name: string;
@@ -128,7 +130,7 @@ export class RifleProfile {
       clickValueType: row.click_value_type,
       clickValue: row.click_value,
       scopeHeight: row.scope_height,
-      notes: row.notes,
+      notes: orUndefined(row.notes),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
