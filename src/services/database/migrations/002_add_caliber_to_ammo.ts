@@ -1,3 +1,4 @@
+import { hasColumn } from './hasColumn';
 import { Migration } from './MigrationRunner';
 
 /**
@@ -8,6 +9,9 @@ export const migration002: Migration = {
   name: 'add_caliber_to_ammo',
 
   async up(db) {
+    // A device stuck by #128 already has it.
+    if (await hasColumn(db, 'ammo_profiles', 'caliber')) return;
+
     // Add caliber column to ammo_profiles table with a default value
     await db.execAsync(`
       ALTER TABLE ammo_profiles
