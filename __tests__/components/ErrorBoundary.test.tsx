@@ -77,6 +77,19 @@ describe('ErrorBoundary', () => {
     expect(queryByText('Something went wrong')).toBeNull();
   });
 
+  it('reports what it caught through onError', () => {
+    const onError = jest.fn();
+
+    renderWithProviders(
+      <ErrorBoundary onError={onError}>
+        <ThrowError shouldThrow />
+      </ErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0]).toEqual(expect.objectContaining({ message: 'Test error' }));
+  });
+
   it('should render custom fallback when provided', () => {
     const customFallback = <Text>Custom Error Message</Text>;
     const { getByText } = renderWithProviders(

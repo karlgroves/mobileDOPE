@@ -1,5 +1,7 @@
 import { ShotStringRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface ShotStringData {
   id?: number;
   ammoId: number;
@@ -80,7 +82,7 @@ export class ShotString {
       shotNumber: row.shot_number,
       velocity: row.velocity,
       temperature: row.temperature,
-      notes: row.notes,
+      notes: orUndefined(row.notes),
       createdAt: row.created_at,
     });
   }

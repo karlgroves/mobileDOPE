@@ -10,6 +10,8 @@ import { Button } from './Button';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Called once with the error that was caught, e.g. to clear state that would reproduce it. */
+  onError?: (error: Error) => void;
 }
 
 interface ErrorBoundaryState {
@@ -73,6 +75,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.props.onError?.(error);
   }
 
   handleReset = (): void => {

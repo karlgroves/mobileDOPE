@@ -8,15 +8,14 @@ import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 
 import { linking, restoredInitialState } from './linking';
+import { NAVIGATION_PERSISTENCE_KEY, NavigationErrorBoundary } from './NavigationErrorBoundary';
 import { TabNavigator } from './TabNavigator';
 
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const NAVIGATION_PERSISTENCE_KEY = '@mobileDOPE:navigation_state';
-
-export const RootNavigator: React.FC = () => {
+const RestoringNavigator: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initialState, setInitialState] = useState<any | undefined>(undefined);
   const routeNameRef = useRef<string | undefined>(undefined);
@@ -109,3 +108,12 @@ export const RootNavigator: React.FC = () => {
     </NavigationContainer>
   );
 };
+
+/**
+ * The app's navigation, behind an error boundary (see NavigationErrorBoundary).
+ */
+export const RootNavigator: React.FC = () => (
+  <NavigationErrorBoundary>
+    <RestoringNavigator />
+  </NavigationErrorBoundary>
+);
