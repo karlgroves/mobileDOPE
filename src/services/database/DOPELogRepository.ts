@@ -32,9 +32,10 @@ export class DOPELogRepository {
         log.windageCorrection,
         log.correctionUnit,
         log.targetType,
-        log.groupSize || null,
-        log.hitCount || null,
-        log.shotCount || null,
+        // `??`, not `||`: 0 hits is a recorded miss, not a missing value.
+        log.groupSize ?? null,
+        log.hitCount ?? null,
+        log.shotCount ?? null,
         log.notes || null,
         log.timestamp ?? null,
       ]
@@ -168,9 +169,9 @@ export class DOPELogRepository {
         updated.windageCorrection,
         updated.correctionUnit,
         updated.targetType,
-        updated.groupSize || null,
-        updated.hitCount || null,
-        updated.shotCount || null,
+        updated.groupSize ?? null,
+        updated.hitCount ?? null,
+        updated.shotCount ?? null,
         updated.notes || null,
         id,
       ]
