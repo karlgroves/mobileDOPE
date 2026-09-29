@@ -1,4 +1,5 @@
 import { Migration } from './MigrationRunner';
+
 /**
  * The schema exactly as it stood at version 1 (a2b7db5).
  *

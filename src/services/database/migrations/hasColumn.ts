@@ -8,6 +8,9 @@ import type * as SQLite from 'expo-sqlite';
  * version 1, so a device installed in that window has the columns 002 adds and
  * lacks the one 004 removes. Checking the shape lets those devices move forward
  * rather than fail at the same step on every launch.
+ *
+ * `table` is interpolated into the PRAGMA, which cannot take a bound
+ * parameter, so it must be a fixed identifier from a migration -- never input.
  */
 export const hasColumn = async (
   db: SQLite.SQLiteDatabase,
