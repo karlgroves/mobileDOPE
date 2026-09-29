@@ -122,16 +122,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-vxpw-j846-p89q",
-      "package": "undici",
-      "severity": "high",
-      "reason": "Transitive through build-time HTTP tooling. The app makes no network requests, so no undici code path is reachable at runtime. Advisory: undici WebSocket client vulnerable to denial of service via fragment count bypass",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
-    },
-    {
       "id": "GHSA-w3rx-r6r6-pgpr",
       "package": "image-size",
       "severity": "high",
