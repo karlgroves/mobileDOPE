@@ -3,12 +3,13 @@
  * Quick-entry form for logging shooting data in the field
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -29,21 +30,35 @@ export function DOPELogEntry({ route, navigation }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { rifles } = useRifleStore();
-  const { ammoProfiles } = useAmmoStore();
+  const { rifles, loadRifles } = useRifleStore();
+  const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
   const { current: currentEnv, saveCurrent } = useEnvironmentStore();
   const { createDopeLog, updateDopeLog, getDopeById, loading } = useDOPEStore();
 
   // Load existing log if editing
   const existingLog = logId ? getDopeById(logId) : undefined;
 
-  // Profile selection - auto-select first rifle if creating new log
-  const getInitialRifleId = () => {
-    if (existingLog?.rifleId) return existingLog.rifleId;
-    if (rifles.length > 0) return rifles[0].id;
-    return undefined;
-  };
-  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(getInitialRifleId());
+  // Load the profiles this screen needs rather than rely on another screen
+  // having done it: relaunching restores straight into this screen, before
+  // anything has loaded them. All ammunition, not one caliber -- AmmoProfileList
+  // leaves the shared store holding only the caliber it last showed (#132).
+  const [profilesLoaded, setProfilesLoaded] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([loadRifles(), loadAmmoProfiles()]).finally(() => {
+      if (mounted) setProfilesLoaded(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [loadRifles, loadAmmoProfiles]);
+
+  // The shooter's choice, if they made one; otherwise the log's rifle, or the
+  // first rifle. Derived on every render, so a rifle that loads after the
+  // first render is still the default -- a one-time initial state missed it
+  // and showed "Select Rifle".
+  const [chosenRifleId, setSelectedRifleId] = useState<number | undefined>();
+  const selectedRifleId = chosenRifleId ?? existingLog?.rifleId ?? rifles[0]?.id;
   const [selectedAmmoId, setSelectedAmmoId] = useState<number | undefined>(existingLog?.ammoId);
 
   // Target parameters
@@ -174,9 +189,17 @@ export function DOPELogEntry({ route, navigation }: Props) {
     }
   };
 
+  if (!profilesLoaded && rifles.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
   // A new log needs a rifle and a load to log against. Without them the form
   // was all there, with nothing to pick in either picker (#132).
-  if (!existingLog && (rifles.length === 0 || ammoProfiles.length === 0)) {
+  if (profilesLoaded && !existingLog && (rifles.length === 0 || ammoProfiles.length === 0)) {
     const noRifle = rifles.length === 0;
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
