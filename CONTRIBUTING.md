@@ -69,6 +69,18 @@ Thank you for your interest in contributing to Mobile DOPE! This document provid
    npm install
    ```
 
+   Install scripts are blocked unless `allowScripts` in `package.json` names the
+   package **at its exact version**. The one allowed today is
+   `@shopify/react-native-skia`, whose postinstall downloads the prebuilt native
+   libraries the DOPE Curve chart draws with. When Skia is upgraded (for example
+   by `npx expo install` on an SDK upgrade), update that entry to the new
+   version, or the script is skipped, `node_modules/@shopify/react-native-skia/libs`
+   is missing, and the native build fails. Check with:
+
+   ```bash
+   ls node_modules/@shopify/react-native-skia/libs
+   ```
+
 5. **Run the app:**
 
    ```bash
