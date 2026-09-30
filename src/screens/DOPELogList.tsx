@@ -19,6 +19,7 @@ import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { useTheme } from '../contexts/ThemeContext';
+import { environmentRepository } from '../services/database/EnvironmentRepository';
 import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
@@ -143,10 +144,19 @@ export function DOPELogList({ navigation }: Props) {
       {
         text: 'CSV (Spreadsheet)',
         onPress: async () => {
+          // Every snapshot, for each log's conditions (#138).
+          let environments;
+          try {
+            environments = await environmentRepository.getAll();
+          } catch (error) {
+            Alert.alert('Error', error instanceof Error ? error.message : 'Export failed');
+            return;
+          }
           const result = await exportDOPELogsCSV(
             dopeLogs,
             useRifleStore.getState().rifles,
-            useAmmoStore.getState().ammoProfiles
+            useAmmoStore.getState().ammoProfiles,
+            environments
           );
           if (result.success) {
             Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs to CSV.`);
