@@ -189,6 +189,7 @@ function dopeLogsToCSV(
     'Rifle',
     'Ammunition',
     'Distance',
+    'Distance Unit',
     'Elevation Correction',
     'Windage Correction',
     'Angular Unit',
@@ -212,6 +213,8 @@ function dopeLogsToCSV(
       sanitizeCsvCell(getRifleName(log.rifleId)),
       sanitizeCsvCell(getAmmoName(log.ammoId)),
       sanitizeCsvCell(log.distance),
+      // Each log keeps its own unit (#125), so a bare distance is ambiguous.
+      sanitizeCsvCell(log.distanceUnit),
       sanitizeCsvCell(log.elevationCorrection),
       sanitizeCsvCell(log.windageCorrection),
       sanitizeCsvCell(log.correctionUnit),

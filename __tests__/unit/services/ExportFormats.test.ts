@@ -258,6 +258,19 @@ describe('exportDOPELogsCSV hit counts and conditions (#138)', () => {
     });
   });
 
+  it('says which unit each distance is in', async () => {
+    // Logs keep their own unit; a bare "500" could be yards or meters.
+    const rows = await exportRows([
+      log({ distance: 500, distanceUnit: 'yards' }),
+      log({ distance: 500, distanceUnit: 'meters' }),
+    ]);
+
+    expect(rows.map((r) => [r.Distance, r['Distance Unit']])).toEqual([
+      ['500', 'yards'],
+      ['500', 'meters'],
+    ]);
+  });
+
   it('matches each log to its own snapshot', async () => {
     const other = new EnvironmentSnapshot({ ...validEnvironment({ temperature: 95 }), id: 4 });
     const rows = await exportRows([log(), log({ environmentId: 4 })], [environment(), other]);

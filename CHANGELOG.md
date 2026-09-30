@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The DOPE log CSV has a `Distance Unit` column. Each log keeps its own
+  distance unit, so a distance of 500 could have been yards or meters.
+
 ## [1.1.0] - 2026-09-30
 
 A feature release: your own logged DOPE now shapes what the app shows you,
