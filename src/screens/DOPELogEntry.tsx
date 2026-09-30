@@ -15,17 +15,56 @@ import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { TextInput } from '../components/TextInput';
 import { useTheme } from '../contexts/ThemeContext';
+import { useDopeLog } from '../hooks/useDopeLog';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 
-import type { DOPELogData } from '../models/DOPELog';
+import type { DOPELogData, DOPELog } from '../models/DOPELog';
 import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogEdit'>;
 
-export function DOPELogEntry({ route, navigation }: Props) {
+/**
+ * New DOPE Log, or DOPE Log Edit with a `logId`.
+ *
+ * Editing waits for the log before building the form. The form's fields take
+ * their starting values once, on mount; a restored launch shows this screen
+ * before DOPE Logs has filled the store, and the form used to start from a new
+ * log's defaults (distance 100) under an "Update DOPE Log" title and keep them
+ * after the log arrived (#141).
+ */
+export function DOPELogEntry(props: Props) {
+  const { logId } = props.route.params || {};
+  const { colors } = useTheme().theme;
+  const { log, status } = useDopeLog(logId);
+
+  if (logId !== undefined && status === 'loading') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
+  if (logId !== undefined && status === 'missing') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <EmptyState
+          title="DOPE Log Not Found"
+          message="This log may have been deleted."
+          actionLabel="Back to DOPE Logs"
+          onAction={() => props.navigation.goBack()}
+        />
+      </View>
+    );
+  }
+
+  return <DOPELogForm {...props} existingLog={log} />;
+}
+
+function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?: DOPELog }) {
   const { logId } = route.params || {};
   const { theme } = useTheme();
   const { colors } = theme;
@@ -33,10 +72,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
   const { rifles, loadRifles } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
   const { current: currentEnv, saveCurrent } = useEnvironmentStore();
-  const { createDopeLog, updateDopeLog, getDopeById, loading } = useDOPEStore();
-
-  // Load existing log if editing
-  const existingLog = logId ? getDopeById(logId) : undefined;
+  const { createDopeLog, updateDopeLog, loading } = useDOPEStore();
 
   // Load the profiles this screen needs rather than rely on another screen
   // having done it: relaunching restores straight into this screen, before
