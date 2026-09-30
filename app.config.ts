@@ -72,6 +72,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'android.permission.CAMERA',
         'android.permission.READ_MEDIA_IMAGES',
         'android.permission.READ_EXTERNAL_STORAGE',
+        // expo-file-system declares both up to API 32. The app writes only to its
+        // own documents directory and shares through the share sheet.
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+        // expo-sensors declares ACTIVITY_RECOGNITION (physical activity), and
+        // nothing in src/ uses expo-sensors.
+        'android.permission.ACTIVITY_RECOGNITION',
         // No audio capture anywhere in the app.
         'android.permission.RECORD_AUDIO',
         // Drawing over other apps: contributed by autolinked modules, never used.

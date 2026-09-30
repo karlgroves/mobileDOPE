@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import appConfig from '../../app.config';
 import { APP_SCHEME } from '../../src/navigation/linking';
 
@@ -85,6 +88,71 @@ describe('permissions the app has no code to use', () => {
         'android.permission.SYSTEM_ALERT_WINDOW',
       ])
     );
+  });
+
+  it('blocks every dangerous permission a native module brings, unless the app uses it', () => {
+    // Autolinking merges each native module's own AndroidManifest into the app's.
+    // expo-sensors (a dependency nothing in src/ uses) declares
+    // ACTIVITY_RECOGNITION, and expo-file-system declares WRITE_EXTERNAL_STORAGE;
+    // neither was blocked, while PRIVACY.md said motion permissions were. The list
+    // above names what was known; this reads what the installed modules declare.
+    const DANGEROUS = new Set([
+      'ACCESS_BACKGROUND_LOCATION',
+      'ACCESS_COARSE_LOCATION',
+      'ACCESS_FINE_LOCATION',
+      'ACCESS_MEDIA_LOCATION',
+      'ACTIVITY_RECOGNITION',
+      'BLUETOOTH_CONNECT',
+      'BLUETOOTH_SCAN',
+      'BODY_SENSORS',
+      'CALL_PHONE',
+      'CAMERA',
+      'GET_ACCOUNTS',
+      'NEARBY_WIFI_DEVICES',
+      'POST_NOTIFICATIONS',
+      'READ_CALENDAR',
+      'READ_CONTACTS',
+      'READ_EXTERNAL_STORAGE',
+      'READ_MEDIA_AUDIO',
+      'READ_MEDIA_IMAGES',
+      'READ_MEDIA_VIDEO',
+      'READ_MEDIA_VISUAL_USER_SELECTED',
+      'READ_PHONE_STATE',
+      'READ_SMS',
+      'RECEIVE_SMS',
+      'RECORD_AUDIO',
+      'SEND_SMS',
+      'SYSTEM_ALERT_WINDOW',
+      'WRITE_CALENDAR',
+      'WRITE_CONTACTS',
+      'WRITE_EXTERNAL_STORAGE',
+    ]);
+    const modules = path.join(__dirname, '../../node_modules');
+    const declared = fs
+      .readdirSync(modules)
+      .flatMap((name) =>
+        name.startsWith('@')
+          ? fs.readdirSync(path.join(modules, name)).map((sub) => `${name}/${sub}`)
+          : [name]
+      )
+      .map((name) => path.join(modules, name, 'android/src/main/AndroidManifest.xml'))
+      .filter((file) => fs.existsSync(file))
+      .flatMap((file) =>
+        [...fs.readFileSync(file, 'utf8').matchAll(/android\.permission\.([A-Z_]+)/g)].map(
+          (m) => m[1] as string
+        )
+      )
+      .filter((permission) => DANGEROUS.has(permission));
+
+    // So this cannot pass by reading no manifests at all.
+    expect(declared).toContain('ACCESS_FINE_LOCATION');
+
+    const accounted = new Set(
+      [...(config.android?.permissions ?? []), ...(config.android?.blockedPermissions ?? [])].map(
+        (p) => p.replace('android.permission.', '')
+      )
+    );
+    expect([...new Set(declared)].filter((p) => !accounted.has(p)).sort()).toEqual([]);
   });
 
   it('actually deletes the placeholders, not just registers a plugin', () => {
