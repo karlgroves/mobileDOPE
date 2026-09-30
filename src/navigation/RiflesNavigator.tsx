@@ -1,30 +1,30 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RifleProfileList } from '../screens/RifleProfileList';
-import { RifleProfileForm } from '../screens/RifleProfileForm';
-import { RifleProfileDetail } from '../screens/RifleProfileDetail';
-import { AmmoProfileList } from '../screens/AmmoProfileList';
-import { AmmoProfileForm } from '../screens/AmmoProfileForm';
+import React from 'react';
+
+import { useTheme } from '../contexts/ThemeContext';
 import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
-import { DOPECardGenerator } from '../screens/DOPECardGenerator';
+import { AmmoProfileForm } from '../screens/AmmoProfileForm';
+import { AmmoProfileList } from '../screens/AmmoProfileList';
 import { ChronographInput } from '../screens/ChronographInput';
+import { DOPECardGenerator } from '../screens/DOPECardGenerator';
+import { RifleProfileDetail } from '../screens/RifleProfileDetail';
+import { RifleProfileForm } from '../screens/RifleProfileForm';
+import { RifleProfileList } from '../screens/RifleProfileList';
 import { ShotStringHistory } from '../screens/ShotStringHistory';
+
+import { stackHeaderOptions } from './navigationTheme';
+
 import type { RiflesStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RiflesStackParamList>();
 
 export const RiflesNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2a2a2a',
-        },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
+        ...stackHeaderOptions(colors),
       }}
     >
       <Stack.Screen

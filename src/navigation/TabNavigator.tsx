@@ -4,11 +4,13 @@ import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
 
+import { useTheme } from '../contexts/ThemeContext';
 import { DashboardScreen } from '../screens/DashboardScreen';
 
 import { AmmoNavigator } from './AmmoNavigator';
 import { CalculatorNavigator } from './CalculatorNavigator';
 import { HistoryNavigator } from './HistoryNavigator';
+import { tabBarOptions } from './navigationTheme';
 import { RiflesNavigator } from './RiflesNavigator';
 import { SessionNavigator } from './SessionNavigator';
 
@@ -18,15 +20,14 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const TabNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const tabBar = tabBarOptions(useTheme().theme.colors);
 
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#B0B0B0',
+        ...tabBar,
         tabBarStyle: {
-          backgroundColor: '#2a2a2a',
-          borderTopColor: '#404040',
+          ...tabBar.tabBarStyle,
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom + 8,
           paddingTop: 8,

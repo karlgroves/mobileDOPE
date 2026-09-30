@@ -1,28 +1,28 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+
+import { useTheme } from '../contexts/ThemeContext';
 import { AllAmmoProfileList } from '../screens/AllAmmoProfileList';
-import { AmmoProfileForm } from '../screens/AmmoProfileForm';
-import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
-import { DOPECardGenerator } from '../screens/DOPECardGenerator';
-import { ChronographInput } from '../screens/ChronographInput';
-import { ShotStringHistory } from '../screens/ShotStringHistory';
 import { AmmoCompare } from '../screens/AmmoCompare';
+import { AmmoProfileDetail } from '../screens/AmmoProfileDetail';
+import { AmmoProfileForm } from '../screens/AmmoProfileForm';
+import { ChronographInput } from '../screens/ChronographInput';
+import { DOPECardGenerator } from '../screens/DOPECardGenerator';
+import { ShotStringHistory } from '../screens/ShotStringHistory';
+
+import { stackHeaderOptions } from './navigationTheme';
+
 import type { AmmoStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AmmoStackParamList>();
 
 export const AmmoNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2a2a2a',
-        },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
+        ...stackHeaderOptions(colors),
       }}
     >
       <Stack.Screen

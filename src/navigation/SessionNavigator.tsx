@@ -1,25 +1,25 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RangeSessionStart } from '../screens/RangeSessionStart';
-import { RangeSessionActive } from '../screens/RangeSessionActive';
-import { RangeSessionSummary } from '../screens/RangeSessionSummary';
+import React from 'react';
+
+import { useTheme } from '../contexts/ThemeContext';
 import { EnvironmentInput } from '../screens/EnvironmentInput';
+import { RangeSessionActive } from '../screens/RangeSessionActive';
+import { RangeSessionStart } from '../screens/RangeSessionStart';
+import { RangeSessionSummary } from '../screens/RangeSessionSummary';
+
+import { stackHeaderOptions } from './navigationTheme';
+
 import type { SessionStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<SessionStackParamList>();
 
 export const SessionNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2a2a2a',
-        },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
+        ...stackHeaderOptions(colors),
       }}
     >
       <Stack.Screen
