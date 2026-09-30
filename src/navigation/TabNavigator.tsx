@@ -28,7 +28,10 @@ export const TabNavigator: React.FC = () => {
         ...tabBar,
         tabBarStyle: {
           ...tabBar.tabBarStyle,
-          height: 60 + insets.bottom,
+          // 52pt between the paddings holds the icon and its label. At 60 the
+          // label overflowed its item, which only showed once night vision
+          // filled the active item and cut the label in half (#148).
+          height: 68 + insets.bottom,
           paddingBottom: insets.bottom + 8,
           paddingTop: 8,
         },

@@ -116,6 +116,22 @@ describe.each(ON_FILL)('text on the %s fill', (fill, on) => {
   });
 });
 
+/**
+ * Secondary text: field labels, captions, legends, inactive tab labels, list
+ * metadata. Night vision's was #cc0000, 3.52:1 on its background and 3.42:1 on
+ * its surface; the only red that reaches AA there is #ff0000, its primary text
+ * colour, so secondary text now uses that and the hierarchy is carried by size
+ * and weight (#148).
+ */
+describe.each(MODES)('text.secondary on the %s theme', (mode) => {
+  it.each(['background', 'surface'] as const)('passes AA on %s', (surface) => {
+    const c = Colors[mode];
+    expect(contrast(channels(c.text.secondary), channels(c[surface]))).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT
+    );
+  });
+});
+
 describe('text.inverse', () => {
   it('no longer exists, so white-on-fill cannot come back', () => {
     // Removing the token lets tsc reject any new use; this pins the removal.

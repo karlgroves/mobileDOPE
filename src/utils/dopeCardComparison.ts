@@ -163,7 +163,9 @@ const PALETTES = {
     headerBg: '#330000',
     rowHeaderBg: '#1a0000',
     border: '#660000',
-    note: '#cc0000',
+    // The app's secondary red, #cc0000, was 3.57:1 here; the note is told apart
+    // by its size instead (#148).
+    note: '#ff0000',
   },
 } as const;
 

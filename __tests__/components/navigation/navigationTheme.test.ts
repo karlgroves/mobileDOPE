@@ -35,14 +35,38 @@ describe.each(MODES)('navigator chrome on %s', (mode) => {
     const background = options.tabBarStyle.backgroundColor;
 
     expect(background).toBe(colors.surface);
-    expect(contrastRatio(options.tabBarActiveTintColor, background)).toBeGreaterThanOrEqual(4.5);
-    // Inactive labels use the theme's own secondary text. Night vision's is
-    // 3.42:1 everywhere in the app, not just here: #148, a palette decision.
+    // The active label is drawn on the bar, or on its own fill where it has one.
+    expect(
+      contrastRatio(
+        options.tabBarActiveTintColor,
+        options.tabBarActiveBackgroundColor ?? background
+      )
+    ).toBeGreaterThanOrEqual(4.5);
     expect(options.tabBarInactiveTintColor).toBe(colors.text.secondary);
-    if (mode !== 'nightVision') {
-      expect(contrastRatio(options.tabBarInactiveTintColor, background)).toBeGreaterThanOrEqual(
+    expect(contrastRatio(options.tabBarInactiveTintColor, background)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('marks the active tab by more than a colour it may share with the others', () => {
+    // Night vision's secondary text is its primary red (#148), so a red label
+    // cannot mark the active tab there. It is filled instead, as a selected
+    // segment is: the fill stands out from the bar (1.4.11, 3:1) and its label
+    // reads on it (1.4.3, 4.5:1). A dark-red tint cannot do both: seen on the
+    // Simulator, #2a0000 on #1a0000 was near invisible.
+    const options = tabBarOptions(colors);
+    const bar = options.tabBarStyle.backgroundColor;
+    const fill = options.tabBarActiveBackgroundColor;
+
+    if (colors.primaryText === colors.text.secondary) {
+      expect(fill).toBeDefined();
+      expect(contrastRatio(fill as string, bar)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(options.tabBarActiveTintColor, fill as string)).toBeGreaterThanOrEqual(
         4.5
       );
+      expect(options.tabBarActiveTintColor).not.toBe(options.tabBarInactiveTintColor);
+    } else {
+      // Dark and light keep their look: a different label colour, no fill.
+      expect(fill).toBeUndefined();
+      expect(options.tabBarActiveTintColor).toBe(colors.primaryText);
     }
   });
 

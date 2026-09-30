@@ -97,7 +97,10 @@ export const Colors = {
     info: '#ff8888',
     text: {
       primary: '#ff0000',
-      secondary: '#cc0000',
+      // The same red as primary: #cc0000 was 3.42:1 on surface, and #ff0000 is
+      // the only red that reaches AA on these backgrounds. Secondary text is
+      // told apart by size and weight here, not colour (#148).
+      secondary: '#ff0000',
       disabled: '#880000',
     },
     border: '#440000',
