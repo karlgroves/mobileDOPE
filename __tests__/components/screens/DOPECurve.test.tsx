@@ -136,15 +136,30 @@ jest.mock('victory-native', () => {
   // victory-native's transform helpers, on the same matrix slots it uses:
   // scaleX [0], scaleY [5], translateX [3], translateY [7].
   const mockIdentity = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  // Like a Reanimated shared value, writing the matrix wakes anything that
+  // reacts to it: here, by re-rendering, which runs the reactions.
   const mockUseChartTransformState = () => {
-    const { useRef: mockUseRef } = jest.requireActual('react');
-    const ref = mockUseRef({
-      state: {
-        matrix: { value: mockIdentity() },
-        zoomActive: { value: false },
-        panActive: { value: false },
-      },
-    });
+    const { useRef: mockUseRef, useReducer: mockUseReducer } = jest.requireActual('react');
+    const [, wake] = mockUseReducer((n: number) => n + 1, 0);
+    const ref = mockUseRef(null);
+    if (ref.current === null) {
+      let matrix = mockIdentity();
+      ref.current = {
+        state: {
+          matrix: {
+            get value() {
+              return matrix;
+            },
+            set value(next: number[]) {
+              matrix = next;
+              wake();
+            },
+          },
+          zoomActive: { value: false },
+          panActive: { value: false },
+        },
+      };
+    }
     return ref.current;
   };
   const mockSetScale = (m: number[], kx: number, ky?: number) => {
@@ -194,8 +209,16 @@ jest.mock('react-native-reanimated', () => ({
   // still be there in the next.
   useSharedValue: (initial: unknown) =>
     jest.requireActual('react').useRef({ value: initial }).current,
-  // Runs the reaction once per render with the value it watches.
-  useAnimatedReaction: (prepare: () => unknown, react: (v: unknown) => void) => react(prepare()),
+  // Runs the reaction after every render, as the real one runs after a frame
+  // rather than inside React's render.
+  useAnimatedReaction: (prepare: () => unknown, react: (v: unknown, p: unknown) => void) => {
+    const { useEffect: mockUseEffect } = jest.requireActual('react');
+    mockUseEffect(() => react(prepare(), null));
+  },
+  runOnJS:
+    (fn: (...args: unknown[]) => unknown) =>
+    (...args: unknown[]) =>
+      fn(...args),
 }));
 jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
@@ -811,5 +834,54 @@ describe('DOPECurve: a gesture that goes too far snaps back (#64)', () => {
     fireEvent.press(getByText('MOA'));
 
     expect(state.matrix.value[0]).toBe(0.4);
+  });
+});
+
+describe('DOPECurve: zoom buttons say when they can do nothing (#64 review)', () => {
+  /**
+   * At 1x the whole curve already shows, so Zoom out, Shorter and Longer do
+   * nothing; at 8x Zoom in does nothing. A screen-reader user pressing one
+   * heard no change and no reason. They are disabled at the limits instead.
+   */
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  const disabled = (el: { props: { accessibilityState?: { disabled?: boolean } } }) =>
+    el.props.accessibilityState?.disabled === true;
+
+  it('disables Zoom out, Shorter and Longer at the whole curve', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByRole } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+
+    expect(disabled(getByRole('button', { name: 'Zoom out' }))).toBe(true);
+    expect(disabled(getByRole('button', { name: 'Show shorter distances' }))).toBe(true);
+    expect(disabled(getByRole('button', { name: 'Show longer distances' }))).toBe(true);
+    expect(disabled(getByRole('button', { name: 'Zoom in' }))).toBe(false);
+  });
+
+  it('enables them once zoomed, and disables Zoom in at the maximum', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByRole } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    await waitFor(() =>
+      expect(disabled(getByRole('button', { name: 'Show longer distances' }))).toBe(false)
+    );
+    expect(disabled(getByRole('button', { name: 'Zoom out' }))).toBe(false);
+
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    await waitFor(() => expect(disabled(getByRole('button', { name: 'Zoom in' }))).toBe(false));
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    await waitFor(() => expect(disabled(getByRole('button', { name: 'Zoom in' }))).toBe(true));
   });
 });

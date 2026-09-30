@@ -9,6 +9,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
+  runOnJS,
   useAnimatedReaction,
   useDerivedValue,
   useSharedValue,
@@ -37,6 +38,7 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { confidenceOpacity } from '../utils/chartConfidence';
 import {
+  MAX_ZOOM,
   PAN_STEP,
   ZOOM_STEP,
   clampView,
@@ -147,58 +149,69 @@ const loggedMarkers = (
  * controls have no place in the PNG.
  */
 const ZoomControls: React.FC<{
+  zoom: number;
   onZoom: (factor: number) => void;
   onPan: (steps: number) => void;
   onReset: () => void;
-}> = ({ onZoom, onPan, onReset }) => (
-  <View style={styles.zoomControls}>
-    <View style={styles.zoomRow}>
-      <Button
-        title="Zoom out"
-        onPress={() => onZoom(1 / ZOOM_STEP)}
-        variant="secondary"
-        size="small"
-        style={styles.zoomButton}
-      />
-      <Button
-        title="Zoom in"
-        onPress={() => onZoom(ZOOM_STEP)}
-        variant="secondary"
-        size="small"
-        style={styles.zoomButton}
-      />
+}> = ({ zoom, onZoom, onPan, onReset }) => {
+  // At the whole curve there is nothing to zoom out to or pan across, and at
+  // MAX_ZOOM nothing further to zoom into. Disabled says so; a button that did
+  // nothing gave a screen-reader user no change and no reason.
+  const whole = zoom <= 1;
+  return (
+    <View style={styles.zoomControls}>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Zoom out"
+          onPress={() => onZoom(1 / ZOOM_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Zoom in"
+          onPress={() => onZoom(ZOOM_STEP)}
+          disabled={zoom >= MAX_ZOOM}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Shorter"
+          accessibilityLabel="Show shorter distances"
+          accessibilityHint="Moves the zoomed chart toward shorter distances"
+          onPress={() => onPan(-PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Longer"
+          accessibilityLabel="Show longer distances"
+          accessibilityHint="Moves the zoomed chart toward longer distances"
+          onPress={() => onPan(PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Whole curve"
+          accessibilityLabel="Show the whole curve"
+          accessibilityHint="Resets the zoom so every distance shows"
+          onPress={onReset}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
     </View>
-    <View style={styles.zoomRow}>
-      <Button
-        title="Shorter"
-        accessibilityLabel="Show shorter distances"
-        accessibilityHint="Moves the zoomed chart toward shorter distances"
-        onPress={() => onPan(-PAN_STEP)}
-        variant="secondary"
-        size="small"
-        style={styles.zoomButton}
-      />
-      <Button
-        title="Longer"
-        accessibilityLabel="Show longer distances"
-        accessibilityHint="Moves the zoomed chart toward longer distances"
-        onPress={() => onPan(PAN_STEP)}
-        variant="secondary"
-        size="small"
-        style={styles.zoomButton}
-      />
-      <Button
-        title="Whole curve"
-        accessibilityLabel="Show the whole curve"
-        accessibilityHint="Resets the zoom so every distance shows"
-        onPress={onReset}
-        variant="secondary"
-        size="small"
-        style={styles.zoomButton}
-      />
-    </View>
-  </View>
-);
+  );
+};
 
 /** Key to the chart's two lines, and what a marker's opacity means. */
 const ChartLegend: React.FC<{ loggedCount: number }> = ({ loggedCount }) => {
@@ -336,6 +349,15 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
           0
         );
       }
+    }
+  );
+
+  // The zoom level in React, for the buttons' disabled states.
+  const [zoom, setZoom] = useState(1);
+  useAnimatedReaction(
+    () => getTransformComponents(transformState.matrix.value).scaleX,
+    (scale, previous) => {
+      if (scale !== previous) runOnJS(setZoom)(scale);
     }
   );
 
@@ -560,6 +582,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
           {hasData && (
             <ZoomControls
+              zoom={zoom}
               onZoom={(factor) => showView(zoomBy(currentView(), factor, plotWidth))}
               onPan={(steps) => showView(panBy(currentView(), steps, plotWidth))}
               onReset={() => showView(resetView())}
