@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that migration 005 emptied but could not remove (#133). SQLite's
   `DROP COLUMN` removes it in place, with no table rebuild; databases that
   never had the column are skipped. Every install now matches `DB_SCHEMA`.
+- Night vision's secondary text was `#cc0000`: 3.42:1 on its surface and
+  3.52:1 on its background, under the 4.5:1 WCAG AA needs for labels,
+  captions, legends and list metadata across the app (#148). It is now the
+  primary red, `#ff0000` (5.03:1), and secondary text is told apart by size
+  and weight. The tab bar could no longer mark the active tab by label colour
+  in that theme, so there the active tab is filled red with a black label,
+  as a selected segment is. The bar is also 8pt taller: at its old height
+  the label overflowed its item, which the fill made visible.
 
 ## [1.0.0] - 2026-07-20
 

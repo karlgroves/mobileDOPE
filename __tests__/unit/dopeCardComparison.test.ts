@@ -5,6 +5,7 @@ import {
   cellFor,
   renderComparisonHtml,
 } from '../../src/utils/dopeCardComparison';
+import { contrastRatio } from '../helpers/contrast';
 
 import type { ComparisonLoad } from '../../src/utils/dopeCardComparison';
 
@@ -263,5 +264,36 @@ describe('the rendered card', () => {
 
     expect(html).toContain('<tbody>');
     expect(html).toContain('Tikka T3x');
+  });
+});
+
+/**
+ * The card's text reads on every background it sits on (#148).
+ *
+ * Night vision's footnote was #cc0000 on black: 3.57:1 at 11px, the same
+ * secondary red the app itself dropped. Read from the rendered CSS, so a
+ * palette entry the page does not use cannot pass for one it does.
+ */
+describe.each(['light', 'nightVision'] as const)('the %s card colours', (colorMode) => {
+  const html = renderComparisonHtml(
+    buildComparison([load('A', [[100, 1, 0]])], { ...options, colorMode })
+  );
+  const rule = (selector: string, property: string): string => {
+    const block = new RegExp(`${selector}\\s*\\{([^}]*)\\}`).exec(html)?.[1] ?? '';
+    const value = new RegExp(`(?:^|[;\\s])${property}:\\s*(#[0-9a-fA-F]{6})`).exec(block)?.[1];
+    expect(value).toBeDefined();
+    return value as string;
+  };
+
+  const text = rule('body', 'color');
+  const pairs: [string, string, string][] = [
+    ['body text on the page', text, rule('body', 'background')],
+    ['body text on the column headers', text, rule('thead th', 'background')],
+    ['body text on the distance column', text, rule('\\.distance', 'background')],
+    ['the footnote on the page', rule('\\.note', 'color'), rule('body', 'background')],
+  ];
+
+  it.each(pairs)('passes AA for %s', (_what, fg, bg) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 });
