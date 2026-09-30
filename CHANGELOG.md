@@ -82,6 +82,11 @@ alongside a round of fixes found by using the app on a device.
   and in analysis (#107, #125). One caliber database with diameters the solver
   can trust (#103). The calculator no longer requires an altitude the solver
   never reads (#98), and says which pressure it wants (#92).
+- **Android permissions.** `ACTIVITY_RECOGNITION` (from `expo-sensors`, which
+  the app does not use) and `WRITE_EXTERNAL_STORAGE` (from `expo-file-system`)
+  were merged into the Android manifest unblocked, while the privacy policy said
+  motion permissions were blocked. Both are now blocked, and a test checks every
+  dangerous permission any installed native module declares.
 - **Native dependencies** match Expo SDK 55: victory-native's Skia, Reanimated,
   Gesture Handler and Worklets (#139), and `expo-font` / `expo-asset`.
 - The 65 outstanding `react-native-a11y` label and hint findings in `src/`, and

@@ -1,6 +1,6 @@
 # Privacy Policy — Mobile DOPE
 
-**Last updated:** 2026-08-26
+**Last updated:** 2026-09-30
 **Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
@@ -106,9 +106,11 @@ anyone, of any age.
 | ---------------------- | ------------ | ----------------------------------------------------- |
 | Location, while in use | iOS, Android | Altitude and approximate latitude, as described above |
 
-No other runtime permission is requested. Camera, photo library, microphone and
-motion permissions are explicitly blocked in the app's build configuration so that
-autolinked libraries cannot introduce them.
+No other runtime permission is requested. Camera, photo library and shared
+storage, microphone, and physical activity (motion) permissions are explicitly
+blocked in the app's build configuration so that autolinked libraries cannot
+introduce them. Files you export are written to the app's own storage and handed
+to the system share sheet, which needs no storage permission.
 
 ## Changes to this policy
 
