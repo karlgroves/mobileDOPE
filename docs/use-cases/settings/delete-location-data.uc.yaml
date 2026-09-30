@@ -1,0 +1,57 @@
+id: settings-delete-location-data
+title: 'Delete stored location data without losing shooting history'
+type: positive
+description: >-
+  The retention control PRIVACY.md commits to. Removes the coordinate from every
+  stored set of conditions while keeping the temperature, pressure and wind readings
+  -- those are the shooting history and are not the sensitive part.
+
+preconditions:
+  - 'At least two environment snapshots exist with a stored latitude'
+  - 'At least one DOPE log references one of those snapshots'
+
+start_location: 'Settings'
+
+expected_result: >-
+  Every stored coordinate is cleared and the number cleared is reported. Ballistic
+  readings and DOPE logs are untouched, and a subsequent solution still calculates.
+
+data:
+  delete_location_button: 'Delete Stored Location Data'
+  # REPLACE: the confirmation. It must say what survives, not only what is removed --
+  # a user who thinks this deletes their logs will not use it.
+  confirm_title: 'Delete Stored Location Data'
+  confirm_mentions_kept: 'Temperature, pressure, wind and altitude readings are kept'
+  confirm_button: 'Delete'
+  cancel_button: 'Cancel'
+  # REPLACE: the result, reporting a count rather than a bare success.
+  result_message: 'Cleared coordinates from 2 snapshots'
+  latitude_field: 'Latitude, degrees'
+  # REPLACE: a ballistic reading that must survive.
+  surviving_reading: 'Temperature, 59 degrees Fahrenheit'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ delete_location_button }}"
+  - focus: button "{{ delete_location_button }}"
+  - activate: button "{{ delete_location_button }}"
+
+  - verify: text "{{ confirm_title }}"
+  - verify: text "{{ confirm_mentions_kept }}"
+
+  # Cancel first: an irreversible action must be genuinely optional.
+  - locate: button "{{ cancel_button }}"
+  - activate: button "{{ cancel_button }}"
+
+  - activate: button "{{ delete_location_button }}"
+  - locate: button "{{ confirm_button }}"
+  - focus: button "{{ confirm_button }}"
+  - activate: button "{{ confirm_button }}"
+
+  - sr_says: '"{{ result_message }}" after activate button "{{ confirm_button }}"'
+
+  # Coordinates gone, readings intact.
+  - navigate: 'Session/EnvironmentInput'
+  - verify: field "{{ latitude_field }}" has_value ""
+  - verify: text "{{ surviving_reading }}"

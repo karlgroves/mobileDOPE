@@ -1,0 +1,46 @@
+id: settings-change-units
+title: 'Switch between MIL and MOA, yards and meters'
+type: positive
+description: >-
+  A unit change rewrites every correction and distance in the app. This asserts the
+  change propagates rather than applying only to newly calculated values, and that
+  the control announces the consequence -- "MOA" alone does not say what will happen.
+
+preconditions:
+  - 'The app is set to MIL and yards'
+  - 'At least one DOPE log entry exists'
+
+start_location: 'Settings'
+
+expected_result: >-
+  Corrections throughout the app are shown in the selected angular unit and
+  distances in the selected linear unit, including on existing records.
+
+data:
+  correction_unit_control: 'Default correction unit'
+  mil_option: 'MIL'
+  moa_option: 'MOA'
+  # REPLACE: the hint. The label names the option; the hint has to name the effect.
+  moa_hint: 'Shows all correction values in MOA'
+  distance_unit_control: 'Default distance unit'
+  meters_option: 'Meters'
+  # REPLACE: an existing record, before and after conversion.
+  log_in_mil: 'elevation 3.40 MIL'
+  log_in_moa: 'elevation 11.69 MOA'
+
+steps:
+  - audit: page
+
+  - locate: radio "{{ moa_option }}"
+  - focus: radio "{{ moa_option }}"
+  - verify: radio "{{ moa_option }}" has_description "{{ moa_hint }}"
+  - select: radio "{{ moa_option }}"
+
+  - locate: radio "{{ meters_option }}"
+  - select: radio "{{ meters_option }}"
+
+  # Existing records convert too -- a setting that only affects new values is a
+  # trap on a firing line.
+  - navigate: 'MainTabs/History'
+  - verify: text "{{ log_in_moa }}"
+  - verify: no_element text "{{ log_in_mil }}"

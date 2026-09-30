@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+
+import { Sizes } from '../constants/sizes';
+import { Typography } from '../constants/typography';
+import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from './Button';
-import { theme } from '../constants/theme';
 
 interface EmptyStateProps {
   title: string;
@@ -20,6 +24,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   testID,
 }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
   return (
     <View style={styles.container} testID={testID}>
       {icon && (
@@ -27,8 +33,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {icon}
         </Text>
       )}
-      <Text style={styles.title}>{title}</Text>
-      {message && <Text style={styles.message}>{message}</Text>}
+      <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
+      {message && <Text style={[styles.message, { color: colors.text.secondary }]}>{message}</Text>}
       {actionLabel && onAction && (
         <Button title={actionLabel} onPress={onAction} variant="primary" style={styles.button} />
       )}
@@ -41,27 +47,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: Sizes.spacing.xl,
   },
   icon: {
     fontSize: 64,
-    marginBottom: theme.spacing.md,
+    marginBottom: Sizes.spacing.md,
   },
   title: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: Typography.fontSize.xl,
     fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
+    marginBottom: Sizes.spacing.sm,
     textAlign: 'center',
   },
   message: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
+    fontSize: Typography.fontSize.md,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: Sizes.spacing.lg,
   },
   button: {
-    marginTop: theme.spacing.md,
+    marginTop: Sizes.spacing.md,
     minWidth: 200,
   },
 });

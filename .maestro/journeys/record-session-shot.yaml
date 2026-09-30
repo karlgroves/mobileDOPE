@@ -1,0 +1,69 @@
+# Critical journey: the field loop.
+#
+# Start a range session, dial a correction, log a shot, and confirm it reaches
+# history. This is the flow CLAUDE.md's field-use constraints are written for --
+# gloved, one-tap, minimal depth -- so the assertion that matters is that logging
+# a shot takes one tap after the corrections are set.
+#
+# Transcribed from:
+#   docs/use-cases/session/start-session.uc.yaml
+#   docs/use-cases/session/record-shots.uc.yaml
+#   docs/use-cases/history/browse-logs.uc.yaml
+#
+# Requires the rifle and load created by rifle-to-dope-card.yaml, so it is not
+# tagged destructive: it reads the state that flow leaves behind.
+appId: com.mobiledope.app.development
+tags:
+  - journey
+---
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: 'Mobile DOPE'
+    timeout: 30000
+
+# --- Conditions -------------------------------------------------------------
+- tapOn: 'Session'
+- scrollUntilVisible:
+    element: 'Environment'
+    direction: DOWN
+- tapOn: 'Environment'
+
+# Manual entry, not GPS: the E2E run must not depend on a permission prompt or on
+# the simulator having a location fix. See environment-location-denied.yaml for
+# the permission path itself.
+- tapOn: 'Temperature'
+- inputText: '72'
+- hideKeyboard
+- tapOn: 'Altitude'
+- inputText: '5280'
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: 'Save'
+    direction: DOWN
+- tapOn: 'Save'
+
+# --- Session ----------------------------------------------------------------
+- tapOn: 'Session'
+- tapOn: 'Start Session'
+- tapOn: 'Tikka T3x'
+- tapOn: '175gr SMK'
+- tapOn: 'Start'
+
+- assertVisible: 'Tikka T3x'
+
+# --- Record -----------------------------------------------------------------
+- tapOn: 'Increase elevation correction, mils'
+- tapOn: 'Increase elevation correction, mils'
+- tapOn: 'Adjust windage correction right, mils'
+
+# One tap from "corrections dialled" to "shot logged". If a confirmation step is
+# ever inserted here, this flow fails -- which is the intent.
+- tapOn: 'Record shot'
+- assertVisible: 'Shots fired, 1'
+
+# --- It reached the log -----------------------------------------------------
+- tapOn: 'History'
+- assertVisible: 'Tikka T3x'

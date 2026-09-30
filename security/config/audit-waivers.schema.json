@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/karlgroves/mobileDOPE/security/config/audit-waivers.schema.json",
+  "title": "npm audit waivers",
+  "description": "Individually recorded, time-limited acceptances of known advisories. See security/docs/security-exceptions.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["waivers"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "waivers": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/waiver" }
+    }
+  },
+  "definitions": {
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "package",
+        "severity",
+        "reason",
+        "disposition",
+        "owner",
+        "expires",
+        "tracking"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}$",
+          "description": "GitHub Security Advisory id. Waivers are per advisory, never per package."
+        },
+        "package": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["low", "moderate", "high", "critical"] },
+        "reason": {
+          "type": "string",
+          "minLength": 40,
+          "description": "Why this is tolerable HERE. Must reference this app's actual exposure, not restate the advisory."
+        },
+        "disposition": {
+          "enum": ["fixable-now", "blocked-on-upstream", "not-exploitable-here"],
+          "description": "fixable-now is not a valid resting state -- it means the waiver exists only until the next dependency pass."
+        },
+        "owner": { "type": "string", "minLength": 1 },
+        "expires": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "ISO date. Maximum 90 days from the date the waiver was written."
+        },
+        "tracking": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}

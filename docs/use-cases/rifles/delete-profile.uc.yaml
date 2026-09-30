@@ -1,0 +1,46 @@
+id: rifles-delete-profile
+title: 'Delete a rifle profile'
+type: positive
+description: >-
+  A destructive action. Asserts that it is confirmed before it happens, that
+  cancelling really cancels, and that the confirmation names what is about to be
+  deleted rather than asking "are you sure?" about nothing in particular.
+
+preconditions:
+  - 'A rifle profile named at data.rifle_name exists'
+  - 'A second rifle profile exists, so the list is not left empty'
+
+start_location: 'Rifles/RifleProfileList'
+
+expected_result: >-
+  After confirming, the rifle is gone from the list and from any selector that
+  offered it. After cancelling, nothing changes.
+
+data:
+  rifle_name: 'Tikka T3x'
+  delete_button: 'Delete Tikka T3x'
+  # REPLACE: the confirmation dialog. It must name the rifle.
+  confirm_title: 'Delete Tikka T3x?'
+  confirm_button: 'Delete'
+  cancel_button: 'Cancel'
+
+steps:
+  - audit: page
+
+  # Cancel path first: prove the destructive action is genuinely optional.
+  - locate: button "{{ delete_button }}"
+  - focus: button "{{ delete_button }}"
+  - activate: button "{{ delete_button }}"
+  - verify: text "{{ confirm_title }}"
+  - locate: button "{{ cancel_button }}"
+  - activate: button "{{ cancel_button }}"
+  - verify: button "{{ rifle_name }}"
+
+  # Confirm path.
+  - activate: button "{{ delete_button }}"
+  - audit: page
+  - locate: button "{{ confirm_button }}"
+  - focus: button "{{ confirm_button }}"
+  - activate: button "{{ confirm_button }}"
+
+  - verify: no_element button "{{ rifle_name }}"

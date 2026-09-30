@@ -1,16 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TabNavigator } from './TabNavigator';
+import React, { useState, useEffect, useRef } from 'react';
+import { Linking } from 'react-native';
+
+import { useTheme } from '../contexts/ThemeContext';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { useAppStore } from '../store';
+
+import { linking, restoredInitialState } from './linking';
+import { NAVIGATION_PERSISTENCE_KEY, NavigationErrorBoundary } from './NavigationErrorBoundary';
+import { navigationContainerTheme, stackHeaderOptions } from './navigationTheme';
+import { TabNavigator } from './TabNavigator';
+
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const NAVIGATION_PERSISTENCE_KEY = '@mobileDOPE:navigation_state';
-
-export const RootNavigator: React.FC = () => {
+const RestoringNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+  const { themeMode } = useAppStore((s) => s.settings);
   const [isReady, setIsReady] = useState(false);
   const [initialState, setInitialState] = useState<any | undefined>(undefined);
   const routeNameRef = useRef<string | undefined>(undefined);
@@ -19,8 +29,15 @@ export const RootNavigator: React.FC = () => {
   useEffect(() => {
     const restoreState = async () => {
       try {
-        const savedStateString = await AsyncStorage.getItem(NAVIGATION_PERSISTENCE_KEY);
-        const state = savedStateString ? JSON.parse(savedStateString) : undefined;
+        // Deliberately not just "read the saved state". NavigationContainer
+        // prefers the `initialState` prop over the state it derives from an
+        // incoming URL, so restoring unconditionally would swallow every
+        // cold-start deep link -- the user taps a link to one log and lands on
+        // whatever screen they last closed. See restoredInitialState (#65).
+        const state = await restoredInitialState(
+          () => Linking.getInitialURL(),
+          () => AsyncStorage.getItem(NAVIGATION_PERSISTENCE_KEY)
+        );
 
         if (state !== undefined) {
           setInitialState(state);
@@ -44,6 +61,8 @@ export const RootNavigator: React.FC = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navigationContainerTheme(colors, themeMode)}
+      linking={linking}
       initialState={initialState}
       onStateChange={async (state) => {
         try {
@@ -65,17 +84,28 @@ export const RootNavigator: React.FC = () => {
             presentation: 'modal',
             headerShown: true,
             title: 'Settings',
-            headerStyle: {
-              backgroundColor: '#2a2a2a',
-            },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              fontSize: 18,
-            },
+            ...stackHeaderOptions(colors),
+          }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{
+            headerShown: true,
+            title: 'Privacy Policy',
+            ...stackHeaderOptions(colors),
           }}
         />
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
+
+/**
+ * The app's navigation, behind an error boundary (see NavigationErrorBoundary).
+ */
+export const RootNavigator: React.FC = () => (
+  <NavigationErrorBoundary>
+    <RestoringNavigator />
+  </NavigationErrorBoundary>
+);

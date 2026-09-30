@@ -14,6 +14,15 @@ interface AppSettings {
   themeMode: ThemeMode;
   hapticFeedbackEnabled: boolean;
   keepScreenAwakeDuringSession: boolean;
+  /**
+   * Fold spin drift and Coriolis into the dialled solution (#71).
+   *
+   * Off by default. Both terms are small until several hundred yards, and a
+   * shooter who has built a DOPE card against the unadjusted solution would
+   * find every number shifted underneath them by an update. Opting in is the
+   * safe direction; the calculator shows the terms either way.
+   */
+  advancedBallisticsEnabled: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -52,6 +61,7 @@ const defaultSettings: AppSettings = {
   themeMode: 'dark',
   hapticFeedbackEnabled: true,
   keepScreenAwakeDuringSession: true,
+  advancedBallisticsEnabled: false,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 

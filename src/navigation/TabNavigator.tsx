@@ -1,30 +1,37 @@
-import React from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { useTheme } from '../contexts/ThemeContext';
 import { DashboardScreen } from '../screens/DashboardScreen';
+
+import { AmmoNavigator } from './AmmoNavigator';
+import { CalculatorNavigator } from './CalculatorNavigator';
+import { HistoryNavigator } from './HistoryNavigator';
+import { tabBarOptions } from './navigationTheme';
 import { RiflesNavigator } from './RiflesNavigator';
 import { SessionNavigator } from './SessionNavigator';
-import { CalculatorNavigator } from './CalculatorNavigator';
-import { AmmoNavigator } from './AmmoNavigator';
-import { HistoryNavigator } from './HistoryNavigator';
+
 import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const TabNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const tabBar = tabBarOptions(useTheme().theme.colors);
 
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#B0B0B0',
+        ...tabBar,
         tabBarStyle: {
-          backgroundColor: '#2a2a2a',
-          borderTopColor: '#404040',
-          height: 60 + insets.bottom,
+          ...tabBar.tabBarStyle,
+          // 52pt between the paddings holds the icon and its label. At 60 the
+          // label overflowed its item, which only showed once night vision
+          // filled the active item and cut the label in half (#148).
+          height: 68 + insets.bottom,
           paddingBottom: insets.bottom + 8,
           paddingTop: 8,
         },
@@ -87,8 +94,10 @@ export const TabNavigator: React.FC = () => {
         name="Session"
         component={SessionNavigator}
         options={{
-          tabBarLabel: 'Weather',
-          tabBarIcon: ({ color, size }) => <Ionicons name="cloudy" size={size} color={color} />,
+          // It opens the range-session stack. It said "Weather" with a cloud
+          // icon from dadf991 until #131.
+          tabBarLabel: 'Session',
+          tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />,
           lazy: false,
         }}
       />

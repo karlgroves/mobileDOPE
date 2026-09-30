@@ -47,8 +47,7 @@ export interface EnvironmentSnapshotRow {
   density_altitude: number; // feet (calculated)
   wind_speed: number; // mph
   wind_direction: number; // degrees (0-360)
-  latitude?: number;
-  longitude?: number;
+  latitude?: number; // degrees, one decimal place -- see src/utils/geoPrecision.ts
   timestamp: string; // ISO date string
 }
 
@@ -57,7 +56,11 @@ export interface DOPELogRow {
   rifle_id: number;
   ammo_id: number;
   environment_id: number;
-  distance: number; // yards
+  // In `distance_unit`, NOT normalised to yards -- DOPELogEntry stores the
+  // number as typed. This comment said "yards" while the column beside it stored
+  // a unit; both could not be true, and code had been written against each of
+  // them. Use `logDistanceInYards` before computing with it. (#106)
+  distance: number; // in distance_unit
   distance_unit: 'yards' | 'meters';
   elevation_correction: number; // MIL or MOA
   windage_correction: number; // MIL or MOA
@@ -164,8 +167,8 @@ export const DB_SCHEMA = {
       density_altitude REAL NOT NULL,
       wind_speed REAL NOT NULL,
       wind_direction REAL NOT NULL,
+      -- Coarsened to one decimal place at capture; longitude is not collected. See #44.
       latitude REAL,
-      longitude REAL,
       timestamp TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `,

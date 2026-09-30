@@ -1,5 +1,7 @@
 import { AmmoProfileRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface AmmoProfileData {
   id?: number;
   name: string;
@@ -119,10 +121,10 @@ export class AmmoProfile {
       ballisticCoefficientG1: row.ballistic_coefficient_g1,
       ballisticCoefficientG7: row.ballistic_coefficient_g7,
       muzzleVelocity: row.muzzle_velocity,
-      powderType: row.powder_type,
-      powderWeight: row.powder_weight,
-      lotNumber: row.lot_number,
-      notes: row.notes,
+      powderType: orUndefined(row.powder_type),
+      powderWeight: orUndefined(row.powder_weight),
+      lotNumber: orUndefined(row.lot_number),
+      notes: orUndefined(row.notes),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });

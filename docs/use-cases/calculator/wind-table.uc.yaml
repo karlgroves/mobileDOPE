@@ -1,0 +1,46 @@
+id: calculator-wind-table
+title: 'Generate a wind table'
+type: positive
+description: >-
+  A grid of wind holds across speeds and distances -- the single densest piece of
+  data in the app and the hardest to make usable non-visually. A cell read as "1.4"
+  with no row or column context is worse than useless on a firing line.
+
+preconditions:
+  - 'A rifle profile and a matching ammunition profile both exist'
+
+start_location: 'Calculator/WindTable'
+
+expected_result: >-
+  A table of wind holds is produced. Each cell is attributable to its distance and
+  wind speed without relying on visual position, and the table scrolls without
+  trapping focus.
+
+data:
+  rifle_name: 'Tikka T3x'
+  ammo_name: '175gr SMK'
+  max_distance_field: 'Maximum distance, yards'
+  max_distance: '1000'
+  max_wind_field: 'Maximum wind speed, miles per hour'
+  max_wind: '20'
+  generate_button: 'Generate wind table'
+  # REPLACE: how a single cell should announce. Row and column headers are not
+  # conveyed by proximity to a screen reader.
+  sample_cell: '600 yards, 10 mile per hour wind, hold 1.1 mils'
+  table_label: 'Wind hold table'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ max_distance_field }}"
+  - focus: field "{{ max_distance_field }}"
+  - enter: field "{{ max_distance_field }}" value "{{ max_distance }}"
+  - enter: field "{{ max_wind_field }}" value "{{ max_wind }}"
+
+  - locate: button "{{ generate_button }}"
+  - activate: button "{{ generate_button }}"
+
+  - wait_for: region "{{ table_label }}"
+  - audit: region "{{ table_label }}"
+
+  - verify: text "{{ sample_cell }}"

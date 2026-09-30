@@ -96,8 +96,7 @@ export function createEnvironmentSnapshot(
     densityAltitude: 0,
     windSpeed: 5,
     windDirection: 90, // Crosswind from 3 o'clock
-    latitude: 37.7749,
-    longitude: -122.4194,
+    latitude: 37.8,
     timestamp: new Date().toISOString(),
   };
 

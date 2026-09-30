@@ -1,0 +1,43 @@
+id: calculator-moving-target
+title: 'Calculate a lead for a moving target'
+type: positive
+description: >-
+  Lead correction for a target moving at a given speed and angle. Distinct from the
+  static solution because the output is a lead in the same angular unit, and
+  confusing a lead with a windage hold is a miss.
+
+preconditions:
+  - 'A rifle profile and a matching ammunition profile both exist'
+
+start_location: 'Calculator/MovingTargetCalculator'
+
+expected_result: >-
+  A lead correction is shown, named as a lead rather than as a generic correction,
+  with its angular unit.
+
+data:
+  distance_field: 'Target distance, yards'
+  distance: '400'
+  target_speed_field: 'Target speed, miles per hour'
+  target_speed: '4'
+  angle_field: 'Target angle of travel, degrees'
+  angle: '90'
+  calculate_button: 'Calculate lead'
+  # REPLACE: the output. It must say "lead" -- a bare correction figure here is
+  # indistinguishable from a wind hold.
+  lead_output: 'Lead, 0.9 mils'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ distance_field }}"
+  - focus: field "{{ distance_field }}"
+  - enter: field "{{ distance_field }}" value "{{ distance }}"
+  - enter: field "{{ target_speed_field }}" value "{{ target_speed }}"
+  - enter: field "{{ angle_field }}" value "{{ angle }}"
+
+  - locate: button "{{ calculate_button }}"
+  - activate: button "{{ calculate_button }}"
+
+  - audit: page
+  - verify: text "{{ lead_output }}"

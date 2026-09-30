@@ -1,5 +1,7 @@
 import { TargetImageRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface POIMarker {
   x: number;
   y: number;
@@ -83,12 +85,12 @@ export class TargetImage {
   static fromRow(row: TargetImageRow): TargetImage {
     return new TargetImage({
       id: row.id,
-      dopeLogId: row.dope_log_id,
-      rangeSessionId: row.range_session_id,
+      dopeLogId: orUndefined(row.dope_log_id),
+      rangeSessionId: orUndefined(row.range_session_id),
       imageUri: row.image_uri,
       targetType: row.target_type,
       poiMarkers: JSON.parse(row.poi_markers) as POIMarker[],
-      groupSize: row.group_size,
+      groupSize: orUndefined(row.group_size),
       createdAt: row.created_at,
     });
   }

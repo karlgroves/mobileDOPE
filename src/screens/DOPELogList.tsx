@@ -14,16 +14,19 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { SegmentedControl } from '../components/SegmentedControl';
-import type { LogsStackScreenProps } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
+import { environmentRepository } from '../services/database/EnvironmentRepository';
+import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
+import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+
 import type { DOPELog } from '../models/DOPELog';
-import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService';
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogList'>;
 
@@ -141,10 +144,19 @@ export function DOPELogList({ navigation }: Props) {
       {
         text: 'CSV (Spreadsheet)',
         onPress: async () => {
+          // Every snapshot, for each log's conditions (#138).
+          let environments;
+          try {
+            environments = await environmentRepository.getAll();
+          } catch (error) {
+            Alert.alert('Error', error instanceof Error ? error.message : 'Export failed');
+            return;
+          }
           const result = await exportDOPELogsCSV(
             dopeLogs,
             useRifleStore.getState().rifles,
-            useAmmoStore.getState().ammoProfiles
+            useAmmoStore.getState().ammoProfiles,
+            environments
           );
           if (result.success) {
             Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs to CSV.`);
@@ -173,7 +185,21 @@ export function DOPELogList({ navigation }: Props) {
     const ammo = getAmmoById(item.ammoId);
 
     return (
-      <TouchableOpacity onPress={() => handleView(item)} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={() => handleView(item)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        // The card shows corrections as "↑ 2.34" and "→ 0.50". Read aloud that is
+        // two bare numbers with no axis and no unit, which is exactly the
+        // ambiguity a DOPE entry cannot afford.
+        accessibilityLabel={
+          `${rifle?.name || 'Unknown rifle'} with ${ammo?.name || 'unknown ammo'}, ` +
+          `${item.distance} ${item.distanceUnit}, ` +
+          `elevation ${item.elevationCorrection.toFixed(2)} ${item.correctionUnit}, ` +
+          `windage ${item.windageCorrection.toFixed(2)} ${item.correctionUnit}`
+        }
+        accessibilityHint="Opens the full log entry"
+      >
         <Card style={[styles.logCard, { backgroundColor: colors.surface }]}>
           <View style={styles.logHeader}>
             <View style={styles.logTitleContainer}>
@@ -185,10 +211,10 @@ export function DOPELogList({ navigation }: Props) {
               </Text>
             </View>
             <View style={styles.correctionBadge}>
-              <Text style={[styles.correctionText, { color: colors.primary }]}>
+              <Text style={[styles.correctionText, { color: colors.primaryText }]}>
                 ↑ {item.elevationCorrection.toFixed(2)}
               </Text>
-              <Text style={[styles.correctionText, { color: colors.primary }]}>
+              <Text style={[styles.correctionText, { color: colors.primaryText }]}>
                 → {item.windageCorrection.toFixed(2)}
               </Text>
             </View>
@@ -231,14 +257,20 @@ export function DOPELogList({ navigation }: Props) {
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
               onPress={() => handleEdit(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit log at ${item.distance} ${item.distanceUnit}`}
+              accessibilityHint="Opens this entry for editing"
             >
-              <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.primaryText }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
               onPress={() => handleDelete(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete log at ${item.distance} ${item.distanceUnit}`}
+              accessibilityHint="Asks for confirmation before removing this entry"
             >
-              <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
+              <Text style={[styles.actionText, { color: colors.errorText }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </Card>
@@ -282,6 +314,8 @@ export function DOPELogList({ navigation }: Props) {
                   borderColor: colors.border,
                 },
               ]}
+              accessibilityLabel="Search DOPE logs"
+              accessibilityHint="Filters the list as you type"
               placeholder="Search logs..."
               placeholderTextColor={colors.text.secondary}
               value={searchQuery}
@@ -325,12 +359,18 @@ export function DOPELogList({ navigation }: Props) {
                 { backgroundColor: colors.surface, borderColor: colors.primary },
               ]}
               onPress={handleExport}
+              accessibilityRole="button"
+              accessibilityLabel="Export DOPE logs"
+              accessibilityHint="Choose a format and share the exported file"
             >
-              <Text style={[styles.exportFabText, { color: colors.primary }]}>↗</Text>
+              <Text style={[styles.exportFabText, { color: colors.primaryText }]}>↗</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.fab, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('DOPELogEdit', {})}
+              accessibilityRole="button"
+              accessibilityLabel="Add DOPE log entry"
+              accessibilityHint="Opens an empty log entry form"
             >
               <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>

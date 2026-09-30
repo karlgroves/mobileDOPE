@@ -1,0 +1,58 @@
+id: settings-backup-and-restore
+title: 'Export a full backup and restore from it'
+type: positive
+description: >-
+  The whole data set out and back in. This is the only route by which everything the
+  user has entered leaves the device, so the export carries a disclosure step: a
+  backup includes the approximate latitude recorded with each set of conditions, and
+  the app offers to leave it out.
+
+preconditions:
+  - 'At least one rifle, one load, one environment snapshot and one DOPE log exist'
+
+start_location: 'Settings'
+
+expected_result: >-
+  A backup file is produced and shared. Importing it restores every record type, with
+  DOPE logs still linked to their rifle, load and conditions.
+
+data:
+  export_button: 'Export All Data'
+  full_backup_option: 'Full Backup (All Data)'
+  # REPLACE: the disclosure shown before a backup that contains coordinates.
+  location_warning_title: 'This backup contains location data'
+  leave_location_out: 'Leave Location Out'
+  include_location: 'Include Location'
+  # REPLACE: the success message, which should report counts so a silent partial
+  # export is visible.
+  export_summary: 'Exported 1 rifles, 1 ammo profiles'
+  import_button: 'Import Data'
+  import_full_option: 'Full Backup'
+  import_summary: 'Imported 1 rifles, 1 ammo profiles'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ export_button }}"
+  - focus: button "{{ export_button }}"
+  - activate: button "{{ export_button }}"
+  - activate: button "{{ full_backup_option }}"
+
+  # The user is told what is in the file, at the moment it matters.
+  - verify: text "{{ location_warning_title }}"
+  - verify: button "{{ leave_location_out }}"
+  - locate: button "{{ include_location }}"
+  - activate: button "{{ include_location }}"
+
+  - sr_says: '"{{ export_summary }}" after activate button "{{ include_location }}"'
+
+  - locate: button "{{ import_button }}"
+  - focus: button "{{ import_button }}"
+  - activate: button "{{ import_button }}"
+  - activate: button "{{ import_full_option }}"
+
+  - sr_says: '"{{ import_summary }}" after activate button "{{ import_full_option }}"'
+
+  # Restored logs must still resolve their rifle, load and conditions.
+  - navigate: 'MainTabs/History'
+  - verify: text "Tikka T3x"

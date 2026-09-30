@@ -1,0 +1,46 @@
+id: settings-distance-presets
+title: 'Add and remove distance presets'
+type: positive
+description: >-
+  Presets are what make dashboard entry one-tap. Asserts a preset can be added and
+  removed, that the input is labelled (it is a bare TextInput whose accessible name
+  was once the autofixer placeholder "Text input field"), and that the change reaches
+  the dashboard.
+
+preconditions:
+  - 'The default distance presets are in place'
+
+start_location: 'Settings'
+
+expected_result: >-
+  The added preset appears on the dashboard's distance selector. The removed one no
+  longer does. Presets stay sorted.
+
+data:
+  preset_field: 'New distance preset, yards'
+  preset_hint: 'Enter a distance, then activate Add to save it as a preset'
+  add_button: 'Add'
+  new_preset: '650'
+  # REPLACE: the remove control on an existing preset chip.
+  remove_preset_button: 'Remove 900 yard preset'
+  removed_preset: '900'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ preset_field }}"
+  - focus: field "{{ preset_field }}"
+  - verify: field "{{ preset_field }}" has_description "{{ preset_hint }}"
+  - enter: field "{{ preset_field }}" value "{{ new_preset }}"
+
+  - locate: button "{{ add_button }}"
+  - activate: button "{{ add_button }}"
+  - verify: text "{{ new_preset }}"
+
+  - locate: button "{{ remove_preset_button }}"
+  - focus: button "{{ remove_preset_button }}"
+  - activate: button "{{ remove_preset_button }}"
+  - verify: no_element text "{{ removed_preset }}"
+
+  - navigate: 'MainTabs/Dashboard'
+  - verify: button "{{ new_preset }}"

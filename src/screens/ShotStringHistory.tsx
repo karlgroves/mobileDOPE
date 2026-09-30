@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AmmoStackParamList } from '../navigation/types';
-import { useAmmoStore } from '../store/useAmmoStore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
+
 import { Card, Button, EmptyState } from '../components';
-import { AmmoProfileData } from '../models/AmmoProfile';
 import { useTheme } from '../contexts/ThemeContext';
+import { AmmoProfileData } from '../models/AmmoProfile';
+import { ShotString } from '../models/ShotString';
+import { AmmoStackParamList } from '../navigation/types';
 import {
   shotStringRepository,
   ShotStringStatistics,
 } from '../services/database/ShotStringRepository';
-import { ShotString } from '../models/ShotString';
+import { useAmmoStore } from '../store/useAmmoStore';
 
 type ShotStringHistoryNavigationProp = NativeStackNavigationProp<
   AmmoStackParamList,
@@ -49,7 +50,19 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onDelete, onUpdateVe
 
   return (
     <Card style={styles.sessionCard}>
-      <Pressable onPress={() => setExpanded(!expanded)} style={styles.sessionHeader}>
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={styles.sessionHeader}
+        accessibilityRole="button"
+        // "ES: 24" and a bare fps figure read as loose numbers; name each stat.
+        accessibilityLabel={
+          `${formattedDate}, ${session.stats.count} shots, ` +
+          `average velocity ${session.stats.averageVelocity} feet per second, ` +
+          `extreme spread ${session.stats.extremeSpread}`
+        }
+        accessibilityHint={expanded ? 'Collapses this session' : 'Expands to show each shot'}
+        accessibilityState={{ expanded }}
+      >
         <View style={styles.sessionInfo}>
           <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>{formattedDate}</Text>
           <Text style={[styles.sessionSubtitle, { color: colors.text.secondary }]}>
@@ -172,7 +185,7 @@ export const ShotStringHistory: React.FC = () => {
   if (!ammo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>Ammo profile not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>Ammo profile not found</Text>
       </View>
     );
   }

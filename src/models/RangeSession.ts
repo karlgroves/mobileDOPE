@@ -1,5 +1,7 @@
 import { RangeSessionRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface RangeSessionData {
   id?: number;
   rifleId: number;
@@ -103,13 +105,17 @@ export class RangeSession {
       rifleId: row.rifle_id,
       ammoId: row.ammo_id,
       environmentId: row.environment_id,
-      sessionName: row.session_name,
+      sessionName: orUndefined(row.session_name),
       startTime: row.start_time,
-      endTime: row.end_time,
+      endTime: orUndefined(row.end_time),
       distance: row.distance,
       shotCount: row.shot_count,
-      coldBoreShot: row.cold_bore_shot,
-      notes: row.notes,
+      // SQLite has no boolean type, so this column is 0/1. Coerce it rather than passing
+      // the integer through: the field is typed `boolean`, and `toJSON()` emits it
+      // verbatim, so without this an exported session loaded from the database carries
+      // `1` while a freshly created one carries `true`.
+      coldBoreShot: Boolean(row.cold_bore_shot),
+      notes: orUndefined(row.notes),
       createdAt: row.created_at,
     });
   }

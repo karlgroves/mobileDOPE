@@ -1,49 +1,13 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { TextInput, NumberInput, Picker, Button } from '../components';
-import { useRifleStore } from '../store/useRifleStore';
-import { RifleProfileData } from '../models/RifleProfile';
-import { useTheme } from '../contexts/ThemeContext';
+import React, { useState } from 'react';
+import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 
-// Standard caliber options
-const CALIBER_OPTIONS = [
-  { label: '.17 HM2 (Hornady Mach 2)', value: '.17 HM2' },
-  { label: '.17 HMR (Hornady Magnum Rimfire)', value: '.17 HMR' },
-  { label: '.17 WSM (Winchester Super Magnum)', value: '.17 WSM' },
-  { label: '.21 Sharp', value: '.21 Sharp' },
-  { label: '.22 CB', value: '.22 CB' },
-  { label: '.22 Creedmoor', value: '.22 Creedmoor' },
-  { label: '.22 Long', value: '.22 Long' },
-  { label: '.22 Mag (.22 WMR)', value: '.22 WMR' },
-  { label: '.22 Short', value: '.22 Short' },
-  { label: '.22 Win Auto', value: '.22 Win Auto' },
-  { label: '.22 Win Rimfire (.22 WRF)', value: '.22 WRF' },
-  { label: '.223 Remington', value: '.223 Remington' },
-  { label: '.22LR', value: '.22LR' },
-  { label: '.243 Win', value: '.243 Win' },
-  { label: '.25 Stevens Short', value: '.25 Stevens Short' },
-  { label: '.270 Win', value: '.270 Win' },
-  { label: '.30-06', value: '.30-06' },
-  { label: '.30-30 Win', value: '.30-30 Win' },
-  { label: '.300 AAC Blackout (7.62x35mm)', value: '.300 AAC Blackout' },
-  { label: '.300 Win Mag', value: '.300 Win Mag' },
-  { label: '.308/7.62x51mm (.308 Winchester)', value: '.308 Winchester' },
-  { label: '.32 Long Rimfire', value: '.32 Long Rimfire' },
-  { label: '.45-70', value: '.45-70' },
-  { label: '5.45x39mm', value: '5.45x39mm' },
-  { label: '5.56x45mm NATO', value: '5.56 NATO' },
-  { label: '6.5mm Creedmoor', value: '6.5 Creedmoor' },
-  { label: '6.5mm Grendel', value: '6.5 Grendel' },
-  { label: '6mm PRC', value: '6mm PRC' },
-  { label: '6mm ARC', value: '6mm ARC' },
-  { label: '7.62x39mm', value: '7.62x39mm' },
-  { label: '7.62x54R', value: '7.62x54R' },
-  { label: '7mm PRC', value: '7mm PRC' },
-  { label: '7.92x57mm (8x57 JS)', value: '7.92x57mm' },
-  { label: '9mm Flobert', value: '9mm Flobert' },
-];
+import { TextInput, NumberInput, Picker, Button } from '../components';
+import { CALIBER_OPTIONS } from '../constants/calibers';
+import { useTheme } from '../contexts/ThemeContext';
+import { RifleProfileData } from '../models/RifleProfile';
+import { useRifleStore } from '../store/useRifleStore';
 
 type RootStackParamList = {
   RifleProfileForm: { rifleId?: number };
@@ -180,6 +144,8 @@ export const RifleProfileForm: React.FC = () => {
     >
       <TextInput
         label="Rifle Name"
+        accessibilityLabel="Rifle name"
+        accessibilityHint="The name this rifle appears under in lists and DOPE cards"
         value={name}
         onChangeText={setName}
         placeholder="e.g., Remington 700"
@@ -214,6 +180,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Twist Rate"
+        accessibilityLabel="Barrel twist rate, inches per turn"
+        accessibilityHint="For example, 1 in 8. Used for spin drift and stability"
         value={twistRate}
         onChangeText={setTwistRate}
         placeholder="e.g., 1:10"
@@ -238,6 +206,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Optic Manufacturer"
+        accessibilityLabel="Optic manufacturer"
+        accessibilityHint="For example, Vortex, Nightforce or Leupold"
         value={opticManufacturer}
         onChangeText={setOpticManufacturer}
         placeholder="e.g., Vortex, Leupold"
@@ -248,6 +218,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Optic Model"
+        accessibilityLabel="Optic model"
+        accessibilityHint="For example, Razor H D Gen 3"
         value={opticModel}
         onChangeText={setOpticModel}
         placeholder="e.g., Razor HD Gen II"
@@ -258,6 +230,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Reticle Type"
+        accessibilityLabel="Reticle type"
+        accessibilityHint="For example, E B R 7C or Tremor 3"
         value={reticleType}
         onChangeText={setReticleType}
         placeholder="e.g., EBR-2C, Horus H59"
@@ -305,6 +279,8 @@ export const RifleProfileForm: React.FC = () => {
 
       <TextInput
         label="Notes"
+        accessibilityLabel="Notes about this rifle"
+        accessibilityHint="Optional free text, for example zero history or maintenance"
         value={notes}
         onChangeText={setNotes}
         placeholder="Additional notes (optional)"

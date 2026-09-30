@@ -1,5 +1,6 @@
 import { TargetImage, TargetImageData } from '../../models/TargetImage';
 import { TargetImageRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export class TargetImageRepository {

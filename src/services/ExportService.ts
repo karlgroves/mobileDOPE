@@ -4,13 +4,14 @@
  */
 
 import { Paths, File } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
-import type { RifleProfile } from '../models/RifleProfile';
+import * as Sharing from 'expo-sharing';
+
 import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
-import type { RangeSession } from '../models/RangeSession';
 import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import type { RangeSession } from '../models/RangeSession';
+import type { RifleProfile } from '../models/RifleProfile';
 import type { BallisticSolution } from '../types/ballistic.types';
 
 /**
@@ -33,8 +34,9 @@ function sanitizeCsvCell(value: string | number | undefined | null): string {
   const str = String(value);
   // Wrap in quotes and escape internal quotes
   const escaped = str.replace(/"/g, '""');
-  // Prefix formula-triggering characters
-  if (/^[=+\-@\t\r]/.test(escaped)) {
+  // Prefix formula-triggering characters. A number is never a formula, and
+  // prefixing its minus sign would export -0.5 as text (#138).
+  if (typeof value !== 'number' && /^[=+\-@\t\r]/.test(escaped)) {
     return `"'${escaped}"`;
   }
   return `"${escaped}"`;
@@ -156,9 +158,19 @@ export async function exportAllRifleProfilesJSON(rifles: RifleProfile[]): Promis
 }
 
 /**
- * Convert DOPE logs to CSV format
+ * Convert DOPE logs to CSV format.
+ *
+ * Hits and shots are separate columns: a log of 0 from 5 used to export as a
+ * hit, and a single "3/5" cell opens in a spreadsheet as the 5th of March
+ * (#138). Conditions come from each log's own snapshot, in the units the app
+ * records them in. Latitude is deliberately not exported (PRIVACY.md).
  */
-function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfile[]): string {
+function dopeLogsToCSV(
+  logs: DOPELog[],
+  rifles: RifleProfile[],
+  ammos: AmmoProfile[],
+  environments: EnvironmentSnapshot[]
+): string {
   const getRifleName = (rifleId?: number) => {
     const rifle = rifles.find((r) => r.id === rifleId);
     return rifle ? rifle.name : 'Unknown';
@@ -169,6 +181,8 @@ function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfi
     return ammo ? ammo.name : 'Unknown';
   };
 
+  const environmentsById = new Map(environments.map((env) => [env.id, env]));
+
   // CSV header
   const headers = [
     'Date',
@@ -178,19 +192,21 @@ function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfi
     'Elevation Correction',
     'Windage Correction',
     'Angular Unit',
-    'Hit',
+    'Hits',
+    'Shots',
     'Target Type',
     'Group Size',
-    'Temperature',
-    'Humidity',
-    'Pressure',
-    'Wind Speed',
-    'Wind Direction',
-    'Altitude',
+    'Temperature (°F)',
+    'Humidity (%)',
+    'Pressure (inHg)',
+    'Wind Speed (mph)',
+    'Wind Direction (°)',
+    'Altitude (ft)',
     'Notes',
   ];
 
   const rows = logs.map((log) => {
+    const env = environmentsById.get(log.environmentId);
     return [
       sanitizeCsvCell(log.timestamp ? new Date(log.timestamp).toISOString() : ''),
       sanitizeCsvCell(getRifleName(log.rifleId)),
@@ -199,15 +215,16 @@ function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfi
       sanitizeCsvCell(log.elevationCorrection),
       sanitizeCsvCell(log.windageCorrection),
       sanitizeCsvCell(log.correctionUnit),
-      sanitizeCsvCell(log.hitCount || log.shotCount ? 'Yes' : 'No'),
+      sanitizeCsvCell(log.hitCount),
+      sanitizeCsvCell(log.shotCount),
       sanitizeCsvCell(log.targetType),
       sanitizeCsvCell(log.groupSize),
-      sanitizeCsvCell(''), // temperature
-      sanitizeCsvCell(''), // humidity
-      sanitizeCsvCell(''), // pressure
-      sanitizeCsvCell(''), // windSpeed
-      sanitizeCsvCell(''), // windDirection
-      sanitizeCsvCell(''), // altitude
+      sanitizeCsvCell(env?.temperature),
+      sanitizeCsvCell(env?.humidity),
+      sanitizeCsvCell(env?.pressure),
+      sanitizeCsvCell(env?.windSpeed),
+      sanitizeCsvCell(env?.windDirection),
+      sanitizeCsvCell(env?.altitude),
       sanitizeCsvCell(log.notes),
     ];
   });
@@ -223,13 +240,14 @@ function dopeLogsToCSV(logs: DOPELog[], rifles: RifleProfile[], ammos: AmmoProfi
 export async function exportDOPELogsCSV(
   logs: DOPELog[],
   rifles: RifleProfile[],
-  ammos: AmmoProfile[]
+  ammos: AmmoProfile[],
+  environments: EnvironmentSnapshot[]
 ): Promise<ExportResult> {
   try {
     const filename = `dope_logs_${Date.now()}.csv`;
     const file = new File(Paths.document, filename);
 
-    const csvContent = dopeLogsToCSV(logs, rifles, ammos);
+    const csvContent = dopeLogsToCSV(logs, rifles, ammos, environments);
     await file.write(csvContent);
 
     const canShare = await Sharing.isAvailableAsync();
@@ -536,30 +554,58 @@ export async function exportDOPELogsPDF(
   }
 }
 
+/** Options for {@link exportFullBackup}. */
+export interface FullBackupOptions {
+  /**
+   * Whether to include the latitude recorded with each environment snapshot.
+   *
+   * A backup is the only path by which data leaves the device, and latitude says
+   * where the user shoots. It is coarsened to ~11 km at capture, but that is still
+   * a location, so the export flow asks before including it. Defaults to `true` so
+   * a backup taken for restore purposes stays complete. See issue #44.
+   */
+  includeCoordinates?: boolean;
+}
+
 /**
  * Export full database backup (all data)
  */
 export async function exportFullBackup(
   rifles: RifleProfile[],
   ammos: AmmoProfile[],
-  logs: DOPELog[]
+  logs: DOPELog[],
+  environments: EnvironmentSnapshot[] = [],
+  options: FullBackupOptions = {}
 ): Promise<ExportResult> {
+  const { includeCoordinates = true } = options;
   try {
     const filename = `mobiledope_backup_${Date.now()}.json`;
     const file = new File(Paths.document, filename);
 
     const data = {
       exportDate: new Date().toISOString(),
-      exportVersion: '1.0',
+      // 1.1 added `environments`. Without them a restored DOPE log has no environment row to
+      // reference, and since environment_id is NOT NULL with a foreign key, every log failed
+      // to import -- see issue #39. Importers must keep reading 1.0 files, but cannot
+      // recover logs from them.
+      exportVersion: '1.1',
       type: 'full_backup',
       data: {
         rifles: rifles.map((r) => r.toJSON()),
         ammos: ammos.map((a) => a.toJSON()),
+        environments: environments.map((e) => {
+          const json = e.toJSON();
+          if (includeCoordinates) return json;
+          // `id` must survive: DOPE logs reference it on restore (issue #39).
+          const { latitude: _latitude, ...withoutCoordinates } = json;
+          return withoutCoordinates;
+        }),
         logs: logs.map((l) => l.toJSON()),
       },
       counts: {
         rifles: rifles.length,
         ammos: ammos.length,
+        environments: environments.length,
         logs: logs.length,
       },
     };

@@ -1,6 +1,9 @@
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import React from 'react';
+import { StyleSheet } from 'react-native';
+
 import { TextInput } from '../../src/components/TextInput';
+import { theme } from '../../src/constants/theme';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
 // Wrapper component to provide theme context
@@ -81,11 +84,13 @@ describe('TextInput Component', () => {
     );
 
     const input = getByPlaceholderText('Enter name');
-    expect(input.props.style).toMatchObject(
-      expect.objectContaining({
-        borderColor: expect.any(String),
-      })
-    );
+    // React Native passes `style` through as an array of style objects, so flatten to
+    // the effective style before asserting. Asserting the error colour specifically
+    // (rather than `expect.any(String)`) is what makes this test able to fail: every
+    // state of this input sets *some* borderColor.
+    expect(StyleSheet.flatten(input.props.style)).toMatchObject({
+      borderColor: theme.colors.error,
+    });
   });
 
   it('should render with helper text', () => {
@@ -217,11 +222,68 @@ describe('TextInput Component', () => {
     );
 
     const input = getByPlaceholderText('Enter name');
-    // Minimum touch target should be 44pt (per accessibility guidelines)
-    expect(input.props.style).toMatchObject(
-      expect.objectContaining({
-        minHeight: expect.any(Number),
-      })
-    );
+    // Minimum touch target should be 44pt (per accessibility guidelines).
+    // `style` arrives as an array, so flatten first. Assert the actual guarantee rather
+    // than `expect.any(Number)`, which would pass for a 1pt-tall input.
+    const { minHeight } = StyleSheet.flatten(input.props.style);
+    expect(minHeight).toBeGreaterThanOrEqual(theme.touchTargets.min);
+  });
+
+  describe('accessible name', () => {
+    // React Native does not link the visible label to the field, so without an
+    // explicit name the input announces as "text field". See issue #30.
+    it('names the field from its visible label', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Muzzle Velocity" value="" onChangeText={jest.fn()} />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Muzzle Velocity')).toBeTruthy();
+    });
+
+    it('announces that a required field is required', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Ammo Name" value="" onChangeText={jest.fn()} required />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Ammo Name, required')).toBeTruthy();
+    });
+
+    it('prefers an explicit accessibilityLabel over the visible label', () => {
+      // The quality bar for this app: a terse visible label needs a spoken form
+      // that carries the unit and the axis.
+      const { getByLabelText } = render(
+        <TextInput
+          label="MV"
+          accessibilityLabel="Muzzle velocity, feet per second"
+          value=""
+          onChangeText={jest.fn()}
+        />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Muzzle velocity, feet per second')).toBeTruthy();
+    });
+
+    it('reads the error out with the field rather than as a stray sibling', () => {
+      const { getByLabelText } = render(
+        <TextInput label="Ammo Name" value="" onChangeText={jest.fn()} error="Name is required" />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Ammo Name').props.accessibilityHint).toBe('Name is required');
+    });
+
+    it('falls back to helper text for the hint when there is no error', () => {
+      const { getByLabelText } = render(
+        <TextInput
+          label="Lot Number"
+          value=""
+          onChangeText={jest.fn()}
+          helperText="Optional: manufacturer lot number"
+        />,
+        { wrapper: Wrapper }
+      );
+      expect(getByLabelText('Lot Number').props.accessibilityHint).toBe(
+        'Optional: manufacturer lot number'
+      );
+    });
   });
 });

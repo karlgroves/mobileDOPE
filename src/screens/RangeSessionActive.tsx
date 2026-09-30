@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert, Pressable } from 'react-native';
+
+import { Card, Button, NumberPicker } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
+import { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import { RangeSession } from '../models/RangeSession';
+import { environmentRepository } from '../services/database/EnvironmentRepository';
+import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
-import { Card, Button, NumberPicker } from '../components';
-import { rangeSessionRepository } from '../services/database/RangeSessionRepository';
-import { environmentRepository } from '../services/database/EnvironmentRepository';
-import { calculateBallisticSolution } from '../utils/ballistics';
+import { useRifleStore } from '../store/useRifleStore';
 import { BallisticSolution } from '../types/ballistic.types';
-import { RangeSession } from '../models/RangeSession';
-import { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
+import { calculateBallisticSolution } from '../utils/ballistics';
+
 import type { SessionStackScreenProps } from '../navigation/types';
 
 type Props = SessionStackScreenProps<'RangeSessionActive'>;
@@ -317,8 +319,14 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               {distance} yards
             </Text>
             {(elevationAdjustment !== 0 || windageAdjustment !== 0) && (
-              <Pressable onPress={resetAdjustments} style={styles.resetButton}>
-                <Text style={[styles.resetButtonText, { color: colors.primary }]}>Reset</Text>
+              <Pressable
+                onPress={resetAdjustments}
+                style={styles.resetButton}
+                accessibilityRole="button"
+                accessibilityLabel="Reset elevation and windage adjustments"
+                accessibilityHint="Returns both corrections to the calculated solution"
+              >
+                <Text style={[styles.resetButtonText, { color: colors.primaryText }]}>Reset</Text>
               </Pressable>
             )}
           </View>
@@ -333,22 +341,32 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
                 <Pressable
                   style={[styles.adjustButton, { backgroundColor: colors.surface }]}
                   onPress={() => adjustElevation(-0.1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease elevation correction, mils"
+                  accessibilityHint={`Subtracts 0.1 mils. Currently ${
+                    adjustedElevation !== null ? adjustedElevation.toFixed(1) : 'no solution'
+                  }`}
                 >
                   <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>−</Text>
                 </Pressable>
-                <Text style={[styles.correctionValue, { color: colors.primary }]}>
+                <Text style={[styles.correctionValue, { color: colors.primaryText }]}>
                   {adjustedElevation !== null ? adjustedElevation.toFixed(1) : '--'}
                 </Text>
                 <Pressable
                   style={[styles.adjustButton, { backgroundColor: colors.surface }]}
                   onPress={() => adjustElevation(0.1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase elevation correction, mils"
+                  accessibilityHint={`Adds 0.1 mils. Currently ${
+                    adjustedElevation !== null ? adjustedElevation.toFixed(1) : 'no solution'
+                  }`}
                 >
                   <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>+</Text>
                 </Pressable>
               </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {elevationAdjustment !== 0 && (
-                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                <Text style={[styles.adjustmentIndicator, { color: colors.warningText }]}>
                   {elevationAdjustment > 0 ? '+' : ''}
                   {elevationAdjustment.toFixed(1)}
                 </Text>
@@ -366,10 +384,19 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
                 <Pressable
                   style={[styles.adjustButton, { backgroundColor: colors.surface }]}
                   onPress={() => adjustWindage(-0.1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Adjust windage correction left, mils"
+                  accessibilityHint={`Moves the hold 0.1 mils left. Currently ${
+                    adjustedWindage !== null
+                      ? `${Math.abs(adjustedWindage).toFixed(1)} ${
+                          adjustedWindage >= 0 ? 'right' : 'left'
+                        }`
+                      : 'no solution'
+                  }`}
                 >
                   <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>−</Text>
                 </Pressable>
-                <Text style={[styles.correctionValue, { color: colors.primary }]}>
+                <Text style={[styles.correctionValue, { color: colors.primaryText }]}>
                   {adjustedWindage !== null
                     ? `${adjustedWindage >= 0 ? 'R ' : 'L '}${Math.abs(adjustedWindage).toFixed(1)}`
                     : '--'}
@@ -377,13 +404,22 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
                 <Pressable
                   style={[styles.adjustButton, { backgroundColor: colors.surface }]}
                   onPress={() => adjustWindage(0.1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Adjust windage correction right, mils"
+                  accessibilityHint={`Moves the hold 0.1 mils right. Currently ${
+                    adjustedWindage !== null
+                      ? `${Math.abs(adjustedWindage).toFixed(1)} ${
+                          adjustedWindage >= 0 ? 'right' : 'left'
+                        }`
+                      : 'no solution'
+                  }`}
                 >
                   <Text style={[styles.adjustButtonText, { color: colors.text.primary }]}>+</Text>
                 </Pressable>
               </View>
               <Text style={[styles.correctionUnit, { color: colors.text.secondary }]}>MIL</Text>
               {windageAdjustment !== 0 && (
-                <Text style={[styles.adjustmentIndicator, { color: colors.warning }]}>
+                <Text style={[styles.adjustmentIndicator, { color: colors.warningText }]}>
                   {windageAdjustment > 0 ? '+' : ''}
                   {windageAdjustment.toFixed(1)}
                 </Text>
@@ -444,6 +480,10 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
               style={[styles.recordShotButton, { backgroundColor: colors.primary }]}
               onPress={handleRecordShot}
               disabled={isRecording}
+              accessibilityRole="button"
+              accessibilityLabel="Record shot"
+              accessibilityHint={`Logs a shot at ${distance} yards with the corrections shown`}
+              accessibilityState={{ disabled: isRecording, busy: isRecording }}
             >
               <Text style={styles.recordShotButtonText}>{isRecording ? '...' : 'SHOT'}</Text>
             </Pressable>

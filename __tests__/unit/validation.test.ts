@@ -15,7 +15,6 @@ import {
   isValidWindSpeed,
   isValidWindDirection,
   isValidLatitude,
-  isValidLongitude,
   isValidBarrelLength,
   isValidZeroDistance,
   isValidScopeHeight,
@@ -221,21 +220,6 @@ describe('Environmental Validation', () => {
     it('should reject latitudes out of range', () => {
       expect(isValidLatitude(91)).toBe(false);
       expect(isValidLatitude(-91)).toBe(false);
-    });
-  });
-
-  describe('isValidLongitude', () => {
-    it('should accept valid longitudes', () => {
-      expect(isValidLongitude(0)).toBe(true);
-      expect(isValidLongitude(100)).toBe(true);
-      expect(isValidLongitude(-100)).toBe(true);
-      expect(isValidLongitude(180)).toBe(true);
-      expect(isValidLongitude(-180)).toBe(true);
-    });
-
-    it('should reject longitudes out of range', () => {
-      expect(isValidLongitude(181)).toBe(false);
-      expect(isValidLongitude(-181)).toBe(false);
     });
   });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 export interface IconButtonProps {
@@ -8,7 +9,17 @@ export interface IconButtonProps {
   size?: 'small' | 'medium' | 'large';
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   disabled?: boolean;
-  accessibilityLabel?: string;
+  /**
+   * Required. The icon is a bare glyph, so this is the only thing a screen reader
+   * has to work with -- without it the control announces as "button" and nothing
+   * more. Name the action and its subject: "Delete rifle profile", not "Delete".
+   */
+  accessibilityLabel: string;
+  /**
+   * What happens on activation, when that is not obvious from the label alone.
+   * Omit rather than restating the label.
+   */
+  accessibilityHint?: string;
   style?: ViewStyle;
 }
 
@@ -19,10 +30,14 @@ export const IconButton: React.FC<IconButtonProps> = ({
   variant = 'ghost',
   disabled = false,
   accessibilityLabel,
+  accessibilityHint,
   style,
 }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+
+  // Apple HIG minimum, and the figure this project set for itself (#68).
+  const MIN_TOUCH_TARGET = 44;
 
   const sizeMap = {
     small: {
@@ -45,15 +60,15 @@ export const IconButton: React.FC<IconButtonProps> = ({
   const variantStyles: Record<string, { bg: string; color: string }> = {
     primary: {
       bg: colors.primary,
-      color: colors.text.inverse,
+      color: colors.onPrimary,
     },
     secondary: {
       bg: colors.secondary,
-      color: colors.text.inverse,
+      color: colors.onSecondary,
     },
     danger: {
       bg: colors.error,
-      color: colors.text.inverse,
+      color: colors.onError,
     },
     ghost: {
       bg: 'transparent',
@@ -80,13 +95,23 @@ export const IconButton: React.FC<IconButtonProps> = ({
     color: variantStyle.color,
   };
 
+  // Expand the touch area to the 44x44pt minimum without growing the button.
+  // The `small` variant is 36x36 by design -- it has to fit in list rows and chart
+  // toolbars -- so the missing 8pt is made up with hitSlop rather than by making
+  // the icon bigger. See __tests__/components/touchTargets.test.tsx (#68).
+  const slop = Math.max(0, (MIN_TOUCH_TARGET - sizeStyle.height) / 2);
+  const hitSlop = { top: slop, bottom: slop, left: slop, right: slop };
+
   return (
     <TouchableOpacity
       style={buttonStyles}
+      hitSlop={hitSlop}
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
     >
       <Text style={iconStyles}>{icon}</Text>
     </TouchableOpacity>

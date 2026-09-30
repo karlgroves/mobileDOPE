@@ -1,0 +1,223 @@
+/**
+ * Deciding what an import should do with each incoming record (#66).
+ *
+ * `ImportService` currently always creates new rows with fresh ids, so restoring
+ * the same backup twice gives you two of every rifle, every load and every log.
+ * This is the planning half: given what is already stored and what is arriving,
+ * and a strategy, work out which incoming records are duplicates and what should
+ * happen to each.
+ *
+ * Pure — no store, no database, no file I/O. The service applies the plan; this
+ * decides it, which is the part with the interesting failure modes and the part
+ * worth testing directly.
+ *
+ * ## Why matching is by natural key rather than id
+ *
+ * The importer strips `id` from every record before insert, as mass-assignment
+ * hardening. Even if it did not, ids are per-device AUTOINCREMENT values: rifle 3
+ * on the phone that wrote the backup has nothing to do with rifle 3 on the phone
+ * reading it. Matching on them would merge unrelated records, which is worse than
+ * duplicating.
+ *
+ * So each entity declares the fields that identify it in the real world. Two
+ * rifles are the same rifle if they have the same name and caliber; two loads are
+ * the same load if the name, manufacturer, bullet weight and muzzle velocity
+ * agree. These are deliberately narrow: a false match silently overwrites data
+ * the user still wants, and the cost of a false MISS is a duplicate they can
+ * delete.
+ */
+
+/** What to do about incoming records that already exist locally. */
+export type MergeStrategy =
+  /** Keep what is stored; import only records with no local match. */
+  | 'skip-existing'
+  /** Overwrite the stored record with the incoming one. */
+  | 'replace-existing'
+  /** Import everything as new records, duplicates included. The behaviour before #66. */
+  | 'create-all';
+
+/** What should happen to one incoming record. */
+export interface MergeAction<T> {
+  record: T;
+  action: 'create' | 'replace' | 'skip';
+  /** The stored record this one matched, when it matched. */
+  existing?: T;
+  /** The key both sides matched on, for reporting. */
+  matchedOn?: string;
+}
+
+/** A whole import, decided. */
+export interface MergePlan<T> {
+  actions: MergeAction<T>[];
+  created: number;
+  replaced: number;
+  skipped: number;
+}
+
+/**
+ * Builds the natural key for a record, or undefined when it cannot.
+ *
+ * Returning undefined matters: a record missing part of its identity cannot be
+ * matched safely, and the right answer is to import it as new rather than to
+ * match it against whatever else happens to be missing the same field. Two
+ * records that are both missing a name are not thereby the same record.
+ */
+export type KeyBuilder<T> = (record: T) => string | undefined;
+
+/** Normalises a field for comparison: trimmed, case-folded, whitespace-collapsed. */
+const normalise = (value: unknown): string | undefined => {
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : undefined;
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value.trim().replace(/\s+/g, ' ').toLowerCase();
+  return cleaned.length > 0 ? cleaned : undefined;
+};
+
+/**
+ * A key builder over the named fields.
+ *
+ * Every field must be present and non-empty, or the record has no key. Each
+ * value is length-prefixed rather than joined with a separator, so ("ab", "c")
+ * and ("a", "bc") cannot collide whatever the values contain -- and without an
+ * unprintable sentinel byte in the source, which is invisible in a diff and
+ * makes the file read as binary to grep.
+ *
+ * The builder is typed over `unknown` rather than `Record<string, unknown>`,
+ * because it has to accept both sides of a merge. What is stored is a declared
+ * interface such as `RifleProfile`, which has no index signature and so is not
+ * assignable to `Record<string, unknown>`; what is arriving has come out of
+ * parsed JSON as `unknown`. A builder that accepts anything is assignable to
+ * both, and reading a field off a non-record is harmless: it normalises to
+ * undefined, which is exactly "this record has no key" and therefore "import it
+ * as new rather than match it against anything".
+ */
+export const keyOn =
+  (...fields: string[]): KeyBuilder<unknown> =>
+  (record) => {
+    const source = record as Record<string, unknown> | null | undefined;
+    const parts = fields.map((field) => normalise(source?.[field]));
+    if (parts.some((p) => p === undefined)) return undefined;
+    return parts.map((p) => `${(p as string).length}:${p as string}`).join('');
+  };
+
+/**
+ * Two rifles are the same rifle if the name and caliber agree.
+ *
+ * Not barrel length or zero distance: those are the things a user legitimately
+ * edits on the same rifle, and including them would make an edited rifle import
+ * as a second copy — the exact duplication this exists to prevent.
+ */
+export const rifleKey = keyOn('name', 'caliber');
+
+/**
+ * Two loads are the same load if name, manufacturer, bullet weight and muzzle
+ * velocity agree.
+ *
+ * Velocity is included deliberately, even though it is the field most likely to
+ * be re-measured. "140 ELD-M" chronographed at 2700 and the same box at 2750
+ * from a different barrel are genuinely different load data, and merging them
+ * would destroy the distinction the user is keeping them for.
+ */
+export const ammoKey = keyOn('name', 'manufacturer', 'bulletWeight', 'muzzleVelocity');
+
+/**
+ * Two environment snapshots are the same reading if the timestamp and every
+ * measured value agree.
+ *
+ * A snapshot is a measurement at a moment, so the timestamp does most of the
+ * work; the readings are included because a backup written by an older version
+ * can carry two snapshots a second apart that are genuinely different captures.
+ *
+ * Latitude is deliberately excluded. The export flow lets a user omit it, so a
+ * backup taken with it and one taken without it describe the same reading and
+ * must still match. It is coarsened to ~11 km anyway, so it carries almost no
+ * discriminating power -- see PRIVACY.md.
+ */
+export const environmentKey = keyOn(
+  'timestamp',
+  'temperature',
+  'humidity',
+  'pressure',
+  'altitude',
+  'windSpeed',
+  'windDirection'
+);
+
+/**
+ * Two DOPE logs are the same engagement if the rifle, load, distance and
+ * timestamp all agree.
+ *
+ * The timestamp carries most of the weight: two shots at the same distance with
+ * the same kit on different days are different data and must both survive. A log
+ * with no timestamp has no key and is always imported as new — the conservative
+ * answer, since the alternative would collapse a whole range session into one
+ * entry.
+ */
+export const dopeLogKey = keyOn('rifleId', 'ammoId', 'distance', 'timestamp');
+
+/**
+ * Decides what happens to every incoming record.
+ *
+ * Incoming records are matched against the stored set and against each other:
+ * a backup containing two copies of the same rifle should not produce two rows
+ * just because neither existed locally. The first wins and later ones are
+ * treated as duplicates of it.
+ */
+export const planMerge = <T>(
+  existing: T[],
+  incoming: T[],
+  keyOf: KeyBuilder<T>,
+  strategy: MergeStrategy = 'skip-existing'
+): MergePlan<T> => {
+  const byKey = new Map<string, T>();
+  for (const record of existing) {
+    const key = keyOf(record);
+    // First writer wins, so a pre-existing local duplicate does not make the
+    // outcome depend on array order.
+    if (key !== undefined && !byKey.has(key)) byKey.set(key, record);
+  }
+
+  const seenThisImport = new Set<string>();
+  const actions: MergeAction<T>[] = [];
+
+  for (const record of incoming) {
+    const key = keyOf(record);
+
+    if (strategy === 'create-all' || key === undefined) {
+      actions.push({ record, action: 'create' });
+      continue;
+    }
+
+    const match = byKey.get(key);
+    const alreadyImported = seenThisImport.has(key);
+
+    if (match === undefined && !alreadyImported) {
+      actions.push({ record, action: 'create' });
+      seenThisImport.add(key);
+      continue;
+    }
+
+    if (strategy === 'replace-existing' && match !== undefined && !alreadyImported) {
+      actions.push({ record, action: 'replace', existing: match, matchedOn: key });
+      seenThisImport.add(key);
+      continue;
+    }
+
+    actions.push({ record, action: 'skip', existing: match, matchedOn: key });
+  }
+
+  return {
+    actions,
+    created: actions.filter((a) => a.action === 'create').length,
+    replaced: actions.filter((a) => a.action === 'replace').length,
+    skipped: actions.filter((a) => a.action === 'skip').length,
+  };
+};
+
+/** One line per entity, for the import summary a user actually reads. */
+export const describePlan = (label: string, plan: MergePlan<unknown>): string => {
+  const parts: string[] = [];
+  if (plan.created > 0) parts.push(`${plan.created} added`);
+  if (plan.replaced > 0) parts.push(`${plan.replaced} replaced`);
+  if (plan.skipped > 0) parts.push(`${plan.skipped} already present`);
+  return `${label}: ${parts.length > 0 ? parts.join(', ') : 'nothing to import'}`;
+};

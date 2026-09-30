@@ -3,28 +3,245 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
-import { captureRef } from 'react-native-view-shot';
+import { Circle, Group, matchFont } from '@shopify/react-native-skia';
 import * as Sharing from 'expo-sharing';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, ScrollView, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { Gesture } from 'react-native-gesture-handler';
+import {
+  runOnJS,
+  useAnimatedReaction,
+  useDerivedValue,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { captureRef } from 'react-native-view-shot';
+import {
+  CartesianChart,
+  Line,
+  getTransformComponents,
+  setScale,
+  setTranslate,
+  useChartTransformState,
+  type PointsArray,
+} from 'victory-native';
+
+import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
+import { confidenceBand } from '../components/ConfidenceBadge';
+import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
+import { OutlierList } from '../components/OutlierList';
 import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
+import { useHorizontalChartPan } from '../hooks/useHorizontalChartPan';
+import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
-import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
-import { calculateBallisticSolution } from '../utils/ballistics';
+import { useRifleStore } from '../store/useRifleStore';
+import { confidenceOpacity } from '../utils/chartConfidence';
+import {
+  MAX_ZOOM,
+  PAN_STEP,
+  ZOOM_STEP,
+  clampView,
+  counterScale,
+  panBy,
+  resetView,
+  zoomBy,
+  type ChartView,
+} from '../utils/chartZoom';
+import { buildDropCurve, detectOutliers, type DropCurvePoint } from '../utils/dopeAnalysis';
+import { formatCorrection } from '../utils/formatCorrection';
+import { elevationTable } from '../utils/solverInputs';
+
 import type { HistoryStackScreenProps } from '../navigation/types';
-import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
-import type { AtmosphericConditions } from '../utils/atmospheric';
 
 type Props = HistoryStackScreenProps<'DOPECurve'>;
 
 interface DataPoint {
   distance: number;
   elevation: number;
-  [key: string]: number; // Index signature for CartesianChart compatibility
 }
+
+/**
+ * One x position on the chart. `logged` is set only where DOPE was logged, so
+ * the logged line and its markers sit at real distances rather than on the
+ * calculated curve's 50-yard grid.
+ */
+type ChartPoint = {
+  distance: number;
+  elevation: number;
+  logged: number | undefined;
+};
+
+/** Radius of a logged-point marker, in chart pixels. */
+const MARKER_RADIUS = 6;
+
+/**
+ * The axis labels' font. victory-native draws no tick labels at all without
+ * one -- the chart had a grid and no numbers. A system font, so there is no
+ * font file to bundle.
+ */
+const axisFont = () =>
+  matchFont({
+    fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' }),
+    fontSize: 12,
+  });
+
+/** "1 log", "3 logs". */
+const logsLabel = (count: number): string => `${count} ${count === 1 ? 'log' : 'logs'}`;
+
+/**
+ * What the chart shows, in words. The chart is a Skia canvas, which a screen
+ * reader cannot see into, and the markers show confidence only as opacity.
+ */
+const describeChart = (
+  loggedCurve: DropCurvePoint[],
+  maxDistance: number,
+  unit: 'MIL' | 'MOA'
+): string => {
+  const calculated = `Elevation drop curve. Calculated curve from 100 to ${maxDistance} yards.`;
+  if (loggedCurve.length === 0) return `${calculated} No logged DOPE.`;
+  const points = loggedCurve.map(
+    (p) =>
+      `${p.distance} yards, ${p.correction.toFixed(1)} ${unit}, ` +
+      `${logsLabel(p.sampleCount)}, ` +
+      `${confidenceBand(p.confidence).toLowerCase()} confidence`
+  );
+  return `${calculated} Logged DOPE: ${points.join('; ')}.`;
+};
+
+/**
+ * A marker at each logged point: filled at an opacity from its confidence, and
+ * outlined at full strength so a faint point is still found.
+ *
+ * The chart draws in the text-grade tokens (primaryText, warningText), not the
+ * fills: a line or outline needs 3:1 against the background (WCAG 1.4.11), and
+ * on the light theme #4CAF50 and #FF9800 are 2.78:1 and 2.16:1 on white.
+ */
+const loggedMarkers = (
+  points: PointsArray,
+  confidenceAt: Map<number, number>,
+  color: string,
+  keepRound: SharedValue<{ scaleX: number }[]>
+): React.ReactNode[] =>
+  points.map((point) => {
+    if (point.y === undefined || point.y === null) return null;
+    const opacity = confidenceOpacity(confidenceAt.get(Number(point.xValue)) ?? 0);
+    return (
+      // Under the inverse of the zoom, around the marker's own centre, so it
+      // stays round rather than stretching with the distance axis.
+      <Group key={point.xValue} origin={{ x: point.x, y: point.y }} transform={keepRound}>
+        <Circle cx={point.x} cy={point.y} r={MARKER_RADIUS} color={color} opacity={opacity} />
+        <Circle
+          cx={point.x}
+          cy={point.y}
+          r={MARKER_RADIUS}
+          color={color}
+          style="stroke"
+          strokeWidth={2}
+        />
+      </Group>
+    );
+  });
+
+/**
+ * Single-tap zoom and pan. The chart also takes pinch and a pan gesture, which
+ * need a single-pointer alternative (WCAG 2.5.1). Outside the exported area:
+ * controls have no place in the PNG.
+ */
+const ZoomControls: React.FC<{
+  zoom: number;
+  onZoom: (factor: number) => void;
+  onPan: (steps: number) => void;
+  onReset: () => void;
+}> = ({ zoom, onZoom, onPan, onReset }) => {
+  // At the whole curve there is nothing to zoom out to or pan across, and at
+  // MAX_ZOOM nothing further to zoom into. Disabled says so; a button that did
+  // nothing gave a screen-reader user no change and no reason.
+  const whole = zoom <= 1;
+  return (
+    <View style={styles.zoomControls}>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Zoom out"
+          onPress={() => onZoom(1 / ZOOM_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Zoom in"
+          onPress={() => onZoom(ZOOM_STEP)}
+          disabled={zoom >= MAX_ZOOM}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Shorter"
+          accessibilityLabel="Show shorter distances"
+          accessibilityHint="Moves the zoomed chart toward shorter distances"
+          onPress={() => onPan(-PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Longer"
+          accessibilityLabel="Show longer distances"
+          accessibilityHint="Moves the zoomed chart toward longer distances"
+          onPress={() => onPan(PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Whole curve"
+          accessibilityLabel="Show the whole curve"
+          accessibilityHint="Resets the zoom so every distance shows"
+          onPress={onReset}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
+    </View>
+  );
+};
+
+/** Key to the chart's two lines, and what a marker's opacity means. */
+const ChartLegend: React.FC<{ loggedCount: number }> = ({ loggedCount }) => {
+  const { colors } = useTheme().theme;
+  return (
+    <>
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendLine, { backgroundColor: colors.primaryText }]} />
+          <Text style={[styles.legendText, { color: colors.text.secondary }]}>
+            Calculated Curve
+          </Text>
+        </View>
+        {loggedCount > 0 && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.warningText }]} />
+            <Text style={[styles.legendText, { color: colors.text.secondary }]}>
+              Actual DOPE ({logsLabel(loggedCount)})
+            </Text>
+          </View>
+        )}
+      </View>
+      {loggedCount > 0 && (
+        <Text style={[styles.legendNote, { color: colors.text.secondary }]}>
+          Fainter points rest on less evidence: fewer shots, fewer hits or a wider group.
+        </Text>
+      )}
+    </>
+  );
+};
 
 export const DOPECurve: React.FC<Props> = ({ route }) => {
   const { theme } = useTheme();
@@ -48,75 +265,133 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
     return dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId);
   }, [dopeLogs, rifleId, ammoId]);
 
-  // Convert DOPE logs to data points
-  const actualDataPoints: DataPoint[] = useMemo(() => {
-    return filteredLogs
-      .filter((log) => log.distance && log.elevationCorrection !== undefined)
-      .map((log) => {
-        let correction = log.elevationCorrection || 0;
-        // Convert if needed
-        if (log.correctionUnit !== correctionUnit) {
-          correction =
-            log.correctionUnit === 'MIL'
-              ? correction * 3.438 // MIL to MOA
-              : correction / 3.438; // MOA to MIL
-        }
-        return {
-          distance: log.distance || 0,
-          elevation: correction,
-        };
-      })
-      .sort((a, b) => a.distance - b.distance);
-  }, [filteredLogs, correctionUnit]);
+  // The drop curve the logs themselves describe: one point per distance, in
+  // yards and the selected unit, the median correction there, and how well the
+  // logs behind it are evidenced (#64, #123).
+  const loggedCurve = useMemo(
+    () => buildDropCurve(filteredLogs, correctionUnit),
+    [filteredLogs, correctionUnit]
+  );
+  const loggedCount = loggedCurve.reduce((sum, p) => sum + p.sampleCount, 0);
+
+  const maxDistance = Math.max(1000, ...loggedCurve.map((p) => p.distance));
+
+  // Standard atmosphere: the curve is a reference line, not any one day. One
+  // trajectory read at every point, rather than a full solve per point.
+  const table = useMemo(
+    () =>
+      rifle && ammo
+        ? elevationTable(rifle, ammo, undefined, maxDistance, correctionUnit)
+        : undefined,
+    [rifle, ammo, maxDistance, correctionUnit]
+  );
 
   // Generate calculated ballistic curve
   const calculatedCurve: DataPoint[] = useMemo(() => {
-    if (!rifle || !ammo) return [];
-
+    if (!table) return [];
     const distances: number[] = [];
-    const maxDistance = Math.max(1000, ...actualDataPoints.map((p) => p.distance));
-
     for (let d = 100; d <= maxDistance; d += 50) {
       distances.push(d);
     }
+    return distances.map((distance) => ({ distance, elevation: table(distance) ?? 0 }));
+  }, [table, maxDistance]);
 
-    // Build configs for ballistic calculator
-    const rifleConfig: RifleConfig = {
-      zeroDistance: rifle.zeroDistance,
-      sightHeight: rifle.scopeHeight,
-      twistRate: rifle.twistRate,
-      barrelLength: rifle.barrelLength,
-    };
+  // The calculated grid plus every logged distance, so both lines share one x
+  // axis and each logged point is drawn where it was shot.
+  const chartData: ChartPoint[] = useMemo(() => {
+    if (!table) return [];
+    const loggedAt = new Map(loggedCurve.map((p) => [p.distance, p.correction]));
+    const distances = [
+      ...new Set([...calculatedCurve.map((p) => p.distance), ...loggedAt.keys()]),
+    ].sort((a, b) => a - b);
+    return distances.map((distance) => ({
+      distance,
+      elevation: table(distance) ?? 0,
+      logged: loggedAt.get(distance),
+    }));
+  }, [table, calculatedCurve, loggedCurve]);
 
-    const ammoConfig: AmmoConfig = {
-      bulletWeight: ammo.bulletWeight,
-      ballisticCoefficient: ammo.ballisticCoefficientG7 || ammo.ballisticCoefficientG1,
-      dragModel: ammo.ballisticCoefficientG7 ? 'G7' : 'G1',
-      muzzleVelocity: ammo.muzzleVelocity,
-    };
+  const confidenceAt = useMemo(
+    () => new Map(loggedCurve.map((p) => [p.distance, p.confidence])),
+    [loggedCurve]
+  );
 
-    const atmosphere: AtmosphericConditions = {
-      temperature: 59,
-      pressure: 29.92,
-      humidity: 50,
-      altitude: 0,
-    };
+  const font = useMemo(axisFont, []);
 
-    return distances.map((distance) => {
-      const shot: ShotParameters = {
-        distance,
-        angle: 0,
-        windSpeed: 0,
-        windDirection: 0,
-      };
+  // Zoom and pan along the distance axis. Gestures and buttons share one
+  // matrix; the buttons read it live, so they continue from wherever a pinch
+  // left the chart.
+  const { state: transformState } = useChartTransformState();
+  const [plotWidth, setPlotWidth] = useState(0);
+  const horizontalPan = useHorizontalChartPan(transformState);
+  const chartGestures = useMemo(() => Gesture.Race(horizontalPan), [horizontalPan]);
+  // The plot width on the UI thread, where the snap-back below runs. Written
+  // from onChartBoundsChange, never during render: Reanimated drops a write
+  // made while React renders, which left this 0 and snapped every zoom to 1x.
+  const plotWidthOnUi = useSharedValue(0);
 
-      const solution = calculateBallisticSolution(rifleConfig, ammoConfig, shot, atmosphere);
+  // victory-native's pinch and pan have no limits: a pinch could zoom out
+  // past 1x and squeeze the curve into part of an empty chart. Once both
+  // gestures are idle, bring the view back into range.
+  useAnimatedReaction(
+    () => ({
+      idle: !transformState.zoomActive.value && !transformState.panActive.value,
+      matrix: transformState.matrix.value,
+    }),
+    ({ idle, matrix }) => {
+      if (!idle) return;
+      const { scaleX, translateX } = getTransformComponents(matrix);
+      const next = clampView({ scale: scaleX, translate: translateX }, plotWidthOnUi.value);
+      if (next.scale !== scaleX || next.translate !== translateX) {
+        transformState.matrix.value = setTranslate(
+          setScale(matrix, next.scale, 1),
+          next.translate,
+          0
+        );
+      }
+    }
+  );
 
-      const correction = correctionUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA;
+  // The zoom level in React, for the buttons' disabled states.
+  const [zoom, setZoom] = useState(1);
+  useAnimatedReaction(
+    () => getTransformComponents(transformState.matrix.value).scaleX,
+    (scale, previous) => {
+      if (scale !== previous) runOnJS(setZoom)(scale);
+    }
+  );
 
-      return { distance, elevation: correction };
-    });
-  }, [rifle, ammo, correctionUnit, actualDataPoints]);
+  const keepMarkersRound = useDerivedValue(() =>
+    counterScale(getTransformComponents(transformState.matrix.value).scaleX)
+  );
+  const currentView = (): ChartView => {
+    const { scaleX, translateX } = getTransformComponents(transformState.matrix.value);
+    return { scale: scaleX, translate: translateX };
+  };
+  const showView = (next: ChartView) => {
+    transformState.matrix.value = setTranslate(
+      setScale(transformState.matrix.value, next.scale, 1),
+      next.translate,
+      0
+    );
+  };
+
+  const chartLabel = useMemo(
+    () => describeChart(loggedCurve, maxDistance, correctionUnit),
+    [loggedCurve, maxDistance, correctionUnit]
+  );
+
+  const outliers = useMemo(
+    () => detectOutliers(filteredLogs, correctionUnit),
+    [filteredLogs, correctionUnit]
+  );
+
+  const { corrections, applyCorrection } = useInputCorrections({
+    logs: filteredLogs,
+    rifle,
+    ammo,
+    unit: correctionUnit,
+  });
 
   useEffect(() => {
     // Simulate loading
@@ -221,67 +496,102 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             />
           </View>
 
-          {hasData ? (
-            <View
-              ref={chartRef}
-              collapsable={false}
-              style={[
-                styles.chartContainer,
-                { height: chartHeight, backgroundColor: colors.background },
-              ]}
-            >
-              <CartesianChart<DataPoint, 'distance', 'elevation'>
-                data={calculatedCurve}
-                xKey="distance"
-                yKeys={['elevation']}
-                domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
-                axisOptions={{
-                  font: null,
-                  tickCount: { x: 5, y: 5 },
-                  lineColor: colors.border,
-                  labelColor: colors.text.secondary,
-                  formatXLabel: (value: number) => `${value}`,
-                  formatYLabel: (value: number) => `${value.toFixed(1)}`,
-                }}
-              >
-                {({ points }) => (
-                  <>
-                    <Line
-                      points={points.elevation}
-                      color={colors.primary}
-                      strokeWidth={2}
-                      curveType="natural"
-                    />
-                  </>
-                )}
-              </CartesianChart>
-            </View>
-          ) : (
-            <View style={[styles.noChartData, { height: chartHeight }]}>
-              <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
-                Unable to generate ballistic curve.
-              </Text>
-            </View>
-          )}
+          {/* Everything Export captures: the PNG is read away from the app, so it
+              carries the axis units and the legend, not just the plot. */}
+          <View
+            ref={chartRef}
+            collapsable={false}
+            testID="chart-export"
+            style={[styles.exportArea, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.axisCaption, { color: colors.text.secondary }]}>
+              {`Elevation (${correctionUnit}) by distance (yards)`}
+            </Text>
 
-          {/* Legend */}
-          <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendLine, { backgroundColor: colors.primary }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>
-                Calculated Curve
-              </Text>
-            </View>
-            {actualDataPoints.length > 0 && (
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-                <Text style={[styles.legendText, { color: colors.text.secondary }]}>
-                  Actual DOPE ({actualDataPoints.length} points)
+            {hasData ? (
+              <View
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={chartLabel}
+                accessibilityHint="The Drop Table below lists the same values."
+                style={[
+                  styles.chartContainer,
+                  { height: chartHeight, backgroundColor: colors.background },
+                ]}
+              >
+                <CartesianChart<ChartPoint, 'distance', 'elevation' | 'logged'>
+                  data={chartData}
+                  xKey="distance"
+                  yKeys={['elevation', 'logged']}
+                  domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                  transformState={transformState}
+                  // Distance only: scaling MIL too would stretch the elevation
+                  // axis. victory-native's pan is replaced by one that lets a
+                  // vertical drag through to the page scroll.
+                  transformConfig={{ pinch: { dimensions: 'x' }, pan: { enabled: false } }}
+                  customGestures={chartGestures}
+                  onChartBoundsChange={({ left, right }) => {
+                    plotWidthOnUi.value = right - left;
+                    if (right - left !== plotWidth) setPlotWidth(right - left);
+                  }}
+                  axisOptions={{
+                    font,
+                    tickCount: { x: 5, y: 5 },
+                    lineColor: colors.border,
+                    labelColor: colors.text.secondary,
+                    formatXLabel: (value: number) => `${value}`,
+                    formatYLabel: (value?: number) =>
+                      value === undefined ? '' : formatCorrection(value),
+                  }}
+                >
+                  {({ points }) => (
+                    <>
+                      <Line
+                        points={points.elevation}
+                        color={colors.primaryText}
+                        strokeWidth={2}
+                        curveType="natural"
+                      />
+                      <Line
+                        points={points.logged}
+                        color={colors.warningText}
+                        strokeWidth={2}
+                        curveType="linear"
+                        connectMissingData
+                      />
+                      {loggedMarkers(
+                        points.logged,
+                        confidenceAt,
+                        colors.warningText,
+                        keepMarkersRound
+                      )}
+                    </>
+                  )}
+                </CartesianChart>
+              </View>
+            ) : (
+              <View style={[styles.noChartData, { height: chartHeight }]}>
+                <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
+                  Unable to generate ballistic curve.
                 </Text>
               </View>
             )}
+
+            <ChartLegend loggedCount={loggedCount} />
           </View>
+
+          {hasData && (
+            <ZoomControls
+              zoom={zoom}
+              onZoom={(factor) => showView(zoomBy(currentView(), factor, plotWidth))}
+              onPan={(steps) => showView(panBy(currentView(), steps, plotWidth))}
+              onReset={() => showView(resetView())}
+            />
+          )}
         </Card>
+
+        <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
+        <OutlierList outliers={outliers} unit={correctionUnit} />
 
         {/* Data Table */}
         <Card style={styles.tableCard}>
@@ -291,7 +601,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>
               Calculated ({correctionUnit})
             </Text>
-            {actualDataPoints.length > 0 && (
+            {loggedCurve.length > 0 && (
               <Text style={[styles.tableHeaderCell, { color: colors.text.secondary }]}>
                 Actual ({correctionUnit})
               </Text>
@@ -300,7 +610,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
           {calculatedCurve
             .filter((_, i) => i % 2 === 0)
             .map((point) => {
-              const actualPoint = actualDataPoints.find(
+              const actualPoint = loggedCurve.find(
                 (ap) => Math.abs(ap.distance - point.distance) < 25
               );
               return (
@@ -312,16 +622,16 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                     {point.distance} yds
                   </Text>
                   <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                    {point.elevation.toFixed(1)}
+                    {formatCorrection(point.elevation)}
                   </Text>
-                  {actualDataPoints.length > 0 && (
+                  {loggedCurve.length > 0 && (
                     <Text
                       style={[
                         styles.tableCell,
-                        { color: actualPoint ? colors.warning : colors.text.secondary },
+                        { color: actualPoint ? colors.warningText : colors.text.secondary },
                       ]}
                     >
-                      {actualPoint ? actualPoint.elevation.toFixed(1) : '-'}
+                      {actualPoint ? formatCorrection(actualPoint.correction) : '-'}
                     </Text>
                   )}
                 </View>
@@ -333,7 +643,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
         <Card style={styles.summaryCard}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Summary</Text>
 
-          {actualDataPoints.length === 0 ? (
+          {loggedCurve.length === 0 ? (
             <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
               No DOPE logs recorded for this rifle/ammo combination.
               {'\n'}Log some shots to see your actual data compared to the calculated curve.
@@ -342,7 +652,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             <View style={styles.summaryGrid}>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {actualDataPoints.length}
+                  {loggedCount}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Data Points
@@ -350,7 +660,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {Math.min(...actualDataPoints.map((p) => p.distance))}
+                  {`${Math.min(...loggedCurve.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Min Distance
@@ -358,7 +668,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
-                  {Math.max(...actualDataPoints.map((p) => p.distance))}
+                  {`${Math.max(...loggedCurve.map((p) => p.distance))} yds`}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
                   Max Distance
@@ -427,12 +737,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Reaches as far as the chart's negative margin, so Export does not clip the
+  // chart's left edge; the padding keeps everything else where it was.
+  exportArea: {
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+  },
+  axisCaption: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
   chartContainer: {
     marginHorizontal: -8,
   },
   noChartData: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  zoomControls: {
+    marginTop: 12,
+    gap: 8,
+  },
+  zoomRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  zoomButton: {
+    flex: 1,
   },
   legendContainer: {
     flexDirection: 'row',
@@ -457,6 +788,11 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
+  },
+  legendNote: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
   },
   tableCard: {
     marginBottom: 16,

@@ -1,4 +1,5 @@
 import { EnvironmentSnapshotRow } from '../types/database.types';
+import { coarsenLatitude } from '../utils/geoPrecision';
 
 export interface EnvironmentSnapshotData {
   id?: number;
@@ -9,8 +10,8 @@ export interface EnvironmentSnapshotData {
   densityAltitude?: number;
   windSpeed: number;
   windDirection: number;
+  /** Degrees. Coarsened to one decimal place on construction -- see `geoPrecision`. */
   latitude?: number;
-  longitude?: number;
   timestamp?: string;
 }
 
@@ -23,8 +24,8 @@ export class EnvironmentSnapshot {
   densityAltitude: number;
   windSpeed: number;
   windDirection: number;
+  /** Degrees, at one decimal place. Never full GPS precision. */
   latitude?: number;
-  longitude?: number;
   timestamp?: string;
 
   constructor(data: EnvironmentSnapshotData) {
@@ -38,8 +39,12 @@ export class EnvironmentSnapshot {
     this.densityAltitude = data.densityAltitude || this.calculateDensityAltitude(data);
     this.windSpeed = data.windSpeed;
     this.windDirection = data.windDirection;
-    this.latitude = data.latitude;
-    this.longitude = data.longitude;
+    // Coarsened here rather than at the call site so no write path -- repository,
+    // import, factory -- can persist a full-precision coordinate.
+    // `== null` covers both undefined and the NULL a cleared or never-set column
+    // returns. Coarsening NULL would yield 0 -- a fabricated coordinate on the
+    // equator, which is worse than storing nothing.
+    this.latitude = data.latitude == null ? undefined : coarsenLatitude(data.latitude);
     this.timestamp = data.timestamp;
   }
 
@@ -64,9 +69,6 @@ export class EnvironmentSnapshot {
     }
     if (data.latitude !== undefined && (data.latitude < -90 || data.latitude > 90)) {
       throw new Error('Latitude must be between -90 and 90 degrees');
-    }
-    if (data.longitude !== undefined && (data.longitude < -180 || data.longitude > 180)) {
-      throw new Error('Longitude must be between -180 and 180 degrees');
     }
   }
 
@@ -97,7 +99,6 @@ export class EnvironmentSnapshot {
       wind_speed: this.windSpeed,
       wind_direction: this.windDirection,
       latitude: this.latitude,
-      longitude: this.longitude,
     };
   }
 
@@ -115,7 +116,6 @@ export class EnvironmentSnapshot {
       windSpeed: row.wind_speed,
       windDirection: row.wind_direction,
       latitude: row.latitude,
-      longitude: row.longitude,
       timestamp: row.timestamp,
     });
   }
@@ -134,7 +134,6 @@ export class EnvironmentSnapshot {
       windSpeed: this.windSpeed,
       windDirection: this.windDirection,
       latitude: this.latitude,
-      longitude: this.longitude,
       timestamp: this.timestamp,
     };
   }

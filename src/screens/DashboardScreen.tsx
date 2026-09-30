@@ -6,13 +6,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { IconButton } from '../components/IconButton';
 import { useTheme } from '../contexts/ThemeContext';
-import type { MainTabScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
+import { useAppStore } from '../store';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useAppStore } from '../store';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+import { toSolverYards } from '../utils/distanceUnits';
+
+import type { MainTabScreenProps } from '../navigation/types';
 import type { RifleConfig, AmmoConfig, ShotParameters } from '../types/ballistic.types';
 import type { AtmosphericConditions } from '../utils/atmospheric';
 
@@ -40,7 +44,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   // Shooting parameters
-  const [distance, setDistance] = useState(300); // yards
+  // In the shooter's own unit -- the quick-solve below converts for the solver,
+  // and the log prefill records this number with `distanceUnit` beside it. It
+  // used to be commented "yards" while being labelled with the user's default
+  // unit on the way out, so a metric user's quick solve was for 300 yards and
+  // their log said 300 m. (#106)
+  const [distance, setDistance] = useState(300);
   const [windSpeed, setWindSpeed] = useState(5); // mph
   const [windDirection, setWindDirection] = useState(180); // degrees (3 o'clock = 90, 9 o'clock = 270)
 
@@ -127,7 +136,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       };
 
       const shotParams: ShotParameters = {
-        distance: distance,
+        distance: toSolverYards(distance, settings.defaultDistanceUnit),
         angle: 0,
         windSpeed: windSpeed,
         windDirection: windDirection,
@@ -247,38 +256,78 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       edges={['top']}
     >
       <ScrollView contentContainerStyle={styles.content}>
-        {/* App Title */}
+        {/* App Title, and the only route into Settings (#87). The Settings screen
+            was registered on the root navigator with no caller, which stranded
+            Export/Import, Clear All Data and Delete Stored Location Data -- the
+            last of which PRIVACY.md commits to offering. Dashboard is the right
+            home for it: it is a tab, so it is reachable from anywhere. */}
         <View style={styles.header}>
           <Text style={[styles.appTitle, { color: colors.text.primary }]}>Mobile DOPE</Text>
+          <IconButton
+            icon="⚙"
+            size="small"
+            variant="ghost"
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityLabel="Settings"
+            accessibilityHint="Opens settings, including data export, import and privacy controls"
+            style={styles.headerAction}
+          />
         </View>
 
         {/* Trust Indicators */}
         <View style={[styles.trustBar, { backgroundColor: colors.surface }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Rifles')} style={styles.trustItem}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Rifles')}
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={hasRifle ? 'Rifle: selected' : 'Rifle: none selected'}
+            accessibilityHint="Opens the rifle profile list"
+          >
             <Text
               style={[
                 styles.trustText,
-                { color: hasRifle ? colors.primary : colors.text.secondary },
+                { color: hasRifle ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Rifle {hasRifle ? '✓' : '○'}
             </Text>
           </TouchableOpacity>
           <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Ammo')} style={styles.trustItem}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Ammo')}
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={hasAmmo ? 'Ammo: selected' : 'Ammo: none selected'}
+            accessibilityHint="Opens the ammunition profile list"
+          >
             <Text
               style={[
                 styles.trustText,
-                { color: hasAmmo ? colors.primary : colors.text.secondary },
+                { color: hasAmmo ? colors.primaryText : colors.text.secondary },
               ]}
             >
               Ammo {hasAmmo ? '✓' : '○'}
             </Text>
           </TouchableOpacity>
           <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Session')} style={styles.trustItem}>
+          <TouchableOpacity
+            // Straight to the weather screen, with Start Session left underneath
+            // so the tab still opens there and this screen has a way back (#131).
+            onPress={() =>
+              navigation.navigate('Session', { screen: 'EnvironmentInput', initial: false })
+            }
+            style={styles.trustItem}
+            accessibilityRole="button"
+            accessibilityLabel={
+              hasEnv ? 'Environment: readings recorded' : 'Environment: no readings'
+            }
+            accessibilityHint="Opens the weather screen to enter conditions"
+          >
             <Text
-              style={[styles.trustText, { color: hasEnv ? colors.primary : colors.text.secondary }]}
+              style={[
+                styles.trustText,
+                { color: hasEnv ? colors.primaryText : colors.text.secondary },
+              ]}
             >
               Env {hasEnv ? '✓' : '○'}
             </Text>
@@ -297,24 +346,36 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(-25)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease target distance by 25 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-25</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(-10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease target distance by 10 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>-10</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase target distance by 10 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+10</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickAdjustButton, { backgroundColor: colors.background }]}
                   onPress={() => adjustDistance(25)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase target distance by 25 yards"
+                  accessibilityHint={`Current distance is ${distance} yards`}
                 >
                   <Text style={[styles.quickAdjustText, { color: colors.text.primary }]}>+25</Text>
                 </TouchableOpacity>
@@ -324,7 +385,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             {/* Elevation Solution - Largest on screen */}
             <View style={[styles.elevationSection, { backgroundColor: colors.surface }]}>
               <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.elevationValue, { color: colors.primary }]}>
+              <Text style={[styles.elevationValue, { color: colors.primaryText }]}>
                 {elevation !== null ? elevation.toFixed(2) : '--'} {settings.defaultCorrectionUnit}
               </Text>
             </View>
@@ -345,6 +406,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.windButton, { backgroundColor: colors.background }]}
                   onPress={cycleWindDirection}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Wind direction: ${getWindDirectionText(windDirection)}`}
+                  accessibilityHint="Cycles to the next wind direction"
                 >
                   <Text style={[styles.windValue, { color: colors.text.primary }]}>
                     {getWindDirectionText(windDirection)}
@@ -357,6 +421,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   <TouchableOpacity
                     style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
                     onPress={() => adjustWindSpeed(-1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease wind speed by 1 mile per hour"
+                    accessibilityHint={`Wind is currently ${windSpeed} miles per hour`}
                   >
                     <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>−</Text>
                   </TouchableOpacity>
@@ -366,6 +433,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   <TouchableOpacity
                     style={[styles.windAdjustButton, { backgroundColor: colors.background }]}
                     onPress={() => adjustWindSpeed(1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase wind speed by 1 mile per hour"
+                    accessibilityHint={`Wind is currently ${windSpeed} miles per hour`}
                   >
                     <Text style={[styles.windAdjustText, { color: colors.text.primary }]}>+</Text>
                   </TouchableOpacity>
@@ -378,8 +448,11 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.confirmButton, { backgroundColor: colors.primary }]}
               onPress={handleConfirmShot}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm shot"
+              accessibilityHint="Saves this solution to your DOPE log at the current distance"
             >
-              <Text style={[styles.confirmButtonText, { color: colors.text.inverse }]}>
+              <Text style={[styles.confirmButtonText, { color: colors.onPrimary }]}>
                 CONFIRM SHOT
               </Text>
             </TouchableOpacity>
@@ -422,7 +495,15 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     paddingVertical: 8,
+  },
+  // Absolute so the title stays optically centred rather than being pushed left
+  // by the button's width.
+  headerAction: {
+    position: 'absolute',
+    right: 0,
   },
   appTitle: {
     fontSize: 20,

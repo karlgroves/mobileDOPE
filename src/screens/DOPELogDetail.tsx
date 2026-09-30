@@ -3,15 +3,21 @@
  * Displays detailed information about a single DOPE log entry
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import type { LogsStackScreenProps } from '../navigation/types';
+import { ConfidenceBadge } from '../components/ConfidenceBadge';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useTheme } from '../contexts/ThemeContext';
+import { useDopeLog } from '../hooks/useDopeLog';
+import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
+import { calculateConfidence } from '../utils/dopeAnalysis';
+
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogDetail'>;
 
@@ -20,22 +26,33 @@ export function DOPELogDetail({ route, navigation }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { getDopeById, deleteDopeLog } = useDOPEStore();
+  const { deleteDopeLog } = useDOPEStore();
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
 
-  const log = getDopeById(logId);
+  // Loaded by id when the store does not have it yet: a restored launch shows
+  // this screen before DOPE Logs has filled the store (#141).
+  const { log, status } = useDopeLog(logId);
   const rifle = log ? getRifleById(log.rifleId) : undefined;
   const ammo = log ? getAmmoById(log.ammoId) : undefined;
 
+  // Scored from the evidence this log carries, not from whether it agrees with
+  // the solver -- a log that disagrees may be the most useful one there is.
+  // See src/utils/dopeAnalysis.ts. (#64)
+  const confidence = log ? calculateConfidence(log) : undefined;
+
+  // Set when this screen deletes the log: it is then missing on purpose, and
+  // the screen is already on its way back.
+  const deleted = useRef(false);
+
   useEffect(() => {
-    if (!log) {
+    if (status === 'missing' && !deleted.current) {
       Alert.alert('Error', 'DOPE log not found', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [log]);
+  }, [status]);
 
   const handleEdit = () => {
     navigation.navigate('DOPELogEdit', { logId });
@@ -49,9 +66,11 @@ export function DOPELogDetail({ route, navigation }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
+            deleted.current = true;
             await deleteDopeLog(logId);
             navigation.goBack();
           } catch (_error) {
+            deleted.current = false;
             Alert.alert('Error', 'Failed to delete DOPE log');
           }
         },
@@ -59,10 +78,18 @@ export function DOPELogDetail({ route, navigation }: Props) {
     ]);
   };
 
+  if (status === 'loading') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
   if (!log) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>DOPE log not found</Text>
+        <Text style={[styles.errorText, { color: colors.errorText }]}>DOPE log not found</Text>
       </View>
     );
   }
@@ -96,19 +123,19 @@ export function DOPELogDetail({ route, navigation }: Props) {
           </Text>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Distance:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.distance} {log.distanceUnit}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Elevation:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.elevationCorrection.toFixed(2)} {log.correctionUnit}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.label, { color: colors.text.secondary }]}>Windage:</Text>
-            <Text style={[styles.value, { color: colors.primary }]}>
+            <Text style={[styles.value, { color: colors.primaryText }]}>
               {log.windageCorrection.toFixed(2)} {log.correctionUnit}
             </Text>
           </View>
@@ -119,6 +146,16 @@ export function DOPELogDetail({ route, navigation }: Props) {
             </Text>
           </View>
         </Card>
+
+        {/* How well-evidenced this point is (#64) */}
+        {confidence && (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Confidence in this entry
+            </Text>
+            <ConfidenceBadge confidence={confidence} testID="dope-confidence" />
+          </Card>
+        )}
 
         {/* Performance */}
         {(log.hitCount !== undefined ||
@@ -163,6 +200,21 @@ export function DOPELogDetail({ route, navigation }: Props) {
 
         {/* Actions */}
         <View style={styles.buttonContainer}>
+          {/* The only route into DOPECurve (#87). It was registered on the history
+              stack with no caller. This is the natural entry: the curve needs a
+              rifle and a load, and a log entry is where the user already has both
+              in hand. Hidden when either is missing rather than navigating to a
+              screen that would render nothing. */}
+          {rifle?.id !== undefined && ammo?.id !== undefined && (
+            <Button
+              title="View Curve"
+              onPress={() =>
+                navigation.navigate('DOPECurve', { rifleId: rifle.id!, ammoId: ammo.id! })
+              }
+              variant="secondary"
+              size="large"
+            />
+          )}
           <Button title="Edit" onPress={handleEdit} variant="secondary" size="large" />
           <Button title="Delete" onPress={handleDelete} variant="danger" size="large" />
         </View>

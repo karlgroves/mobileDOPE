@@ -1,5 +1,6 @@
 import { ShotString, ShotStringData } from '../../models/ShotString';
 import { ShotStringRow } from '../../types/database.types';
+
 import databaseService from './DatabaseService';
 
 export interface ShotStringStatistics {

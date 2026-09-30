@@ -10,6 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege at the workflow level. This job runs `npm ci`, which executes
+# dependency lifecycle scripts; without an explicit block, GITHUB_TOKEN inherits the
+# repository default and arbitrary postinstall code would run with a possibly
+# write-capable token. See issue #45 item 5.
+permissions:
+  contents: read
+
 jobs:
   lint-and-typecheck:
     name: Lint & Format
@@ -17,16 +24,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      # `--ignore-scripts`: nothing in the lint/type-check/format path needs a
+      # dependency's postinstall step to have run, so it is not granted.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run ESLint
         run: npm run lint
@@ -37,16 +46,21 @@ jobs:
       - name: Run TypeScript type checking
         run: npm run type-check
 
+      # No `continue-on-error`. Verified passing at 0 errors across 29 files when
+      # this gate was made real, so enabling it breaks nothing today and stops the
+      # count drifting up unnoticed.
       - name: Lint Markdown
         run: npm run markdownlint
-        continue-on-error: true
 
+      # No `continue-on-error`. Verified exiting 0 against the thresholds in
+      # .jscpd.json when this gate was made real. It reports 115 clones today, which
+      # is within the configured budget — the point of gating is that exceeding that
+      # budget now fails instead of scrolling past in a green log.
       - name: Check for code duplication (jscpd)
         run: npm run lint:cpd:ci
-        continue-on-error: true
 
       - name: Upload duplication report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: jscpd-report
           path: reports/jscpd/
@@ -60,16 +74,47 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      # Scripts are needed here: jest-expo's transform relies on expo module
+      # postinstall output, so the test project cannot run without them. This is the
+      # one place in the repo that grants them, which is why the workflow-level
+      # `permissions: contents: read` above matters.
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm run test
+      # __tests__/unit/securitySecrets.test.ts skips its detection cases when
+      # trufflehog is absent, and the pre-push hook runs `npm run check`, which does
+      # not include tests -- so without this step the cases that prove the secret
+      # gate actually detects a key would run nowhere automatically. A guard that
+      # only ever skips is not a guard.
+      #
+      # Pinned by version AND checksum rather than installed from the upstream
+      # install script, which is a curl-to-shell: this repo pins its actions by SHA
+      # for the same reason.
+      - name: Install trufflehog
+        env:
+          TRUFFLEHOG_VERSION: '3.95.2'
+          TRUFFLEHOG_SHA256: 'fded1c139fe4d3872d9fde65e1428d82d5556d655439e82f492d87ae8d846779'
+        run: |
+          curl -sSfL -o trufflehog.tar.gz \
+            "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz"
+          echo "${TRUFFLEHOG_SHA256}  trufflehog.tar.gz" | sha256sum --check --strict
+          tar -xzf trufflehog.tar.gz trufflehog
+          sudo install -m 0755 trufflehog /usr/local/bin/trufflehog
+          rm -f trufflehog.tar.gz trufflehog
+          trufflehog --version
+
+      # Runs the same suites as `npm test` plus the coverageThreshold ratchet in
+      # jest.config.js, so a coverage regression fails here. Deliberately not added to
+      # `npm run check` (the pre-push gate) -- see #28 phase 1 -- to keep the local
+      # feedback loop fast. This adds a step to an existing workflow rather than a new
+      # workflow, per ADR-011.
+      - name: Run tests with coverage
+        run: npm run test:coverage

@@ -1,0 +1,45 @@
+id: rifles-clone-profile
+title: 'Clone a rifle profile as the basis for a new one'
+type: positive
+description: >-
+  Shooters commonly run two rifles that differ in one or two values. Cloning avoids
+  re-entering a dozen fields. Asserts the clone is a genuinely independent record --
+  editing it must not alter the original.
+
+preconditions:
+  - 'A rifle profile named at data.source_rifle exists'
+
+start_location: 'Rifles/RifleProfileList'
+
+expected_result: >-
+  A new profile exists carrying the source's ballistic values under a new name. The
+  source is unchanged.
+
+data:
+  source_rifle: 'Tikka T3x'
+  clone_button: 'Clone Tikka T3x'
+  name_field: 'Rifle name'
+  new_name: 'Tikka T3x - Backup'
+  # REPLACE: a value that should have been carried over.
+  twist_rate_field: 'Barrel twist rate, inches per turn'
+  twist_rate: '8'
+  save_button: 'Save'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ clone_button }}"
+  - focus: button "{{ clone_button }}"
+  - activate: button "{{ clone_button }}"
+
+  # The clone arrives pre-filled: that is the whole value of the feature.
+  - verify: field "{{ twist_rate_field }}" has_value "{{ twist_rate }}"
+
+  - focus: field "{{ name_field }}"
+  - enter: field "{{ name_field }}" value "{{ new_name }}"
+  - activate: button "{{ save_button }}"
+
+  - navigate: 'Rifles/RifleProfileList'
+  - verify: button "{{ new_name }}"
+  # The original must survive intact -- a clone that moves the source is a rename.
+  - verify: button "{{ source_rifle }}"

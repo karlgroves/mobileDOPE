@@ -1,0 +1,48 @@
+id: ammo-search-and-sort
+title: 'Find one load in a long ammunition list'
+type: positive
+description: >-
+  Once a shooter has more than a handful of loads, the list is only usable through
+  search and sort. Asserts the search field is labelled (it is a bare input with a
+  placeholder, which is not an accessible name) and that filtering is announced
+  rather than only rendered.
+
+preconditions:
+  - 'At least five ammunition profiles exist'
+  - 'One of them is named at data.target_ammo'
+
+start_location: 'Ammo/AllAmmoProfileList'
+
+expected_result: >-
+  Typing a term narrows the list to matching loads, the result count is announced,
+  and clearing the term restores the full list.
+
+data:
+  search_field: 'Search ammunition profiles'
+  target_ammo: '175gr SMK'
+  search_term: '175'
+  # REPLACE: what a screen reader should hear once the list narrows. This is the
+  # part most often missed -- the list updates visually and nothing is announced.
+  results_announcement: '1 profile'
+  # REPLACE: a load that must disappear when the term is applied.
+  excluded_ammo: '140gr ELD-M'
+  sort_control: 'Sort ammunition by'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ search_field }}"
+  - focus: field "{{ search_field }}"
+  - enter: field "{{ search_field }}" value "{{ search_term }}"
+
+  - verify: button "{{ target_ammo }}"
+  - verify: no_element button "{{ excluded_ammo }}"
+  - sr_says: '"{{ results_announcement }}" after enter field "{{ search_field }}"'
+
+  - enter: field "{{ search_field }}" value ""
+  - verify: button "{{ excluded_ammo }}"
+
+  - locate: button "{{ sort_control }}"
+  - focus: button "{{ sort_control }}"
+  - activate: button "{{ sort_control }}"
+  - audit: page

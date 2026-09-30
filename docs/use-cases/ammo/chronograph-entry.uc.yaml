@@ -1,0 +1,53 @@
+id: ammo-chronograph-entry
+title: 'Record a chronograph shot string'
+type: positive
+description: >-
+  Entering measured velocities and having the app derive average, extreme spread and
+  standard deviation. Done at the range, often gloved, so the entry loop is
+  deliberately short -- this counts the interactions per shot.
+
+preconditions:
+  - 'An ammunition profile at data.ammo_name exists'
+
+start_location: 'Ammo/ChronographInput'
+
+expected_result: >-
+  Each entered velocity is added to the string, and the derived statistics update
+  after each entry. Saving stores the string against the ammunition profile.
+
+data:
+  ammo_name: '175gr SMK'
+  velocity_field: 'Shot velocity, feet per second'
+  add_shot_button: 'Add shot to string'
+  # REPLACE: the velocities to enter.
+  shot_one: '2648'
+  shot_two: '2655'
+  shot_three: '2651'
+  # REPLACE: derived statistics. Each must name what it is -- "ES: 7" read aloud
+  # is two characters and a number.
+  average_readout: 'Average velocity, 2651 feet per second'
+  extreme_spread_readout: 'Extreme spread, 7 feet per second'
+  save_button: 'Save shot string'
+
+steps:
+  - audit: page
+
+  - locate: field "{{ velocity_field }}"
+  - focus: field "{{ velocity_field }}"
+  - enter: field "{{ velocity_field }}" value "{{ shot_one }}"
+  - activate: button "{{ add_shot_button }}"
+
+  # Focus must return to the velocity field: anything else makes the next shot a
+  # two-step operation, which matters with gloves on.
+  - verify: field "{{ velocity_field }}" has_focus
+
+  - enter: field "{{ velocity_field }}" value "{{ shot_two }}"
+  - activate: button "{{ add_shot_button }}"
+  - enter: field "{{ velocity_field }}" value "{{ shot_three }}"
+  - activate: button "{{ add_shot_button }}"
+
+  - verify: text "{{ average_readout }}"
+  - verify: text "{{ extreme_spread_readout }}"
+
+  - locate: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"

@@ -1,0 +1,84 @@
+id: rifles-create-profile
+title: 'Create a rifle profile'
+type: positive
+description: >-
+  Entering a rifle for the first time. Every later calculation depends on these
+  values, so the flow exercises each required ballistic field and confirms the
+  profile is persisted and readable afterwards -- not merely that a form submitted.
+
+preconditions:
+  - 'The Rifles tab is reachable'
+
+start_location: 'Rifles/RifleProfileList'
+
+expected_result: >-
+  A rifle profile exists with the entered values, appears in the rifle list, and its
+  detail screen shows the same numbers that were typed. Reopening the app still
+  shows it, because storage is local and immediate.
+
+data:
+  # REPLACE: accessible name of the create control. Rendered as a floating "+",
+  # which announces as nothing useful without an explicit label.
+  create_button: 'Create new rifle profile'
+  # REPLACE: field labels. Where a field has a unit, the accessible name must
+  # carry it -- "Barrel Length" alone does not say inches.
+  name_field: 'Rifle name'
+  caliber_field: 'Caliber'
+  barrel_length_field: 'Barrel length, inches'
+  twist_rate_field: 'Barrel twist rate, inches per turn'
+  zero_distance_field: 'Zero distance, yards'
+  click_value_field: 'Click value'
+  scope_height_field: 'Scope height, inches'
+  save_button: 'Save'
+  # REPLACE: the values to enter.
+  rifle_name: 'Tikka T3x'
+  caliber: '.308 Win'
+  barrel_length: '24'
+  twist_rate: '8'
+  zero_distance: '100'
+  scope_height: '1.5'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ create_button }}"
+  - focus: button "{{ create_button }}"
+  - activate: button "{{ create_button }}"
+
+  - audit: page
+
+  - locate: field "{{ name_field }}"
+  - focus: field "{{ name_field }}"
+  - enter: field "{{ name_field }}" value "{{ rifle_name }}"
+  - verify: field "{{ name_field }}" has_value "{{ rifle_name }}"
+
+  - locate: field "{{ caliber_field }}"
+  - enter: field "{{ caliber_field }}" value "{{ caliber }}"
+
+  - locate: field "{{ barrel_length_field }}"
+  - enter: field "{{ barrel_length_field }}" value "{{ barrel_length }}"
+
+  - locate: field "{{ twist_rate_field }}"
+  - enter: field "{{ twist_rate_field }}" value "{{ twist_rate }}"
+
+  - locate: field "{{ zero_distance_field }}"
+  - enter: field "{{ zero_distance_field }}" value "{{ zero_distance }}"
+
+  # MIL/MOA is a radio group, not a button group: the choice is exclusive and the
+  # announcement should say "1 of 2".
+  - locate: radio "MIL"
+  - focus: radio "MIL"
+  - select: radio "MIL"
+
+  - locate: field "{{ scope_height_field }}"
+  - enter: field "{{ scope_height_field }}" value "{{ scope_height }}"
+
+  - locate: button "{{ save_button }}"
+  - focus: button "{{ save_button }}"
+  - activate: button "{{ save_button }}"
+
+  # Persisted, not just accepted.
+  - verify: heading "{{ rifle_name }}"
+  - verify: text "{{ caliber }}"
+  - navigate: 'Rifles/RifleProfileList'
+  - verify: button "{{ rifle_name }}"

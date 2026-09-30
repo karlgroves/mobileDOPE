@@ -14,13 +14,10 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Card, Button, SegmentedControl } from '../components';
-import type { RootStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useDOPEStore } from '../store/useDOPEStore';
-import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
+import { useTheme } from '../contexts/ThemeContext';
+import { environmentRepository } from '../services/database/EnvironmentRepository';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -29,10 +26,21 @@ import {
   exportDOPELogsPDF,
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
+import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+import { MergeStrategy } from '../utils/importMerge';
+
+import type { RootStackScreenProps } from '../navigation/types';
 
 type Props = RootStackScreenProps<'Settings'>;
 
-export const SettingsScreen: React.FC<Props> = () => {
+/** Message shown when an export returns no error of its own. */
+const EXPORT_FAILED = 'Export failed';
+
+export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, setThemeMode } = useTheme();
   const { settings, updateSettings } = useAppStore();
   const { colors } = theme;
@@ -40,6 +48,7 @@ export const SettingsScreen: React.FC<Props> = () => {
   const { rifles } = useRifleStore();
   const { ammoProfiles } = useAmmoStore();
   const { dopeLogs } = useDOPEStore();
+  const { loadSnapshots } = useEnvironmentStore();
 
   // Distance preset customization state
   const [newPresetValue, setNewPresetValue] = useState<string>('');
@@ -102,6 +111,93 @@ export const SettingsScreen: React.FC<Props> = () => {
     );
   };
 
+  /**
+   * Write a full backup, asking first whether to include stored coordinates.
+   *
+   * A backup is the only route by which data leaves the device, and it carries the
+   * approximate latitude of every place the user has shot. The choice is offered at
+   * the point of sharing rather than buried in settings, because that is the moment
+   * it matters. See issue #44.
+   */
+  const runFullBackup = async () => {
+    // Load every snapshot, not just the recent ones already in the store: a DOPE log
+    // whose environment is missing from the backup cannot be restored (issue #39).
+    await loadSnapshots();
+    const allEnvironments = useEnvironmentStore.getState().snapshots;
+    const withCoordinates = allEnvironments.filter((s) => s.latitude !== undefined).length;
+
+    const write = async (includeCoordinates: boolean) => {
+      const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs, allEnvironments, {
+        includeCoordinates,
+      });
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, ` +
+            `${allEnvironments.length} environment snapshots, and ${dopeLogs.length} DOPE logs.` +
+            (includeCoordinates ? '' : '\n\nLocation data was left out.')
+        );
+      } else {
+        Alert.alert('Error', result.error || EXPORT_FAILED);
+      }
+    };
+
+    if (withCoordinates === 0) {
+      await write(true);
+      return;
+    }
+
+    Alert.alert(
+      'This backup contains location data',
+      `${withCoordinates} of your ${allEnvironments.length} environment snapshots include ` +
+        'an approximate latitude (rounded to about 11 km) for where the reading was taken. ' +
+        'Anyone you share this file with can read it.\n\n' +
+        'A backup without it still restores completely.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave Location Out', onPress: () => void write(false) },
+        { text: 'Include Location', onPress: () => void write(true) },
+      ]
+    );
+  };
+
+  /**
+   * Remove the stored latitude from every environment snapshot, keeping the
+   * ballistic readings. Backs the retention commitment in the privacy policy.
+   */
+  const handleDeleteLocationData = () => {
+    Alert.alert(
+      'Delete Stored Location Data',
+      'This removes the approximate latitude from every environment snapshot. ' +
+        'Temperature, pressure, wind and altitude readings are kept, and no DOPE logs ' +
+        'are affected.\n\nThis cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const cleared = await environmentRepository.clearStoredCoordinates();
+              await loadSnapshots();
+              Alert.alert(
+                'Location Data Deleted',
+                cleared === 0
+                  ? 'No stored coordinates were found.'
+                  : `Cleared coordinates from ${cleared} snapshot${cleared === 1 ? '' : 's'}.`
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete location data'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleExportData = () => {
     Alert.alert(
       'Export Data',
@@ -109,16 +205,8 @@ export const SettingsScreen: React.FC<Props> = () => {
       [
         {
           text: 'Full Backup (All Data)',
-          onPress: async () => {
-            const result = await exportFullBackup(rifles, ammoProfiles, dopeLogs);
-            if (result.success) {
-              Alert.alert(
-                'Success',
-                `Exported ${rifles.length} rifles, ${ammoProfiles.length} ammo profiles, and ${dopeLogs.length} DOPE logs.`
-              );
-            } else {
-              Alert.alert('Error', result.error || 'Export failed');
-            }
+          onPress: () => {
+            void runFullBackup();
           },
         },
         {
@@ -132,7 +220,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${rifles.length} rifle profiles.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -143,11 +231,19 @@ export const SettingsScreen: React.FC<Props> = () => {
               Alert.alert('No Data', 'You have no DOPE logs to export.');
               return;
             }
-            const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles);
+            // Every snapshot, for each log's conditions (#138).
+            let environments;
+            try {
+              environments = await environmentRepository.getAll();
+            } catch (error) {
+              Alert.alert('Error', error instanceof Error ? error.message : EXPORT_FAILED);
+              return;
+            }
+            const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles, environments);
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -162,7 +258,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -177,7 +273,7 @@ export const SettingsScreen: React.FC<Props> = () => {
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs as PDF report.`);
             } else {
-              Alert.alert('Error', result.error || 'Export failed');
+              Alert.alert('Error', result.error || EXPORT_FAILED);
             }
           },
         },
@@ -187,6 +283,74 @@ export const SettingsScreen: React.FC<Props> = () => {
     );
   };
 
+  /**
+   * A full backup restored onto a device that has been in use since has to say
+   * what happens to records it already holds (#66). Asked as its own step rather
+   * than guessed at, because the two answers are not recoverable from each
+   * other: keeping yours can leave the file's edits behind, and letting the file
+   * win overwrites work done since the backup.
+   */
+  const chooseBackupMergeStrategy = () => {
+    Alert.alert(
+      'Restore Full Backup',
+      'Some records in this backup may already be on this device. What should happen to those?',
+      [
+        {
+          text: 'Keep mine',
+          onPress: () => runFullBackupImport('skip-existing'),
+        },
+        {
+          text: "Use the backup's",
+          onPress: () => runFullBackupImport('replace-existing'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const runFullBackupImport = async (strategy: MergeStrategy) => {
+    const result = await importFullBackup(strategy);
+
+    if (!result.success || !result.imported) {
+      Alert.alert('Error', result.error || 'Import failed');
+      return;
+    }
+
+    const { imported, replaced, skipped, warnings } = result;
+    const lines = [
+      `• ${imported.rifles || 0} rifle profiles`,
+      `• ${imported.ammos || 0} ammo profiles`,
+      `• ${imported.logs || 0} DOPE logs`,
+    ];
+
+    const replacedTotal =
+      (replaced?.rifles || 0) +
+      (replaced?.ammos || 0) +
+      (replaced?.environments || 0) +
+      (replaced?.logs || 0);
+    if (replacedTotal > 0) {
+      lines.push(`\n${replacedTotal} existing record(s) were replaced.`);
+    }
+
+    // Reported rather than silent: "0 imported" on a backup full of data looks
+    // like a failure unless it says the records were already here.
+    const skippedTotal =
+      (skipped?.rifles || 0) +
+      (skipped?.ammos || 0) +
+      (skipped?.environments || 0) +
+      (skipped?.logs || 0);
+    if (skippedTotal > 0) {
+      lines.push(`\n${skippedTotal} record(s) were already on this device.`);
+    }
+
+    if (warnings && warnings.length > 0) {
+      lines.push(`\n${warnings.join('\n')}`);
+    }
+
+    Alert.alert('Import Complete', `Imported:\n${lines.join('\n')}`);
+  };
+
   const handleImportData = () => {
     Alert.alert(
       'Import Data',
@@ -194,17 +358,7 @@ export const SettingsScreen: React.FC<Props> = () => {
       [
         {
           text: 'Full Backup',
-          onPress: async () => {
-            const result = await importFullBackup();
-            if (result.success && result.imported) {
-              Alert.alert(
-                'Success',
-                `Imported:\n• ${result.imported.rifles || 0} rifle profiles\n• ${result.imported.ammos || 0} ammo profiles\n• ${result.imported.logs || 0} DOPE logs`
-              );
-            } else {
-              Alert.alert('Error', result.error || 'Import failed');
-            }
-          },
+          onPress: chooseBackupMergeStrategy,
         },
         {
           text: 'Rifle Profiles Only',
@@ -293,8 +447,8 @@ export const SettingsScreen: React.FC<Props> = () => {
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               Distance Presets
             </Text>
-            <Pressable onPress={handleResetPresets}>
-              <Text style={[styles.resetLink, { color: colors.primary }]}>Reset</Text>
+            <Pressable accessibilityRole="button" onPress={handleResetPresets}>
+              <Text style={[styles.resetLink, { color: colors.primaryText }]}>Reset</Text>
             </Pressable>
           </View>
           <Text style={[styles.settingHelp, { color: colors.text.secondary, marginBottom: 12 }]}>
@@ -303,6 +457,7 @@ export const SettingsScreen: React.FC<Props> = () => {
           <View style={styles.presetsContainer}>
             {settings.distancePresets.map((preset) => (
               <Pressable
+                accessibilityRole="button"
                 key={preset}
                 style={[
                   styles.presetChip,
@@ -314,6 +469,7 @@ export const SettingsScreen: React.FC<Props> = () => {
                   {preset}
                 </Text>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => handleRemovePreset(preset)}
                   style={styles.presetRemoveButton}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -325,6 +481,8 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
           <View style={styles.addPresetRow}>
             <TextInput
+              accessibilityLabel="New distance preset, yards"
+              accessibilityHint="Enter a distance, then activate Add to save it as a preset"
               style={[
                 styles.presetInput,
                 {
@@ -397,6 +555,59 @@ export const SettingsScreen: React.FC<Props> = () => {
           </View>
         </Card>
 
+        {/* Advanced Ballistics */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Advanced Ballistics
+          </Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Apply Spin Drift and Coriolis
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Folds both corrections into the dialled solution. Small inside a few hundred yards.
+                Off by default so a DOPE card built against the plain solution does not shift
+                underneath you; the calculator shows both figures either way. Coriolis needs a
+                latitude on the shot.
+              </Text>
+            </View>
+            <Switch
+              value={settings.advancedBallisticsEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ advancedBallisticsEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.advancedBallisticsEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Apply spin drift and Coriolis corrections"
+              accessibilityHint="Includes spin drift and Coriolis in the elevation and windage the calculator tells you to dial"
+            />
+          </View>
+        </Card>
+
+        {/* Privacy */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Privacy</Text>
+          <Text style={[styles.privacyBlurb, { color: colors.text.secondary }]}>
+            This app has no network connection. Location is used only for altitude and an
+            approximate latitude, rounded to about 11 km before it is saved.
+          </Text>
+          <Button
+            title="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+            variant="secondary"
+            size="medium"
+            style={styles.button}
+          />
+          <Button
+            title="Delete Stored Location Data"
+            onPress={handleDeleteLocationData}
+            variant="danger"
+            size="medium"
+            style={styles.button}
+          />
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>
@@ -451,6 +662,11 @@ export const SettingsScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  privacyBlurb: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   scrollView: {
     flex: 1,

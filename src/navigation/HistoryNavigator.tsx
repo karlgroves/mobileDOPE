@@ -1,25 +1,25 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { DOPELogList } from '../screens/DOPELogList';
+import React from 'react';
+
+import { useTheme } from '../contexts/ThemeContext';
+import { DOPECurve } from '../screens/DOPECurve';
 import { DOPELogDetail } from '../screens/DOPELogDetail';
 import { DOPELogEntry } from '../screens/DOPELogEntry';
-import { DOPECurve } from '../screens/DOPECurve';
+import { DOPELogList } from '../screens/DOPELogList';
+
+import { stackHeaderOptions } from './navigationTheme';
+
 import type { HistoryStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<HistoryStackParamList>();
 
 export const HistoryNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2a2a2a',
-        },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
+        ...stackHeaderOptions(colors),
       }}
     >
       <Stack.Screen name="DOPELogList" component={DOPELogList} options={{ title: 'DOPE Logs' }} />

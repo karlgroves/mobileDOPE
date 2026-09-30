@@ -1,0 +1,115 @@
+{
+  "$schema": "./audit-waivers.schema.json",
+  "waivers": [
+    {
+      "id": "GHSA-23hp-3jrh-7fpw",
+      "package": "tar",
+      "severity": "critical",
+      "reason": "Reached only through the Metro bundler and Expo CLI at build time, on archives this repo produces itself. The shipped app contains no tar parser and never handles an untrusted archive. Advisory: node-tar: Decompression/parse DoS via unlimited input",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-2v37-7h3g-55p8",
+      "package": "nanoid",
+      "severity": "high",
+      "reason": "Used for build-time identifiers. The size argument is never attacker-controlled -- every call site passes a literal. Advisory: nanoid: custom generators can loop indefinitely when size is zero",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-395f-4hp3-45gv",
+      "package": "shell-quote",
+      "severity": "high",
+      "reason": "Build-time only, via Metro. No shell command in this app is constructed from user input; the shipped bundle spawns no process at all. Advisory: shell-quote: Quadratic-complexity Denial of Service in `parse()` (CWE-407)",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "severity": "high",
+      "reason": "Transitive through Expo asset processing at build time, on images committed to this repository. The app decodes no untrusted image dimensions. Advisory: image-size: JXL and HEIF parsers allow denial of service through infinite loops",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-8x88-c5mf-7j5w",
+      "package": "tar",
+      "severity": "high",
+      "reason": "Reached only through the Metro bundler and Expo CLI at build time, on archives this repo produces itself. The shipped app contains no tar parser and never handles an untrusted archive. Advisory: node-tar: Negative tar entry size causes infinite loop in archive replace",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-96hv-2xvq-fx4p",
+      "package": "ws",
+      "severity": "high",
+      "reason": "Reached only by the Metro dev server websocket during development. Production builds contain no websocket client or server. Advisory: ws: Memory exhaustion DoS from tiny fragments and data chunks",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-hmw2-7cc7-3qxx",
+      "package": "form-data",
+      "severity": "high",
+      "reason": "Transitive through build-time HTTP tooling. The app issues no HTTP request of any kind -- it has no network layer. Advisory: form-data: CRLF injection in form-data via unescaped multipart field names and filenames",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-mwp4-54f8-5fhr",
+      "package": "ip-address",
+      "severity": "high",
+      "reason": "Transitive through dev-server address handling. Not reachable in a production build. Advisory: ip-address: Address4 decodes leading-zero octets as decimal while resolvers decode them as",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-r292-9mhp-454m",
+      "package": "tar",
+      "severity": "high",
+      "reason": "Reached only through the Metro bundler and Expo CLI at build time, on archives this repo produces itself. The shipped app contains no tar parser and never handles an untrusted archive. Advisory: node-tar: Uncontrolled recursion in mapHas/filesFilter allows uncatchable stack-overflow D",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "severity": "high",
+      "reason": "Transitive through Expo asset processing at build time, on images committed to this repository. The app decodes no untrusted image dimensions. Advisory: image-size: ICNS parser allows denial of service through an infinite loop",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-w7jw-789q-3m8p",
+      "package": "shell-quote",
+      "severity": "critical",
+      "reason": "Build-time only, via Metro. No shell command in this app is constructed from user input; the shipped bundle spawns no process at all. Advisory: shell-quote quote() does not escape newlines in object .op values",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    }
+  ]
+}

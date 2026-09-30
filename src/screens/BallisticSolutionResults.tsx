@@ -3,29 +3,99 @@
  * Displays calculated ballistic solution for a target
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
-import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
-import { useDOPEStore } from '../store/useDOPEStore';
+
 import { Card, Button } from '../components';
+import { RelevantDopeList } from '../components/RelevantDopeList';
+import { useTheme } from '../contexts/ThemeContext';
+import { useSnapshotsFor } from '../hooks/useSnapshotsFor';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
-import type { CalculatorStackScreenProps } from '../navigation/types';
+import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
+import { useDOPEStore } from '../store/useDOPEStore';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+import {
+  applyAdvancedCorrections,
+  describeAdvancedCorrections,
+} from '../utils/advancedCorrections';
+import { toSolverYards } from '../utils/distanceUnits';
+import { rankMatches } from '../utils/dopeMatching';
+
 import type { DOPELogData } from '../models/DOPELog';
+import type { CalculatorStackScreenProps } from '../navigation/types';
+import type { MatchableEnvironment } from '../utils/dopeMatching';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
 export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation }) => {
-  const { solution, rifleId, ammoId, distance, angularUnit } = route.params;
+  const { solution, rifleId, ammoId, distance, distanceUnit, angularUnit } = route.params;
+  const { settings } = useAppStore();
+
+  /**
+   * The solver computes spin drift and Coriolis but its elevation and windage
+   * fields do not include them (#71). `applyAdvancedCorrections` folds them in
+   * when the setting is on, and reports the breakdown either way so the shooter
+   * can see what the toggle would change.
+   */
+  const adjusted = applyAdvancedCorrections(solution, {
+    enabled: settings.advancedBallisticsEnabled,
+  });
+  const advancedLines = describeAdvancedCorrections(solution, angularUnit);
+  const elevation = angularUnit === 'MIL' ? adjusted.elevationMIL : adjusted.elevationMOA;
+  const windage = angularUnit === 'MIL' ? adjusted.windageMIL : adjusted.windageMOA;
+  const baseElevation =
+    angularUnit === 'MIL' ? adjusted.baseElevationMIL : adjusted.baseElevationMOA;
+  const baseWindage = angularUnit === 'MIL' ? adjusted.baseWindageMIL : adjusted.baseWindageMOA;
   const { theme } = useTheme();
   const { colors } = theme;
 
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
-  const { current: currentEnv, saveCurrent } = useEnvironmentStore();
-  const { createDopeLog } = useDOPEStore();
+  const { current: currentEnv, saveCurrent, snapshots } = useEnvironmentStore();
+  const { createDopeLog, dopeLogs } = useDOPEStore();
+
+  /**
+   * The shooter's own logged DOPE that resembles this shot (#70).
+   *
+   * Logs carry an `environmentId` rather than the conditions themselves, so the
+   * snapshot is joined on here -- without it every log scores neutral on the
+   * environment factor and the ranking collapses to distance and recency.
+   *
+   * The store holds only recent snapshots -- the Dashboard loads one -- so each
+   * candidate log's own snapshot is loaded by id and joined over the store's
+   * (#122). Reading the store alone left nearly every log neutral.
+   */
+  const candidateLogs = useMemo(
+    () => dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId),
+    [dopeLogs, rifleId, ammoId]
+  );
+  const loadedSnapshots = useSnapshotsFor(candidateLogs);
+
+  const relevantDope = useMemo(() => {
+    if (dopeLogs.length === 0) return [];
+
+    const environmentById = new Map<number | undefined, MatchableEnvironment>([
+      ...snapshots.map((snapshot) => [snapshot.id, snapshot] as const),
+      ...(loadedSnapshots ?? []),
+    ]);
+
+    const matchable: (DOPELogData & { environment?: MatchableEnvironment })[] = dopeLogs.map(
+      (log) => ({
+        ...log,
+        environment: environmentById.get(log.environmentId),
+      })
+    );
+
+    return rankMatches(matchable, {
+      rifleId,
+      ammoId,
+      // The solver's unit, because that is what the matcher compares against.
+      distance: toSolverYards(distance, distanceUnit),
+      environment: currentEnv ?? undefined,
+    });
+  }, [dopeLogs, snapshots, loadedSnapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -93,13 +163,16 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
         rifleId: rifle!.id!,
         ammoId: ammo!.id!,
         environmentId,
+        // Stored as entered, with its unit beside it -- the contract DOPELogEntry
+        // already uses. Hard-coding 'yards' here mislabelled every metric
+        // solution that reached this screen. (#106)
         distance,
-        distanceUnit: 'yards',
-        elevationCorrection: angularUnit === 'MIL' ? solution.elevationMIL : solution.elevationMOA,
-        windageCorrection: angularUnit === 'MIL' ? solution.windageMIL : solution.windageMOA,
+        distanceUnit,
+        elevationCorrection: elevation,
+        windageCorrection: windage,
         correctionUnit: angularUnit,
         targetType,
-        notes: `Calculated at ${distance} yards with ${rifle?.name} / ${ammo?.name}`,
+        notes: `Calculated at ${distance} ${distanceUnit === 'yards' ? 'yards' : 'metres'} with ${rifle?.name} / ${ammo?.name}`,
       };
 
       await createDopeLog(dopeData);
@@ -131,7 +204,9 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Distance:</Text>
-            <Text style={[styles.infoValue, { color: colors.text.primary }]}>{distance} yards</Text>
+            <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+              {distance} {distanceUnit === 'yards' ? 'yards' : 'metres'}
+            </Text>
           </View>
         </Card>
 
@@ -143,10 +218,8 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           <View style={styles.primaryResult}>
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.primaryValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.elevationMIL.toFixed(2)}`
-                  : `${solution.elevationMOA.toFixed(2)}`}
+              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
+                {elevation.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -155,16 +228,62 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
-              <Text style={[styles.primaryValue, { color: colors.primary }]}>
-                {angularUnit === 'MIL'
-                  ? `${solution.windageMIL.toFixed(2)}`
-                  : `${solution.windageMOA.toFixed(2)}`}
+              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
+                {windage.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
               </Text>
             </View>
           </View>
+        </Card>
+
+        {/* Advanced corrections, shown separately from the base solution (#71).
+            Rendered whether or not they are applied: seeing that spin drift is
+            0.3 MIL and NOT in the dialled number is more useful than seeing
+            nothing, and it is how a shooter decides whether to turn it on. */}
+        {advancedLines.length > 0 && (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Advanced Corrections
+            </Text>
+            <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+              {adjusted.applied
+                ? 'Included in the corrections above.'
+                : 'Not included above. Turn on Advanced Ballistics in Settings to apply them.'}
+            </Text>
+            {advancedLines.map((line) => (
+              <View key={line.label} style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  {line.label}:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {line.value.toFixed(2)} {line.unit}
+                </Text>
+              </View>
+            ))}
+            {adjusted.applied && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  Without them:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {baseElevation.toFixed(2)} / {baseWindage.toFixed(2)} {angularUnit}
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
+
+        {/* What this shooter actually dialled in conditions like these (#70) */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Your logged DOPE
+          </Text>
+          <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
+            Shown beside the solution, not merged into it.
+          </Text>
+          <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
         </Card>
 
         {/* Detailed Results */}
@@ -237,7 +356,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           />
           <Button
             title="View Wind Table"
-            onPress={() => navigation.navigate('WindTable', { rifleId, ammoId, distance })}
+            onPress={() =>
+              navigation.navigate('WindTable', {
+                rifleId,
+                ammoId,
+                // WindTable solves, so it takes the solver's unit.
+                distance: toSolverYards(distance, distanceUnit),
+              })
+            }
             variant="secondary"
             size="large"
             style={styles.button}
@@ -272,6 +398,10 @@ const styles = StyleSheet.create({
   highlightCard: {
     borderWidth: 2,
     borderColor: 'rgba(74, 144, 226, 0.3)',
+  },
+  matchesCaption: {
+    fontSize: 12,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,

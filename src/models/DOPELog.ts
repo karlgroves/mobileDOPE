@@ -1,5 +1,7 @@
 import { DOPELogRow } from '../types/database.types';
 
+import { orUndefined } from './orUndefined';
+
 export interface DOPELogData {
   id?: number;
   rifleId: number;
@@ -132,10 +134,10 @@ export class DOPELog {
       windageCorrection: row.windage_correction,
       correctionUnit: row.correction_unit,
       targetType: row.target_type,
-      groupSize: row.group_size,
-      hitCount: row.hit_count,
-      shotCount: row.shot_count,
-      notes: row.notes,
+      groupSize: orUndefined(row.group_size),
+      hitCount: orUndefined(row.hit_count),
+      shotCount: orUndefined(row.shot_count),
+      notes: orUndefined(row.notes),
       timestamp: row.timestamp,
     });
   }

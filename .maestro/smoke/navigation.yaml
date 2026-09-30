@@ -1,0 +1,33 @@
+# Smoke: every tab is reachable and renders its root screen.
+#
+# Catches the class of regression a unit test cannot: a screen that throws on
+# mount, a navigator registered under the wrong name, or a stack whose initial
+# route no longer exists.
+appId: com.mobiledope.app.development
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: 'Mobile DOPE'
+    timeout: 30000
+
+- tapOn: 'Rifles'
+- assertVisible: 'Rifles'
+
+- tapOn: 'Ammo'
+- assertVisible: 'Ammunition'
+
+- tapOn: 'Calculator'
+- assertVisible: 'Ballistic Calculator'
+
+- tapOn: 'Session'
+- assertVisible: 'Range Session'
+
+- tapOn: 'History'
+- assertVisible: 'DOPE Logs'
+
+- tapOn: 'Dashboard'
+- assertVisible: 'Mobile DOPE'

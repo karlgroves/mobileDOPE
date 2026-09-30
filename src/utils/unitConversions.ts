@@ -149,14 +149,6 @@ export const convertDistance = (
 };
 
 /**
- * Convert angular measurement based on unit preference
- */
-export const convertAngular = (value: number, from: 'MIL' | 'MOA', to: 'MIL' | 'MOA'): number => {
-  if (from === to) return value;
-  return from === 'MIL' ? milToMoa(value) : moaToMil(value);
-};
-
-/**
  * Format distance with unit label
  */
 export const formatDistance = (

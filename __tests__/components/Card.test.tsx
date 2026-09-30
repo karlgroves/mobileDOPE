@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render } from '@testing-library/react-native';
+
 import { Card } from '../../src/components/Card';
+import { renderWithProviders as render } from '../helpers/renderWithProviders';
 
 describe('Card', () => {
   it('should render children correctly', () => {

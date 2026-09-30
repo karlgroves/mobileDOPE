@@ -3,44 +3,98 @@
  * Quick-entry form for logging shooting data in the field
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { Button } from '../components/Button';
+import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { NumberInput } from '../components/NumberInput';
-import { TextInput } from '../components/TextInput';
 import { Picker } from '../components/Picker';
 import { SegmentedControl } from '../components/SegmentedControl';
-import { Card } from '../components/Card';
-import type { LogsStackScreenProps } from '../navigation/types';
-import { useRifleStore } from '../store/useRifleStore';
+import { TextInput } from '../components/TextInput';
+import { useTheme } from '../contexts/ThemeContext';
+import { useDopeLog } from '../hooks/useDopeLog';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useDOPEStore } from '../store/useDOPEStore';
-import type { DOPELogData } from '../models/DOPELog';
+import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { useRifleStore } from '../store/useRifleStore';
+
+import type { DOPELogData, DOPELog } from '../models/DOPELog';
+import type { LogsStackScreenProps } from '../navigation/types';
 
 type Props = LogsStackScreenProps<'DOPELogEdit'>;
 
-export function DOPELogEntry({ route, navigation }: Props) {
+/**
+ * New DOPE Log, or DOPE Log Edit with a `logId`.
+ *
+ * Editing waits for the log before building the form. The form's fields take
+ * their starting values once, on mount; a restored launch shows this screen
+ * before DOPE Logs has filled the store, and the form used to start from a new
+ * log's defaults (distance 100) under an "Update DOPE Log" title and keep them
+ * after the log arrived (#141).
+ */
+export function DOPELogEntry(props: Props) {
+  const { logId } = props.route.params || {};
+  const { colors } = useTheme().theme;
+  const { log, status } = useDopeLog(logId);
+
+  if (logId !== undefined && status === 'loading') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
+  if (logId !== undefined && status === 'missing') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <EmptyState
+          title="DOPE Log Not Found"
+          message="This log may have been deleted."
+          actionLabel="Back to DOPE Logs"
+          onAction={() => props.navigation.goBack()}
+        />
+      </View>
+    );
+  }
+
+  return <DOPELogForm {...props} existingLog={log} />;
+}
+
+function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?: DOPELog }) {
   const { logId } = route.params || {};
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { rifles } = useRifleStore();
-  const { ammoProfiles } = useAmmoStore();
+  const { rifles, loadRifles } = useRifleStore();
+  const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
   const { current: currentEnv, saveCurrent } = useEnvironmentStore();
-  const { createDopeLog, updateDopeLog, getDopeById, loading } = useDOPEStore();
+  const { createDopeLog, updateDopeLog, loading } = useDOPEStore();
 
-  // Load existing log if editing
-  const existingLog = logId ? getDopeById(logId) : undefined;
+  // Load the profiles this screen needs rather than rely on another screen
+  // having done it: relaunching restores straight into this screen, before
+  // anything has loaded them. All ammunition, not one caliber -- AmmoProfileList
+  // leaves the shared store holding only the caliber it last showed (#132).
+  const [profilesLoaded, setProfilesLoaded] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([loadRifles(), loadAmmoProfiles()]).finally(() => {
+      if (mounted) setProfilesLoaded(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [loadRifles, loadAmmoProfiles]);
 
-  // Profile selection - auto-select first rifle if creating new log
-  const getInitialRifleId = () => {
-    if (existingLog?.rifleId) return existingLog.rifleId;
-    if (rifles.length > 0) return rifles[0].id;
-    return undefined;
-  };
-  const [selectedRifleId, setSelectedRifleId] = useState<number | undefined>(getInitialRifleId());
+  // The shooter's choice, if they made one; otherwise the log's rifle, or the
+  // first rifle. Derived on every render, so a rifle that loads after the
+  // first render is still the default -- a one-time initial state missed it
+  // and showed "Select Rifle".
+  const [chosenRifleId, setSelectedRifleId] = useState<number | undefined>();
+  const selectedRifleId = chosenRifleId ?? existingLog?.rifleId ?? rifles[0]?.id;
   const [selectedAmmoId, setSelectedAmmoId] = useState<number | undefined>(existingLog?.ammoId);
 
   // Target parameters
@@ -170,6 +224,34 @@ export function DOPELogEntry({ route, navigation }: Props) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save DOPE log');
     }
   };
+
+  if (!profilesLoaded && rifles.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
+  // A new log needs a rifle and a load to log against. Without them the form
+  // was all there, with nothing to pick in either picker (#132).
+  if (profilesLoaded && !existingLog && (rifles.length === 0 || ammoProfiles.length === 0)) {
+    const noRifle = rifles.length === 0;
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <EmptyState
+          title={noRifle ? 'No Rifle Profiles' : 'No Ammunition Profiles'}
+          message={
+            noRifle
+              ? 'Create a rifle profile before logging DOPE.'
+              : 'Create an ammunition profile before logging DOPE.'
+          }
+          actionLabel={noRifle ? 'Go to Rifles' : 'Go to Ammo'}
+          onAction={() => navigation.navigate(noRifle ? 'Rifles' : 'Ammo')}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -321,6 +403,8 @@ export function DOPELogEntry({ route, navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Notes</Text>
           <TextInput
             label="Notes"
+            accessibilityLabel="Notes about this engagement"
+            accessibilityHint="Optional. For example, mirage, light or position"
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes about this engagement..."
@@ -346,7 +430,7 @@ export function DOPELogEntry({ route, navigation }: Props) {
 
         {!currentEnv && (
           <Card style={[styles.card, { backgroundColor: colors.error + '20' }]}>
-            <Text style={[styles.warningText, { color: colors.error }]}>
+            <Text style={[styles.warningText, { color: colors.errorText }]}>
               ⚠️ No environmental data captured. Go to Range → Environmental Conditions to record
               conditions.
             </Text>

@@ -1,0 +1,44 @@
+id: ammo-compare
+title: 'Compare two loads side by side'
+type: positive
+description: >-
+  Comparison is a table of numbers, which is where a screen reader most easily loses
+  the thread: a column of bare figures with no row or column association says
+  nothing. This asserts each compared value is announced with the load it belongs to
+  and the quantity it represents.
+
+preconditions:
+  - 'At least two ammunition profiles exist in the same caliber'
+
+start_location: 'Ammo/AmmoCompare'
+
+expected_result: >-
+  Both loads are shown with their ballistic coefficient and muzzle velocity, and each
+  figure is attributable to a specific load without relying on visual column position.
+
+data:
+  first_ammo: '175gr SMK'
+  second_ammo: '168gr ELD-M'
+  select_first: 'Select first load to compare'
+  select_second: 'Select second load to compare'
+  # REPLACE: how a compared cell should announce. Position in a visual column is
+  # not available to a screen reader, so the value must carry its own context.
+  first_velocity_cell: '175gr SMK muzzle velocity, 2650 feet per second'
+  second_velocity_cell: '168gr ELD-M muzzle velocity, 2700 feet per second'
+
+steps:
+  - audit: page
+
+  - locate: button "{{ select_first }}"
+  - focus: button "{{ select_first }}"
+  - activate: button "{{ select_first }}"
+  - select: radio "{{ first_ammo }}"
+
+  - locate: button "{{ select_second }}"
+  - activate: button "{{ select_second }}"
+  - select: radio "{{ second_ammo }}"
+
+  - audit: page
+
+  - verify: text "{{ first_velocity_cell }}"
+  - verify: text "{{ second_velocity_cell }}"

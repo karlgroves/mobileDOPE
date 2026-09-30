@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+
+import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
+import { ALTITUDE_HELP, STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
-import { useRifleStore } from '../store/useRifleStore';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
-import { Card, Picker, NumberInput, NumberPicker, UnitToggle, Button } from '../components';
+import { useRifleStore } from '../store/useRifleStore';
 import { calculateBallisticSolution } from '../utils/ballistics';
+import {
+  hasRequiredEnvironmentalInputs,
+  missingEnvironmentalInputs,
+} from '../utils/calculatorInputs';
+import { toSolverYards } from '../utils/distanceUnits';
+
 import type { CalculatorStackScreenProps } from '../navigation/types';
 
 // Wind direction options in degrees
@@ -69,16 +77,15 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (
-      angle === undefined ||
-      temperature === undefined ||
-      pressure === undefined ||
-      humidity === undefined ||
-      altitude === undefined ||
-      windSpeed === undefined ||
-      windDirection === undefined
-    ) {
-      Alert.alert('Missing Data', 'Please fill in all environmental parameters.');
+    // Altitude is deliberately not in this set: the solver does not read it.
+    // See `calculatorInputs`, where the rule lives so it can be tested.
+    const environmentals = { angle, temperature, pressure, humidity, windSpeed, windDirection };
+
+    if (!hasRequiredEnvironmentalInputs(environmentals)) {
+      Alert.alert(
+        'Missing Data',
+        `Please fill in: ${missingEnvironmentalInputs(environmentals).join(', ')}.`
+      );
       return;
     }
 
@@ -100,17 +107,23 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
       };
 
       const targetParams = {
-        distance,
-        angle,
-        windSpeed,
-        windDirection,
+        // The solver is yards. The toggle above used to change only the label,
+        // so entering 600 with meters selected solved for 600 yards -- a target
+        // 52 m closer than the one being looked at. See #106.
+        distance: toSolverYards(distance, distanceUnit),
+        angle: environmentals.angle,
+        windSpeed: environmentals.windSpeed,
+        windDirection: environmentals.windDirection,
       };
 
       const atmosphere = {
-        temperature,
-        pressure,
-        humidity,
-        altitude,
+        temperature: environmentals.temperature,
+        pressure: environmentals.pressure,
+        humidity: environmentals.humidity,
+        // Defaulted rather than made optional throughout: the solver never reads
+        // altitude, and for anything derived from station pressure 0 is the
+        // right value -- the elevation is already in the pressure. See #89.
+        altitude: altitude ?? 0,
       };
 
       const result = calculateBallisticSolution(
@@ -126,7 +139,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
         solution: result,
         rifleId: selectedRifleId!,
         ammoId: selectedAmmoId!,
+        // Passed as entered, with the unit, so the results screen shows the
+        // shooter the number they asked about rather than its yard equivalent.
         distance,
+        distanceUnit,
         angularUnit,
       });
     } catch (error: unknown) {
@@ -219,7 +235,8 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             unit="°F"
           />
           <NumberInput
-            label="Barometric Pressure"
+            label="Station Pressure"
+            helperText={STATION_PRESSURE_HELP}
             value={pressure}
             onChangeValue={setPressure}
             min={25}
@@ -236,6 +253,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             precision={0}
             unit="%"
           />
+          {/* Not required (#89). The solver reads temperature and pressure only;
+              with station pressure entered, elevation is already accounted for
+              and reading altitude too would correct for it twice. Blocking the
+              solve on a field the solver ignores was the misleading part. */}
           <NumberInput
             label="Altitude"
             value={altitude}
@@ -244,6 +265,7 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
             max={15000}
             precision={0}
             unit="feet"
+            helperText={ALTITUDE_HELP}
           />
         </Card>
 

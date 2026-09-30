@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { Modal } from './Modal';
+
 import { useTheme } from '../contexts/ThemeContext';
+
+import { Modal } from './Modal';
 
 export interface PickerOption {
   label: string;
@@ -60,6 +62,10 @@ export const Picker: React.FC<PickerProps> = ({
         ]}
         onPress={() => !disabled && setIsOpen(true)}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selectedOption ? selectedOption.label : placeholder}`}
+        accessibilityHint={`Opens a list of ${label.toLowerCase()} options`}
+        accessibilityState={{ disabled, expanded: isOpen }}
       >
         <Text
           style={[
@@ -74,7 +80,7 @@ export const Picker: React.FC<PickerProps> = ({
         <Text style={[styles.arrow, { color: colors.text.secondary }]}>▼</Text>
       </TouchableOpacity>
 
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>}
       {helperText && !error && (
         <Text style={[styles.helperText, { color: colors.text.secondary }]}>{helperText}</Text>
       )}
@@ -82,22 +88,29 @@ export const Picker: React.FC<PickerProps> = ({
       <Modal visible={isOpen} onClose={() => setIsOpen(false)} title={label}>
         <FlatList
           data={options}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={label}
+          accessibilityHint={`Choose one ${label.toLowerCase()} option`}
           keyExtractor={(item) => item.value}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
                 styles.option,
                 {
-                  backgroundColor: item.value === value ? colors.primaryDark : 'transparent',
+                  backgroundColor: item.value === value ? colors.primary : 'transparent',
                 },
               ]}
               onPress={() => handleSelect(item.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={item.label}
+              accessibilityHint={`Sets ${label.toLowerCase()} to ${item.label}`}
+              accessibilityState={{ selected: item.value === value }}
             >
               <Text
                 style={[
                   styles.optionText,
                   {
-                    color: item.value === value ? colors.text.inverse : colors.text.primary,
+                    color: item.value === value ? colors.onPrimary : colors.text.primary,
                     fontWeight: item.value === value ? '600' : '400',
                   },
                 ]}
