@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Negative numbers, such as a left windage correction, exported as text
     (`'-0.5`) because the formula-injection guard also caught a leading
     minus. Numbers are no longer prefixed; free text still is.
+- Migration 006 drops the always-NULL `environment_snapshots.longitude` column
+  that migration 005 emptied but could not remove (#133). SQLite's
+  `DROP COLUMN` removes it in place, with no table rebuild; databases that
+  never had the column are skipped. Every install now matches `DB_SCHEMA`.
 
 ## [1.0.0] - 2026-07-20
 

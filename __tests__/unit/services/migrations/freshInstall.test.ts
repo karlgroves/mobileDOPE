@@ -126,10 +126,9 @@ describe('migrations on a fresh install (#128)', () => {
     const db = new DatabaseSync(':memory:');
     await migrate(db);
 
-    // Migration 005 empties `longitude` rather than dropping it, and says why;
-    // DB_SCHEMA leaves it out. That is the one intended difference.
+    // No allowance for `longitude`: 001 creates it, 005 empties it and 006
+    // drops it (#133), so a new install matches DB_SCHEMA exactly.
     const expected = current();
-    expected.exec('ALTER TABLE environment_snapshots ADD COLUMN longitude REAL;');
     expect(shapeOf(db)).toEqual(shapeOf(expected));
 
     expected.close();
@@ -185,11 +184,13 @@ describe.each(STUCK_SHAPES)('a device stuck by #128, $name', ({ withLongitude })
     db.close();
   });
 
-  it('keeps the schema it already had', async () => {
+  it('ends with the schema the repositories expect', async () => {
+    // With or without `longitude` to begin with: 006 drops it when it is there
+    // and leaves the table alone when it is not (#133).
     const db = stuck();
     await migrate(db);
 
-    const expected = shape();
+    const expected = current();
     expect(shapeOf(db)).toEqual(shapeOf(expected));
 
     expected.close();
@@ -211,6 +212,71 @@ describe.each(STUCK_SHAPES)('a device stuck by #128, $name', ({ withLongitude })
       latitude: number;
     };
     expect(row.latitude).toBe(39.7);
+    db.close();
+  });
+});
+
+/**
+ * An install that is up to date apart from #133: migration 005 left
+ * `environment_snapshots.longitude` in place, always NULL, and every real
+ * install has DOPE logs referencing its snapshots.
+ */
+describe('an install at version 5, with the emptied longitude column (#133)', () => {
+  const atVersion5 = (): DatabaseSync => {
+    const db = current();
+    db.exec('ALTER TABLE environment_snapshots ADD COLUMN longitude REAL;');
+    db.exec(`
+      INSERT INTO rifle_profiles
+        (name, caliber, barrel_length, twist_rate, zero_distance, optic_manufacturer,
+         optic_model, reticle_type, click_value_type, click_value, scope_height)
+      VALUES ('Tikka T3x', '.308 Win', 24, 8, 100, 'Vortex', 'Razor', 'EBR-7C', 'MIL', 0.1, 1.5);
+      INSERT INTO ammo_profiles
+        (name, manufacturer, caliber, bullet_weight, bullet_type,
+         ballistic_coefficient_g1, ballistic_coefficient_g7, muzzle_velocity)
+      VALUES ('175gr SMK', 'Sierra', '.308 Win', 175, 'HPBT', 0.505, 0.243, 2650);
+      INSERT INTO environment_snapshots
+        (temperature, humidity, pressure, altitude, density_altitude,
+         wind_speed, wind_direction, latitude, longitude, timestamp)
+      VALUES (41, 73, 28.61, 1250, 2000, 12, 270, 39.7, NULL, '2026-01-01T00:00:00.000Z');
+      INSERT INTO dope_logs
+        (rifle_id, ammo_id, environment_id, distance, distance_unit,
+         elevation_correction, windage_correction, correction_unit, target_type, timestamp)
+      VALUES (1, 1, 1, 400, 'yards', 2.9, -0.5, 'MIL', 'steel', '2026-01-01T00:00:00.000Z');
+      PRAGMA user_version = 5;
+    `);
+    return db;
+  };
+
+  it('drops the column and ends with the schema the repositories expect', async () => {
+    const db = atVersion5();
+    await migrate(db);
+
+    expect(version(db)).toBe(latest);
+    const expected = current();
+    expect(shapeOf(db)).toEqual(shapeOf(expected));
+
+    expected.close();
+    db.close();
+  });
+
+  it('keeps the snapshot, its readings and the log that references it', async () => {
+    const db = atVersion5();
+    await migrate(db);
+
+    expect(db.prepare('SELECT temperature, latitude FROM environment_snapshots').all()).toEqual([
+      { temperature: 41, latitude: 39.7 },
+    ]);
+    expect(
+      db
+        .prepare(
+          `SELECT l.distance, e.wind_direction FROM dope_logs l
+             JOIN environment_snapshots e ON e.id = l.environment_id`
+        )
+        .all()
+    ).toEqual([{ distance: 400, wind_direction: 270 }]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    expect(db.prepare('PRAGMA foreign_keys').get()).toEqual({ foreign_keys: 1 });
+
     db.close();
   });
 });
