@@ -2,18 +2,21 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
+import { Colors } from '../../../src/constants/colors';
 import { AmmoProfile } from '../../../src/models/AmmoProfile';
 import { DOPELog } from '../../../src/models/DOPELog';
 import { EnvironmentSnapshot } from '../../../src/models/EnvironmentSnapshot';
 import { RifleProfile } from '../../../src/models/RifleProfile';
 import { DOPECurve } from '../../../src/screens/DOPECurve';
 import { environmentRepository } from '../../../src/services/database';
+import { useAppStore } from '../../../src/store';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useRifleStore } from '../../../src/store/useRifleStore';
 import { confidenceOpacity } from '../../../src/utils/chartConfidence';
 import { calculateConfidence } from '../../../src/utils/dopeAnalysis';
 import { predictElevation } from '../../../src/utils/solverInputs';
+import { contrastRatio } from '../../helpers/contrast';
 import { validAmmo, validEnvironment, validRifle } from '../../helpers/fixtures';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
 
@@ -69,7 +72,11 @@ jest.mock('../../../src/utils/solverInputs', () => {
  * render callback with one point per datum -- enough to see which distances get
  * a marker and how each marker is drawn -- and records what was drawn.
  */
-const mockDrawn: { lines: Record<string, unknown>[]; circles: Record<string, unknown>[] } = {
+const mockDrawn: {
+  lines: Record<string, unknown>[];
+  circles: Record<string, unknown>[];
+  axisOptions?: Record<string, unknown>;
+} = {
   lines: [],
   circles: [],
 };
@@ -78,13 +85,16 @@ jest.mock('victory-native', () => {
     data,
     xKey,
     yKeys,
+    axisOptions,
     children,
   }: {
     data: Record<string, number | undefined>[];
     xKey: string;
     yKeys: string[];
+    axisOptions?: Record<string, unknown>;
     children: (arg: { points: Record<string, unknown[]> }) => React.ReactNode;
   }) => {
+    mockDrawn.axisOptions = axisOptions;
     const points = Object.fromEntries(
       yKeys.map((key) => [
         key,
@@ -104,7 +114,9 @@ jest.mock('@shopify/react-native-skia', () => {
     mockDrawn.circles.push(props);
     return null;
   };
-  return { Circle: mockCircle };
+  // A stand-in font: what matters is that the chart is given one at all.
+  const mockMatchFont = (style: Record<string, unknown>) => ({ mockFont: true, ...style });
+  return { Circle: mockCircle, matchFont: mockMatchFont };
 });
 jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
@@ -418,5 +430,84 @@ describe('DOPECurve: logged drop curve and confidence (#64)', () => {
     const label = chart.props.accessibilityLabel as string;
     expect(label).toMatch(/300 yards, 3\.0 MIL, 1 log, strong confidence/);
     expect(label).toMatch(/600 yards, 6\.0 MIL, 1 log, weak confidence/);
+  });
+});
+
+describe('DOPECurve: reading values off the chart (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDrawn.axisOptions = undefined;
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('gives the axes a font, so their numbers are drawn', async () => {
+    // With font: null, victory-native draws the grid and no tick labels at all
+    // -- seen on the iOS Simulator: no distances, no MIL values.
+    seed(logsAt([300, 500], 0));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    expect(mockDrawn.axisOptions?.font).toEqual(expect.objectContaining({ mockFont: true }));
+  });
+
+  it('names the axes and their units, following the unit toggle', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    expect(await findByText('Elevation (MIL) by distance (yards)')).toBeTruthy();
+    fireEvent.press(getByText('MOA'));
+    expect(await findByText('Elevation (MOA) by distance (yards)')).toBeTruthy();
+  });
+
+  it('labels the elevation axis without a -0.0', async () => {
+    // The solver returns a hair below zero at the zero range; toFixed kept the sign.
+    seed(logsAt([300], 0));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const format = mockDrawn.axisOptions?.formatYLabel as (v: number) => string;
+    expect(format(-0.0001)).toBe('0.0');
+  });
+});
+
+describe('DOPECurve: the chart can be seen in every theme (#64)', () => {
+  /**
+   * WCAG 1.4.11: a graphical object needed to understand the content needs
+   * 3:1 against what it sits on. Seen on the iOS Simulator in the light theme:
+   * the calculated line (#4CAF50) is 2.78:1 on white and the logged line and
+   * marker outlines (#FF9800) 2.16:1. The faint marker fill is faint on
+   * purpose; the outline is what has to be found.
+   */
+  const MODES = ['dark', 'light', 'nightVision'] as const;
+
+  afterEach(() => {
+    useAppStore.setState((s) => ({ settings: { ...s.settings, themeMode: 'dark' } }));
+  });
+
+  it.each(MODES)('draws every line and outline at 3:1 or better in %s', async (mode) => {
+    useAppStore.setState((s) => ({ settings: { ...s.settings, themeMode: mode } }));
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+    mockDrawn.lines.length = 0;
+    mockDrawn.circles.length = 0;
+    seed(logsAt([300, 500], 0));
+
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const background = Colors[mode].background;
+    const strokes = [
+      ...mockDrawn.lines.map((l) => l.color as string),
+      ...mockDrawn.circles.filter((c) => c.style === 'stroke').map((c) => c.color as string),
+    ];
+    expect(strokes.length).toBeGreaterThanOrEqual(3);
+    for (const color of strokes) {
+      expect(contrastRatio(color, background)).toBeGreaterThanOrEqual(3);
+    }
   });
 });

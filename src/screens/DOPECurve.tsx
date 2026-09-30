@@ -3,10 +3,10 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
-import { Circle } from '@shopify/react-native-skia';
+import { Circle, matchFont } from '@shopify/react-native-skia';
 import * as Sharing from 'expo-sharing';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { CartesianChart, Line, type PointsArray } from 'victory-native';
 
@@ -21,6 +21,7 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { confidenceOpacity } from '../utils/chartConfidence';
 import { buildDropCurve, detectOutliers, type DropCurvePoint } from '../utils/dopeAnalysis';
+import { formatCorrection } from '../utils/formatCorrection';
 import { elevationTable } from '../utils/solverInputs';
 
 import type { HistoryStackScreenProps } from '../navigation/types';
@@ -45,6 +46,17 @@ type ChartPoint = {
 
 /** Radius of a logged-point marker, in chart pixels. */
 const MARKER_RADIUS = 6;
+
+/**
+ * The axis labels' font. victory-native draws no tick labels at all without
+ * one -- the chart had a grid and no numbers. A system font, so there is no
+ * font file to bundle.
+ */
+const axisFont = () =>
+  matchFont({
+    fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' }),
+    fontSize: 12,
+  });
 
 /** "1 log", "3 logs". */
 const logsLabel = (count: number): string => `${count} ${count === 1 ? 'log' : 'logs'}`;
@@ -72,6 +84,10 @@ const describeChart = (
 /**
  * A marker at each logged point: filled at an opacity from its confidence, and
  * outlined at full strength so a faint point is still found.
+ *
+ * The chart draws in the text-grade tokens (primaryText, warningText), not the
+ * fills: a line or outline needs 3:1 against the background (WCAG 1.4.11), and
+ * on the light theme #4CAF50 and #FF9800 are 2.78:1 and 2.16:1 on white.
  */
 const loggedMarkers = (
   points: PointsArray,
@@ -103,14 +119,14 @@ const ChartLegend: React.FC<{ loggedCount: number }> = ({ loggedCount }) => {
     <>
       <View style={styles.legendContainer}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendLine, { backgroundColor: colors.primary }]} />
+          <View style={[styles.legendLine, { backgroundColor: colors.primaryText }]} />
           <Text style={[styles.legendText, { color: colors.text.secondary }]}>
             Calculated Curve
           </Text>
         </View>
         {loggedCount > 0 && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+            <View style={[styles.legendDot, { backgroundColor: colors.warningText }]} />
             <Text style={[styles.legendText, { color: colors.text.secondary }]}>
               Actual DOPE ({logsLabel(loggedCount)})
             </Text>
@@ -198,6 +214,8 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
     () => new Map(loggedCurve.map((p) => [p.distance, p.confidence])),
     [loggedCurve]
   );
+
+  const font = useMemo(axisFont, []);
 
   const chartLabel = useMemo(
     () => describeChart(loggedCurve, maxDistance, correctionUnit),
@@ -319,6 +337,10 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             />
           </View>
 
+          <Text style={[styles.axisCaption, { color: colors.text.secondary }]}>
+            {`Elevation (${correctionUnit}) by distance (yards)`}
+          </Text>
+
           {hasData ? (
             <View
               ref={chartRef}
@@ -338,30 +360,31 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                 yKeys={['elevation', 'logged']}
                 domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
                 axisOptions={{
-                  font: null,
+                  font,
                   tickCount: { x: 5, y: 5 },
                   lineColor: colors.border,
                   labelColor: colors.text.secondary,
                   formatXLabel: (value: number) => `${value}`,
-                  formatYLabel: (value?: number) => (value === undefined ? '' : value.toFixed(1)),
+                  formatYLabel: (value?: number) =>
+                    value === undefined ? '' : formatCorrection(value),
                 }}
               >
                 {({ points }) => (
                   <>
                     <Line
                       points={points.elevation}
-                      color={colors.primary}
+                      color={colors.primaryText}
                       strokeWidth={2}
                       curveType="natural"
                     />
                     <Line
                       points={points.logged}
-                      color={colors.warning}
+                      color={colors.warningText}
                       strokeWidth={2}
                       curveType="linear"
                       connectMissingData
                     />
-                    {loggedMarkers(points.logged, confidenceAt, colors.warning)}
+                    {loggedMarkers(points.logged, confidenceAt, colors.warningText)}
                   </>
                 )}
               </CartesianChart>
@@ -409,7 +432,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                     {point.distance} yds
                   </Text>
                   <Text style={[styles.tableCell, { color: colors.text.primary }]}>
-                    {point.elevation.toFixed(1)}
+                    {formatCorrection(point.elevation)}
                   </Text>
                   {loggedCurve.length > 0 && (
                     <Text
@@ -418,7 +441,7 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                         { color: actualPoint ? colors.warningText : colors.text.secondary },
                       ]}
                     >
-                      {actualPoint ? actualPoint.correction.toFixed(1) : '-'}
+                      {actualPoint ? formatCorrection(actualPoint.correction) : '-'}
                     </Text>
                   )}
                 </View>
@@ -523,6 +546,10 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  axisCaption: {
+    fontSize: 12,
+    marginBottom: 8,
   },
   chartContainer: {
     marginHorizontal: -8,
