@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -79,13 +80,19 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    // Gestures (the DOPE Curve's pinch and pan) only work beneath this root.
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     alignItems: 'center',

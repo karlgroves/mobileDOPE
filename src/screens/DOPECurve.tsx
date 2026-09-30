@@ -3,23 +3,51 @@
  * Displays ballistic drop curve with actual DOPE data points overlaid
  */
 
-import { Circle, matchFont } from '@shopify/react-native-skia';
+import { Circle, Group, matchFont } from '@shopify/react-native-skia';
 import * as Sharing from 'expo-sharing';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { Gesture } from 'react-native-gesture-handler';
+import {
+  runOnJS,
+  useAnimatedReaction,
+  useDerivedValue,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
-import { CartesianChart, Line, type PointsArray } from 'victory-native';
+import {
+  CartesianChart,
+  Line,
+  getTransformComponents,
+  setScale,
+  setTranslate,
+  useChartTransformState,
+  type PointsArray,
+} from 'victory-native';
 
 import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
 import { confidenceBand } from '../components/ConfidenceBadge';
 import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
 import { OutlierList } from '../components/OutlierList';
 import { useTheme } from '../contexts/ThemeContext';
+import { useHorizontalChartPan } from '../hooks/useHorizontalChartPan';
 import { useInputCorrections } from '../hooks/useInputCorrections';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { confidenceOpacity } from '../utils/chartConfidence';
+import {
+  MAX_ZOOM,
+  PAN_STEP,
+  ZOOM_STEP,
+  clampView,
+  counterScale,
+  panBy,
+  resetView,
+  zoomBy,
+  type ChartView,
+} from '../utils/chartZoom';
 import { buildDropCurve, detectOutliers, type DropCurvePoint } from '../utils/dopeAnalysis';
 import { formatCorrection } from '../utils/formatCorrection';
 import { elevationTable } from '../utils/solverInputs';
@@ -92,13 +120,16 @@ const describeChart = (
 const loggedMarkers = (
   points: PointsArray,
   confidenceAt: Map<number, number>,
-  color: string
+  color: string,
+  keepRound: SharedValue<{ scaleX: number }[]>
 ): React.ReactNode[] =>
   points.map((point) => {
     if (point.y === undefined || point.y === null) return null;
     const opacity = confidenceOpacity(confidenceAt.get(Number(point.xValue)) ?? 0);
     return (
-      <React.Fragment key={point.xValue}>
+      // Under the inverse of the zoom, around the marker's own centre, so it
+      // stays round rather than stretching with the distance axis.
+      <Group key={point.xValue} origin={{ x: point.x, y: point.y }} transform={keepRound}>
         <Circle cx={point.x} cy={point.y} r={MARKER_RADIUS} color={color} opacity={opacity} />
         <Circle
           cx={point.x}
@@ -108,9 +139,79 @@ const loggedMarkers = (
           style="stroke"
           strokeWidth={2}
         />
-      </React.Fragment>
+      </Group>
     );
   });
+
+/**
+ * Single-tap zoom and pan. The chart also takes pinch and a pan gesture, which
+ * need a single-pointer alternative (WCAG 2.5.1). Outside the exported area:
+ * controls have no place in the PNG.
+ */
+const ZoomControls: React.FC<{
+  zoom: number;
+  onZoom: (factor: number) => void;
+  onPan: (steps: number) => void;
+  onReset: () => void;
+}> = ({ zoom, onZoom, onPan, onReset }) => {
+  // At the whole curve there is nothing to zoom out to or pan across, and at
+  // MAX_ZOOM nothing further to zoom into. Disabled says so; a button that did
+  // nothing gave a screen-reader user no change and no reason.
+  const whole = zoom <= 1;
+  return (
+    <View style={styles.zoomControls}>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Zoom out"
+          onPress={() => onZoom(1 / ZOOM_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Zoom in"
+          onPress={() => onZoom(ZOOM_STEP)}
+          disabled={zoom >= MAX_ZOOM}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
+      <View style={styles.zoomRow}>
+        <Button
+          title="Shorter"
+          accessibilityLabel="Show shorter distances"
+          accessibilityHint="Moves the zoomed chart toward shorter distances"
+          onPress={() => onPan(-PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Longer"
+          accessibilityLabel="Show longer distances"
+          accessibilityHint="Moves the zoomed chart toward longer distances"
+          onPress={() => onPan(PAN_STEP)}
+          disabled={whole}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+        <Button
+          title="Whole curve"
+          accessibilityLabel="Show the whole curve"
+          accessibilityHint="Resets the zoom so every distance shows"
+          onPress={onReset}
+          variant="secondary"
+          size="small"
+          style={styles.zoomButton}
+        />
+      </View>
+    </View>
+  );
+};
 
 /** Key to the chart's two lines, and what a marker's opacity means. */
 const ChartLegend: React.FC<{ loggedCount: number }> = ({ loggedCount }) => {
@@ -216,6 +317,64 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
   );
 
   const font = useMemo(axisFont, []);
+
+  // Zoom and pan along the distance axis. Gestures and buttons share one
+  // matrix; the buttons read it live, so they continue from wherever a pinch
+  // left the chart.
+  const { state: transformState } = useChartTransformState();
+  const [plotWidth, setPlotWidth] = useState(0);
+  const horizontalPan = useHorizontalChartPan(transformState);
+  const chartGestures = useMemo(() => Gesture.Race(horizontalPan), [horizontalPan]);
+  // The plot width on the UI thread, where the snap-back below runs. Written
+  // from onChartBoundsChange, never during render: Reanimated drops a write
+  // made while React renders, which left this 0 and snapped every zoom to 1x.
+  const plotWidthOnUi = useSharedValue(0);
+
+  // victory-native's pinch and pan have no limits: a pinch could zoom out
+  // past 1x and squeeze the curve into part of an empty chart. Once both
+  // gestures are idle, bring the view back into range.
+  useAnimatedReaction(
+    () => ({
+      idle: !transformState.zoomActive.value && !transformState.panActive.value,
+      matrix: transformState.matrix.value,
+    }),
+    ({ idle, matrix }) => {
+      if (!idle) return;
+      const { scaleX, translateX } = getTransformComponents(matrix);
+      const next = clampView({ scale: scaleX, translate: translateX }, plotWidthOnUi.value);
+      if (next.scale !== scaleX || next.translate !== translateX) {
+        transformState.matrix.value = setTranslate(
+          setScale(matrix, next.scale, 1),
+          next.translate,
+          0
+        );
+      }
+    }
+  );
+
+  // The zoom level in React, for the buttons' disabled states.
+  const [zoom, setZoom] = useState(1);
+  useAnimatedReaction(
+    () => getTransformComponents(transformState.matrix.value).scaleX,
+    (scale, previous) => {
+      if (scale !== previous) runOnJS(setZoom)(scale);
+    }
+  );
+
+  const keepMarkersRound = useDerivedValue(() =>
+    counterScale(getTransformComponents(transformState.matrix.value).scaleX)
+  );
+  const currentView = (): ChartView => {
+    const { scaleX, translateX } = getTransformComponents(transformState.matrix.value);
+    return { scale: scaleX, translate: translateX };
+  };
+  const showView = (next: ChartView) => {
+    transformState.matrix.value = setTranslate(
+      setScale(transformState.matrix.value, next.scale, 1),
+      next.translate,
+      0
+    );
+  };
 
   const chartLabel = useMemo(
     () => describeChart(loggedCurve, maxDistance, correctionUnit),
@@ -365,6 +524,16 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                   xKey="distance"
                   yKeys={['elevation', 'logged']}
                   domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                  transformState={transformState}
+                  // Distance only: scaling MIL too would stretch the elevation
+                  // axis. victory-native's pan is replaced by one that lets a
+                  // vertical drag through to the page scroll.
+                  transformConfig={{ pinch: { dimensions: 'x' }, pan: { enabled: false } }}
+                  customGestures={chartGestures}
+                  onChartBoundsChange={({ left, right }) => {
+                    plotWidthOnUi.value = right - left;
+                    if (right - left !== plotWidth) setPlotWidth(right - left);
+                  }}
                   axisOptions={{
                     font,
                     tickCount: { x: 5, y: 5 },
@@ -390,7 +559,12 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
                         curveType="linear"
                         connectMissingData
                       />
-                      {loggedMarkers(points.logged, confidenceAt, colors.warningText)}
+                      {loggedMarkers(
+                        points.logged,
+                        confidenceAt,
+                        colors.warningText,
+                        keepMarkersRound
+                      )}
                     </>
                   )}
                 </CartesianChart>
@@ -405,6 +579,15 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
             <ChartLegend loggedCount={loggedCount} />
           </View>
+
+          {hasData && (
+            <ZoomControls
+              zoom={zoom}
+              onZoom={(factor) => showView(zoomBy(currentView(), factor, plotWidth))}
+              onPan={(steps) => showView(panBy(currentView(), steps, plotWidth))}
+              onReset={() => showView(resetView())}
+            />
+          )}
         </Card>
 
         <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
@@ -570,6 +753,17 @@ const styles = StyleSheet.create({
   noChartData: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  zoomControls: {
+    marginTop: 12,
+    gap: 8,
+  },
+  zoomRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  zoomButton: {
+    flex: 1,
   },
   legendContainer: {
     flexDirection: 'row',

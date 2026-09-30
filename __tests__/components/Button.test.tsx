@@ -10,6 +10,20 @@ describe('Button', () => {
     expect(getByText('Press Me')).toBeTruthy();
   });
 
+  it('uses its title as its name by default', () => {
+    const { getByRole } = renderWithProviders(<Button title="Zoom in" onPress={() => {}} />);
+    expect(getByRole('button', { name: 'Zoom in' })).toBeTruthy();
+  });
+
+  it('can be given a fuller spoken name than its short visible title', () => {
+    // WCAG 2.5.3: the name must contain the visible words, so a voice-control
+    // user can still say "Shorter".
+    const { getByRole } = renderWithProviders(
+      <Button title="Shorter" accessibilityLabel="Show shorter distances" onPress={() => {}} />
+    );
+    expect(getByRole('button', { name: 'Show shorter distances' })).toBeTruthy();
+  });
+
   it('should call onPress when pressed', () => {
     const onPressMock = jest.fn();
     const { getByText } = renderWithProviders(<Button title="Press Me" onPress={onPressMock} />);
