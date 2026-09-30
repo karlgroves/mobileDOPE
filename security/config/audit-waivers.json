@@ -32,16 +32,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-3jxr-9vmj-r5cp",
-      "package": "brace-expansion",
-      "severity": "high",
-      "reason": "Reached through glob matching in the build and test tooling. Patterns come from this repo config, never from input. Advisory: brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
-    },
-    {
       "id": "GHSA-5p2g-fcmc-qvqq",
       "package": "image-size",
       "severity": "high",
@@ -82,16 +72,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-mh99-v99m-4gvg",
-      "package": "brace-expansion",
-      "severity": "high",
-      "reason": "Reached through glob matching in the build and test tooling. Patterns come from this repo config, never from input. Advisory: brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
-    },
-    {
       "id": "GHSA-mwp4-54f8-5fhr",
       "package": "ip-address",
       "severity": "high",
@@ -106,16 +86,6 @@
       "package": "tar",
       "severity": "high",
       "reason": "Reached only through the Metro bundler and Expo CLI at build time, on archives this repo produces itself. The shipped app contains no tar parser and never handles an untrusted archive. Advisory: node-tar: Uncontrolled recursion in mapHas/filesFilter allows uncatchable stack-overflow D",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
-    },
-    {
-      "id": "GHSA-rgw5-rvv9-x895",
-      "package": "brace-expansion",
-      "severity": "high",
-      "reason": "Reached through glob matching in the build and test tooling. Patterns come from this repo config, never from input. Advisory: brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitig",
       "disposition": "blocked-on-upstream",
       "owner": "karlgroves",
       "expires": "2026-11-24",
