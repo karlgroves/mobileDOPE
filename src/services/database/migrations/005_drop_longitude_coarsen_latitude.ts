@@ -33,6 +33,9 @@ import { Migration } from './MigrationRunner';
  * fresh installs. That divergence is inert and is the deliberate trade against an
  * app that will not boot.
  *
+ * Migration 006 later removed the column itself with `ALTER TABLE ... DROP
+ * COLUMN`, which needs no rebuild (#133).
+ *
  * The coarsening is one-way. `down()` cannot restore the discarded digits, which is
  * the point. See issue #44.
  */
