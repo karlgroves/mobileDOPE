@@ -43,6 +43,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   native module into the app; it also could not resolve `expo-asset`, so no
   test could render the icon sets. A unit test now checks that every
   SDK-pinned native package is installed within its pin.
+- DOPE log CSV export (#138):
+  - The `Hit` column exported "Yes" for any log with a shot count, including
+    0 hits from 5. It is replaced by separate `Hits` and `Shots` columns. A
+    single "3/5" cell would open in a spreadsheet as a date.
+  - The temperature, humidity, pressure, wind and altitude columns were
+    always empty. They now come from each log's environment snapshot, and
+    their headers carry units (°F, %, inHg, mph, °, ft).
+  - Negative numbers, such as a left windage correction, exported as text
+    (`'-0.5`) because the formula-injection guard also caught a leading
+    minus. Numbers are no longer prefixed; free text still is.
 
 ## [1.0.0] - 2026-07-20
 

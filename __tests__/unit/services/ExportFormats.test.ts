@@ -89,7 +89,7 @@ describe('exportDOPELogsCSV', () => {
   });
 
   it('writes a header row and one row per log', () => {
-    return exportDOPELogsCSV([log(), log({ distance: 800 })], [rifle()], [ammo()]).then(
+    return exportDOPELogsCSV([log(), log({ distance: 800 })], [rifle()], [ammo()], []).then(
       (result) => {
         expect(result.success).toBe(true);
 
@@ -101,7 +101,7 @@ describe('exportDOPELogsCSV', () => {
   });
 
   it('resolves rifle and ammo names rather than emitting bare ids', async () => {
-    const result = await exportDOPELogsCSV([log()], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV([log()], [rifle()], [ammo()], []);
 
     const body = read(result.uri).split('\n')[1] as string;
     expect(body).toContain('Tikka T3x');
@@ -109,7 +109,12 @@ describe('exportDOPELogsCSV', () => {
   });
 
   it('quotes every cell so a comma in a name cannot shift the columns', async () => {
-    const result = await exportDOPELogsCSV([log({ notes: 'windy, gusting' })], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV(
+      [log({ notes: 'windy, gusting' })],
+      [rifle()],
+      [ammo()],
+      []
+    );
 
     const [header, body] = read(result.uri).split('\n') as [string, string];
     expect(body).toContain('"windy, gusting"');
@@ -124,7 +129,12 @@ describe('exportDOPELogsCSV', () => {
   });
 
   it('escapes embedded quotes by doubling them', async () => {
-    const result = await exportDOPELogsCSV([log({ notes: 'called "good"' })], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV(
+      [log({ notes: 'called "good"' })],
+      [rifle()],
+      [ammo()],
+      []
+    );
 
     expect(read(result.uri)).toContain('"called ""good"""');
   });
@@ -134,7 +144,8 @@ describe('exportDOPELogsCSV', () => {
     const result = await exportDOPELogsCSV(
       [log({ notes: '=HYPERLINK("http://evil","click")' })],
       [rifle()],
-      [ammo()]
+      [ammo()],
+      []
     );
 
     const csv = read(result.uri);
@@ -143,26 +154,26 @@ describe('exportDOPELogsCSV', () => {
   });
 
   it.each(['=cmd', '+1', '-1', '@SUM'])('prefixes the formula trigger %s', async (note) => {
-    const result = await exportDOPELogsCSV([log({ notes: note })], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV([log({ notes: note })], [rifle()], [ammo()], []);
 
     expect(read(result.uri)).toContain(`"'${note}"`);
   });
 
   it('emits an empty cell for a missing value rather than "undefined"', async () => {
-    const result = await exportDOPELogsCSV([log({ notes: undefined })], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV([log({ notes: undefined })], [rifle()], [ammo()], []);
 
     expect(read(result.uri)).not.toContain('undefined');
   });
 
   it('writes a header-only file when there are no logs', async () => {
-    const result = await exportDOPELogsCSV([], [], []);
+    const result = await exportDOPELogsCSV([], [], [], []);
 
     expect(result.success).toBe(true);
     expect(read(result.uri).split('\n')).toHaveLength(1);
   });
 
   it('offers the file to the share sheet as text/csv', async () => {
-    await exportDOPELogsCSV([log()], [rifle()], [ammo()]);
+    await exportDOPELogsCSV([log()], [rifle()], [ammo()], []);
 
     expect(Sharing.shareAsync).toHaveBeenCalledWith(
       expect.stringContaining('.csv'),
@@ -173,10 +184,113 @@ describe('exportDOPELogsCSV', () => {
   it('still reports success when sharing is unavailable', async () => {
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(false);
 
-    const result = await exportDOPELogsCSV([log()], [rifle()], [ammo()]);
+    const result = await exportDOPELogsCSV([log()], [rifle()], [ammo()], []);
 
     expect(result.success).toBe(true);
     expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('exportDOPELogsCSV hit counts and conditions (#138)', () => {
+  beforeEach(() => {
+    resetFileSystem();
+    jest.clearAllMocks();
+  });
+
+  const environment = () =>
+    new EnvironmentSnapshot({
+      ...validEnvironment({
+        temperature: 41,
+        humidity: 73,
+        pressure: 28.61,
+        altitude: 1250,
+        windSpeed: 12,
+        windDirection: 270,
+      }),
+      id: 3,
+    });
+
+  /** Each row as a header -> cell map, so a test names the column it reads. */
+  const exportRows = async (
+    logs: DOPELog[],
+    environments: EnvironmentSnapshot[] = [environment()]
+  ): Promise<Record<string, string>[]> => {
+    const result = await exportDOPELogsCSV(logs, [rifle()], [ammo()], environments);
+    const [header, ...body] = read(result.uri).split('\n') as [string, ...string[]];
+    const names = csvFields(header);
+    return body.map((row) => {
+      const cells = csvFields(row);
+      return Object.fromEntries(names.map((name, i) => [name, cells[i] as string]));
+    });
+  };
+
+  it('exports a log of all misses as 0 hits from 5 shots, not as a hit', async () => {
+    // It said "Yes": the old cell was `hitCount || shotCount ? 'Yes' : 'No'`.
+    const [row] = await exportRows([log({ hitCount: 0, shotCount: 5 })]);
+
+    expect(row).toMatchObject({ Hits: '0', Shots: '5' });
+    expect(Object.values(row as object)).not.toContain('Yes');
+  });
+
+  it('exports the counts as recorded', async () => {
+    const [row] = await exportRows([log({ hitCount: 3, shotCount: 5 })]);
+
+    // Separate columns: a spreadsheet opens "3/5" as the 5th of March.
+    expect(row).toMatchObject({ Hits: '3', Shots: '5' });
+  });
+
+  it('leaves the counts empty when none were recorded', async () => {
+    const [row] = await exportRows([log({ hitCount: undefined, shotCount: undefined })]);
+
+    expect(row).toMatchObject({ Hits: '', Shots: '' });
+  });
+
+  it("writes each log's conditions from its environment snapshot, with units", async () => {
+    const [row] = await exportRows([log()]);
+
+    expect(row).toMatchObject({
+      'Temperature (°F)': '41',
+      'Humidity (%)': '73',
+      'Pressure (inHg)': '28.61',
+      'Wind Speed (mph)': '12',
+      'Wind Direction (°)': '270',
+      'Altitude (ft)': '1250',
+    });
+  });
+
+  it('matches each log to its own snapshot', async () => {
+    const other = new EnvironmentSnapshot({ ...validEnvironment({ temperature: 95 }), id: 4 });
+    const rows = await exportRows([log(), log({ environmentId: 4 })], [environment(), other]);
+
+    expect(rows.map((r) => r['Temperature (°F)'])).toEqual(['41', '95']);
+  });
+
+  it('leaves the conditions empty when the snapshot is not there', async () => {
+    const [row] = await exportRows([log()], []);
+
+    expect(row?.['Temperature (°F)']).toBe('');
+    expect(row?.['Altitude (ft)']).toBe('');
+  });
+
+  it('exports negative numbers as numbers, not as defused text', async () => {
+    // The formula guard prefixes a leading "-" with "'"; a number is never a
+    // formula, and "'-0.5" is text a spreadsheet cannot sum.
+    const cold = new EnvironmentSnapshot({ ...validEnvironment({ temperature: -5 }), id: 3 });
+    const [row] = await exportRows([log({ windageCorrection: -0.5 })], [cold]);
+
+    expect(row?.['Windage Correction']).toBe('-0.5');
+    expect(row?.['Temperature (°F)']).toBe('-5');
+  });
+
+  it('does not export the coarsened latitude', async () => {
+    // Only the full JSON backup carries it, behind the export warning (PRIVACY.md).
+    const withLatitude = new EnvironmentSnapshot({
+      ...validEnvironment({ latitude: 44.9778 }),
+      id: 3,
+    });
+    const result = await exportDOPELogsCSV([log()], [rifle()], [ammo()], [withLatitude]);
+
+    expect(read(result.uri)).not.toMatch(/latitude|45\.0|44\.9/i);
   });
 });
 

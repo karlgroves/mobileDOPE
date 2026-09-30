@@ -231,7 +231,15 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               Alert.alert('No Data', 'You have no DOPE logs to export.');
               return;
             }
-            const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles);
+            // Every snapshot, for each log's conditions (#138).
+            let environments;
+            try {
+              environments = await environmentRepository.getAll();
+            } catch (error) {
+              Alert.alert('Error', error instanceof Error ? error.message : EXPORT_FAILED);
+              return;
+            }
+            const result = await exportDOPELogsCSV(dopeLogs, rifles, ammoProfiles, environments);
             if (result.success) {
               Alert.alert('Success', `Exported ${dopeLogs.length} DOPE logs.`);
             } else {
