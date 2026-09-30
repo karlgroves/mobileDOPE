@@ -83,6 +83,40 @@ describe('DOPE Log Details restored before the store loads', () => {
   });
 });
 
+describe('DOPE Log Details after deleting the log', () => {
+  it('goes back without also saying "DOPE log not found"', async () => {
+    // Deleting empties the store before the screen has animated away; the
+    // screen then read the log as missing and alerted over the list. It did
+    // this before #141 too.
+    const alerts: unknown[] = [];
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, message, buttons) => {
+      alerts.push(message);
+      (buttons as { text: string; onPress?: () => void }[] | undefined)
+        ?.find((b) => b.text === 'Delete')
+        ?.onPress?.();
+    });
+    jest.spyOn(dopeLogRepository, 'getById').mockResolvedValue(null);
+    useDOPEStore.setState({
+      dopeLogs: [saved()],
+      deleteDopeLog: jest.fn(async () => useDOPEStore.setState({ dopeLogs: [] })),
+    });
+    const nav = navigation();
+
+    const { getByText } = renderWithProviders(
+      <DOPELogDetail route={route('DOPELogDetail')} navigation={nav as never} />
+    );
+    await act(async () => {
+      fireEvent.press(getByText('Delete'));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(nav.goBack).toHaveBeenCalledTimes(1);
+    expect(alerts).not.toContain('DOPE log not found');
+  });
+});
+
 describe('DOPE Log Edit restored before the store loads', () => {
   it("fills the form from the log, not from a new log's defaults", async () => {
     jest.spyOn(dopeLogRepository, 'getById').mockResolvedValue(saved());

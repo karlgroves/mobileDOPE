@@ -3,7 +3,7 @@
  * Displays detailed information about a single DOPE log entry
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 
 import { Button } from '../components/Button';
@@ -41,8 +41,12 @@ export function DOPELogDetail({ route, navigation }: Props) {
   // See src/utils/dopeAnalysis.ts. (#64)
   const confidence = log ? calculateConfidence(log) : undefined;
 
+  // Set when this screen deletes the log: it is then missing on purpose, and
+  // the screen is already on its way back.
+  const deleted = useRef(false);
+
   useEffect(() => {
-    if (status === 'missing') {
+    if (status === 'missing' && !deleted.current) {
       Alert.alert('Error', 'DOPE log not found', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -62,9 +66,11 @@ export function DOPELogDetail({ route, navigation }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
+            deleted.current = true;
             await deleteDopeLog(logId);
             navigation.goBack();
           } catch (_error) {
+            deleted.current = false;
             Alert.alert('Error', 'Failed to delete DOPE log');
           }
         },
