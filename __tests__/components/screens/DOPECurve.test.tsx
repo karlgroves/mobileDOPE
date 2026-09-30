@@ -1,6 +1,7 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 
 import { Colors } from '../../../src/constants/colors';
 import { AmmoProfile } from '../../../src/models/AmmoProfile';
@@ -509,5 +510,36 @@ describe('DOPECurve: the chart can be seen in every theme (#64)', () => {
     for (const color of strokes) {
       expect(contrastRatio(color, background)).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('DOPECurve: what Export captures (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('includes the units caption and the legend, not just the plot', async () => {
+    // The exported PNG is read away from the app, where nothing else says what
+    // the axes are, which line is which, or what a faint point means.
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByTestId, getByRole } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+
+    const exported = within(getByTestId('chart-export'));
+    expect(exported.getByText('Elevation (MIL) by distance (yards)')).toBeTruthy();
+    expect(exported.getByText('Calculated Curve')).toBeTruthy();
+    expect(exported.getByText(/^Fainter points rest on less evidence/)).toBeTruthy();
+
+    fireEvent.press(getByRole('button', { name: 'Export' }));
+    await waitFor(() => expect(captureRef).toHaveBeenCalled());
+    const ref = (captureRef as jest.Mock).mock.calls[0][0] as {
+      current: { props: { testID?: string } };
+    };
+    expect(ref.current.props.testID).toBe('chart-export');
   });
 });

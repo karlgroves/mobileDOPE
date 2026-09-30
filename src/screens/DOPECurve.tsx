@@ -337,67 +337,74 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
             />
           </View>
 
-          <Text style={[styles.axisCaption, { color: colors.text.secondary }]}>
-            {`Elevation (${correctionUnit}) by distance (yards)`}
-          </Text>
+          {/* Everything Export captures: the PNG is read away from the app, so it
+              carries the axis units and the legend, not just the plot. */}
+          <View
+            ref={chartRef}
+            collapsable={false}
+            testID="chart-export"
+            style={[styles.exportArea, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.axisCaption, { color: colors.text.secondary }]}>
+              {`Elevation (${correctionUnit}) by distance (yards)`}
+            </Text>
 
-          {hasData ? (
-            <View
-              ref={chartRef}
-              collapsable={false}
-              accessible
-              accessibilityRole="image"
-              accessibilityLabel={chartLabel}
-              accessibilityHint="The Drop Table below lists the same values."
-              style={[
-                styles.chartContainer,
-                { height: chartHeight, backgroundColor: colors.background },
-              ]}
-            >
-              <CartesianChart<ChartPoint, 'distance', 'elevation' | 'logged'>
-                data={chartData}
-                xKey="distance"
-                yKeys={['elevation', 'logged']}
-                domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
-                axisOptions={{
-                  font,
-                  tickCount: { x: 5, y: 5 },
-                  lineColor: colors.border,
-                  labelColor: colors.text.secondary,
-                  formatXLabel: (value: number) => `${value}`,
-                  formatYLabel: (value?: number) =>
-                    value === undefined ? '' : formatCorrection(value),
-                }}
+            {hasData ? (
+              <View
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={chartLabel}
+                accessibilityHint="The Drop Table below lists the same values."
+                style={[
+                  styles.chartContainer,
+                  { height: chartHeight, backgroundColor: colors.background },
+                ]}
               >
-                {({ points }) => (
-                  <>
-                    <Line
-                      points={points.elevation}
-                      color={colors.primaryText}
-                      strokeWidth={2}
-                      curveType="natural"
-                    />
-                    <Line
-                      points={points.logged}
-                      color={colors.warningText}
-                      strokeWidth={2}
-                      curveType="linear"
-                      connectMissingData
-                    />
-                    {loggedMarkers(points.logged, confidenceAt, colors.warningText)}
-                  </>
-                )}
-              </CartesianChart>
-            </View>
-          ) : (
-            <View style={[styles.noChartData, { height: chartHeight }]}>
-              <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
-                Unable to generate ballistic curve.
-              </Text>
-            </View>
-          )}
+                <CartesianChart<ChartPoint, 'distance', 'elevation' | 'logged'>
+                  data={chartData}
+                  xKey="distance"
+                  yKeys={['elevation', 'logged']}
+                  domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                  axisOptions={{
+                    font,
+                    tickCount: { x: 5, y: 5 },
+                    lineColor: colors.border,
+                    labelColor: colors.text.secondary,
+                    formatXLabel: (value: number) => `${value}`,
+                    formatYLabel: (value?: number) =>
+                      value === undefined ? '' : formatCorrection(value),
+                  }}
+                >
+                  {({ points }) => (
+                    <>
+                      <Line
+                        points={points.elevation}
+                        color={colors.primaryText}
+                        strokeWidth={2}
+                        curveType="natural"
+                      />
+                      <Line
+                        points={points.logged}
+                        color={colors.warningText}
+                        strokeWidth={2}
+                        curveType="linear"
+                        connectMissingData
+                      />
+                      {loggedMarkers(points.logged, confidenceAt, colors.warningText)}
+                    </>
+                  )}
+                </CartesianChart>
+              </View>
+            ) : (
+              <View style={[styles.noChartData, { height: chartHeight }]}>
+                <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
+                  Unable to generate ballistic curve.
+                </Text>
+              </View>
+            )}
 
-          <ChartLegend loggedCount={loggedCount} />
+            <ChartLegend loggedCount={loggedCount} />
+          </View>
         </Card>
 
         <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
@@ -546,6 +553,12 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Reaches as far as the chart's negative margin, so Export does not clip the
+  // chart's left edge; the padding keeps everything else where it was.
+  exportArea: {
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
   },
   axisCaption: {
     fontSize: 12,
