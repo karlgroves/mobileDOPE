@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { fireEvent } from '@testing-library/react-native';
 import React from 'react';
@@ -17,7 +18,8 @@ import { renderWithProviders } from '../../helpers/renderWithProviders';
  */
 
 // Only the tab bar is under test; each tab's content is a stand-in, which keeps
-// the screens' Skia, SQLite and font imports out of this suite.
+// the screens' Skia and SQLite imports out of this suite. The icon sets are
+// real: they load since expo-font is declared at the SDK's version (#137).
 jest.mock('../../../src/navigation/HistoryNavigator', () => {
   const mockNothing = () => null;
   return { HistoryNavigator: mockNothing };
@@ -38,14 +40,6 @@ jest.mock('../../../src/navigation/SessionNavigator', () => {
   const mockNothing = () => null;
   return { SessionNavigator: mockNothing };
 });
-// The icon sets load expo-font, which cannot resolve expo-asset under Jest (#137).
-// Each icon renders its name, so the test can see which one a tab uses.
-jest.mock('@expo/vector-icons', () => {
-  const { Text: MockText } = jest.requireActual('react-native');
-  const mockIcon = ({ name }: { name: string }) => <MockText>{`icon:${name}`}</MockText>;
-  return { Ionicons: mockIcon, MaterialCommunityIcons: mockIcon };
-});
-
 /** The tab bar reads safe-area insets; give it a phone-shaped frame. */
 const tabs = () => (
   <SafeAreaProvider
@@ -83,9 +77,20 @@ describe('the range-session tab (#131)', () => {
   });
 
   it('does not use a weather icon', () => {
-    const { queryByText } = renderWithProviders(tabs());
+    const view = renderWithProviders(tabs());
+    // Each set's wrapper and inner component both match the type; dedupe.
+    const names = new Set(
+      [Ionicons, MaterialCommunityIcons].flatMap((set) =>
+        view
+          .UNSAFE_queryAllByType(set as React.ComponentType<{ name: string }>)
+          .map((icon) => String(icon.props.name))
+      )
+    );
 
-    expect(queryByText(/^icon:(cloudy|cloud|partly-sunny|rainy|sunny)/)).toBeNull();
+    // One per tab, so this cannot pass by finding no icons at all.
+    expect(names.size).toBe(6);
+    expect(names).toContain('clipboard');
+    expect([...names].filter((n) => /cloud|sunny|rainy|weather/.test(n))).toEqual([]);
   });
 });
 

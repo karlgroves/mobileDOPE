@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `eslint --fix --fix-type problem,layout,suggestion` so the descriptor rule's
   autofixer can no longer silently stamp placeholder
   `accessibilityLabel="Text input field"` props on commit.
+- `expo-font` and `expo-asset` are now direct dependencies at the SDK 55
+  versions (#137). `expo-font` previously arrived only as a peer of
+  `@expo/vector-icons`, which resolved it to 14.0.11 (SDK 54) and linked that
+  native module into the app; it also could not resolve `expo-asset`, so no
+  test could render the icon sets. A unit test now checks that every
+  SDK-pinned native package is installed within its pin.
 
 ## [1.0.0] - 2026-07-20
 

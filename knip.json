@@ -18,7 +18,8 @@
     "expo-sensors",
     "react-hook-form",
     "expo-updates",
-    "expo-system-ui"
+    "expo-system-ui",
+    "expo-asset"
   ],
   "ignoreBinaries": ["trufflehog", "lychee", "semgrep", "osv-scanner"],
   "ignoreExportsUsedInFile": true,
