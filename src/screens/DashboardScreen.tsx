@@ -311,13 +311,17 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
           <Text style={[styles.trustDivider, { color: colors.text.secondary }]}>•</Text>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Session')}
+            // Straight to the weather screen, with Start Session left underneath
+            // so the tab still opens there and this screen has a way back (#131).
+            onPress={() =>
+              navigation.navigate('Session', { screen: 'EnvironmentInput', initial: false })
+            }
             style={styles.trustItem}
             accessibilityRole="button"
             accessibilityLabel={
               hasEnv ? 'Environment: readings recorded' : 'Environment: no readings'
             }
-            accessibilityHint="Opens the range session screen to enter conditions"
+            accessibilityHint="Opens the weather screen to enter conditions"
           >
             <Text
               style={[
