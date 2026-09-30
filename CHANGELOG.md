@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-30
+
+A feature release: your own logged DOPE now shapes what the app shows you,
+alongside a round of fixes found by using the app on a device.
+
 ### Changed
 
 - **Breaking (component API):** `IconButton`'s `accessibilityLabel` prop is now
@@ -24,6 +29,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Logged DOPE beside the solution.** The calculator shows your own logged
+  entries for the shot in front of you, ranked by how closely each log's
+  recorded conditions match (#96, #113, #126), with how well-evidenced each
+  entry is (#112).
+- **DOPE Curve.** Your logged drop drawn against the solver's curve, each
+  marker's opacity showing its confidence, with axis values, a legend, export,
+  and pinch or drag to zoom and pan along distance (#143, #146). Entries that
+  disagree with the rest are listed (#127), and muzzle-velocity and BC changes
+  are suggested from what you logged (#124).
+- **Analysis.** Confidence, outliers and corrections read back from logged DOPE
+  (#93); group statistics from marked points of impact (#94).
+- **Ballistics.** Spin drift and Coriolis, which the solver already computed,
+  are applied to the solution (#97).
+- **Cards and sessions.** Several loads side by side on one DOPE card (#105);
+  conditions compared between sessions (#99).
+- **Import** plans merge-versus-replace instead of always duplicating (#95).
+- **Deep links** into the app (#102).
+- **Privacy.** Precise location is no longer collected: latitude is coarsened
+  to about 11 km and longitude is never recorded; permissions are declared and
+  a privacy policy is published (#46).
+- An end-user guide (#88).
 - `TextInput` now derives an accessible name from its `label`, appends
   ", required" when required, and folds `error`/`helperText` into
   `accessibilityHint`. React Native does not associate a sibling `<Text>` label
@@ -32,6 +58,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fresh installs launch.** Migration 001 built the live schema, so 002 failed
+  on every new install (#128, #130).
+- **No DOPE history is lost in migrations.** They run with foreign keys
+  suspended and a `foreign_key_check` before commit; migration 004 had deleted
+  every DOPE log through a cascade (#57).
+- **Crashes and wrong readings from empty fields.** Empty columns read as
+  `undefined`, a recorded 0 hits is kept as 0, and a screen that throws shows a
+  recoverable error instead of a blank app (#134, #136).
+- **Restored screens.** DOPE Log Details and Edit load their log by id after a
+  relaunch instead of calling it missing (#141, #147).
+- **New DOPE Log** says what it needs when there are no rifle or ammunition
+  profiles (#132, #140).
+- **Navigation.** The last tab is Session again, and Home's Env indicator opens
+  the weather screen (#131, #142). Settings and the DOPE Curve are reachable
+  (#91).
+- **Theme.** Headers, the tab bar and every shared component follow the chosen
+  theme (#120, #144, #150); the theme switcher no longer leaves the chosen
+  option washed out (#145, #151); text colours meet WCAG AA on every theme
+  (#115, #118, #121).
+- **Units.** Distances are converted at the solver boundary instead of
+  relabelled, and logs are read in yards and one correction unit on the curve
+  and in analysis (#107, #125). One caliber database with diameters the solver
+  can trust (#103). The calculator no longer requires an altitude the solver
+  never reads (#98), and says which pressure it wants (#92).
+- **Native dependencies** match Expo SDK 55: victory-native's Skia, Reanimated,
+  Gesture Handler and Worklets (#139), and `expo-font` / `expo-asset`.
 - The 65 outstanding `react-native-a11y` label and hint findings in `src/`, and
   both rules raised from `warn` to `error` (see ADR-010). `lint-staged` now runs
   `eslint --fix --fix-type problem,layout,suggestion` so the descriptor rule's
@@ -65,6 +117,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in that theme, so there the active tab is filled red with a black label,
   as a selected segment is. The bar is also 8pt taller: at its old height
   the label overflowed its item, which the fill made visible.
+
+### Security
+
+- Dependency advisories cleared: 15 high advisories (#76), `undici`
+  GHSA-rfgv-xxqx-mfg5 (#135) and `brace-expansion` GHSA-qhr7-859c-m2p7 and
+  GHSA-6j4f-fj2g-mc7p (#149).
+- Secret scanning with TruffleHog in the pre-commit and CI gates (#79, #109),
+  and ten spec-audit gaps closed (#49, #56).
+
+## 1.0.1 - 2026-09-29
+
+Released on `main` as a hotfix; not tagged.
+
+### Fixed
+
+- A fresh install could not get past launch: migration 001 created the live
+  schema and 002 then failed adding a column that already existed (#128, #129).
 
 ## [1.0.0] - 2026-07-20
 
@@ -104,7 +173,8 @@ First tagged release. Ships the entire application (113 commits, 23 features, 3 
 - `npm run security:audit` reports high-severity advisories in Expo transitive
   dependencies with no upstream fix available; re-check on the next Expo bump.
 
-[Unreleased]: https://github.com/karlgroves/mobileDOPE/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/karlgroves/mobileDOPE/compare/v1.1.0...develop
+[1.1.0]: https://github.com/karlgroves/mobileDOPE/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/karlgroves/mobileDOPE/releases/tag/v1.0.0
 [#17]: https://github.com/karlgroves/mobileDOPE/issues/17
 [#21]: https://github.com/karlgroves/mobileDOPE/pull/21
