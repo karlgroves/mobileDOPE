@@ -5,7 +5,7 @@
 
 import type { BallisticSolution } from '../types/ballistic.types';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import type { CompositeScreenProps } from '@react-navigation/native';
+import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 /**
@@ -22,7 +22,8 @@ export type RootStackParamList = {
  */
 export type MainTabParamList = {
   Dashboard: undefined;
-  Session: undefined;
+  // Home's Env indicator opens the weather screen inside this stack (#131).
+  Session: NavigatorScreenParams<SessionStackParamList> | undefined;
   Calculator: undefined;
   Rifles: undefined;
   Ammo: undefined;

@@ -1,14 +1,17 @@
-import React from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
 import { DashboardScreen } from '../screens/DashboardScreen';
+
+import { AmmoNavigator } from './AmmoNavigator';
+import { CalculatorNavigator } from './CalculatorNavigator';
+import { HistoryNavigator } from './HistoryNavigator';
 import { RiflesNavigator } from './RiflesNavigator';
 import { SessionNavigator } from './SessionNavigator';
-import { CalculatorNavigator } from './CalculatorNavigator';
-import { AmmoNavigator } from './AmmoNavigator';
-import { HistoryNavigator } from './HistoryNavigator';
+
 import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -87,8 +90,10 @@ export const TabNavigator: React.FC = () => {
         name="Session"
         component={SessionNavigator}
         options={{
-          tabBarLabel: 'Weather',
-          tabBarIcon: ({ color, size }) => <Ionicons name="cloudy" size={size} color={color} />,
+          // It opens the range-session stack. It said "Weather" with a cloud
+          // icon from dadf991 until #131.
+          tabBarLabel: 'Session',
+          tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />,
           lazy: false,
         }}
       />
