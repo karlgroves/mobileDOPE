@@ -1,25 +1,25 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+
+import { useTheme } from '../contexts/ThemeContext';
 import { BallisticCalculator } from '../screens/BallisticCalculator';
 import { BallisticSolutionResults } from '../screens/BallisticSolutionResults';
-import { WindTable } from '../screens/WindTable';
 import { MovingTargetCalculator } from '../screens/MovingTargetCalculator';
+import { WindTable } from '../screens/WindTable';
+
+import { stackHeaderOptions } from './navigationTheme';
+
 import type { CalculatorStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<CalculatorStackParamList>();
 
 export const CalculatorNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2a2a2a',
-        },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
+        ...stackHeaderOptions(colors),
       }}
     >
       <Stack.Screen

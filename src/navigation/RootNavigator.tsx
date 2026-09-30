@@ -4,11 +4,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useState, useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
 
+import { useTheme } from '../contexts/ThemeContext';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { useAppStore } from '../store';
 
 import { linking, restoredInitialState } from './linking';
 import { NAVIGATION_PERSISTENCE_KEY, NavigationErrorBoundary } from './NavigationErrorBoundary';
+import { navigationContainerTheme, stackHeaderOptions } from './navigationTheme';
 import { TabNavigator } from './TabNavigator';
 
 import type { RootStackParamList } from './types';
@@ -16,6 +19,8 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RestoringNavigator: React.FC = () => {
+  const { colors } = useTheme().theme;
+  const { themeMode } = useAppStore((s) => s.settings);
   const [isReady, setIsReady] = useState(false);
   const [initialState, setInitialState] = useState<any | undefined>(undefined);
   const routeNameRef = useRef<string | undefined>(undefined);
@@ -56,6 +61,7 @@ const RestoringNavigator: React.FC = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navigationContainerTheme(colors, themeMode)}
       linking={linking}
       initialState={initialState}
       onStateChange={async (state) => {
@@ -78,14 +84,7 @@ const RestoringNavigator: React.FC = () => {
             presentation: 'modal',
             headerShown: true,
             title: 'Settings',
-            headerStyle: {
-              backgroundColor: '#2a2a2a',
-            },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              fontSize: 18,
-            },
+            ...stackHeaderOptions(colors),
           }}
         />
         <Stack.Screen
@@ -94,14 +93,7 @@ const RestoringNavigator: React.FC = () => {
           options={{
             headerShown: true,
             title: 'Privacy Policy',
-            headerStyle: {
-              backgroundColor: '#2a2a2a',
-            },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              fontSize: 18,
-            },
+            ...stackHeaderOptions(colors),
           }}
         />
       </Stack.Navigator>
