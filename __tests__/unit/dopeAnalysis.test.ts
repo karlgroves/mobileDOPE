@@ -233,6 +233,21 @@ describe('buildDropCurve', () => {
   it('ignores logs with no usable distance', () => {
     expect(buildDropCurve([log({ distance: 0 })])).toEqual([]);
   });
+
+  it('rates each point by the confidence of the logs behind it', () => {
+    // The chart shades each point by this (#64), so it must be the per-log
+    // evidence score -- not agreement with the solver -- averaged over the bucket.
+    const solid = log({ distance: 300, shotCount: 5, hitCount: 5, groupSize: 1.5 });
+    const thin = log({ distance: 300, shotCount: 1 });
+    const alone = log({ distance: 600, shotCount: 1 });
+
+    const [at300, at600] = buildDropCurve([solid, thin, alone]);
+
+    const expected300 = (calculateConfidence(solid).score + calculateConfidence(thin).score) / 2;
+    expect(at300.confidence).toBeCloseTo(expected300, 10);
+    expect(at600.confidence).toBeCloseTo(calculateConfidence(alone).score, 10);
+    expect(at300.confidence).toBeGreaterThan(at600.confidence);
+  });
 });
 
 describe('compareToCalculated', () => {
@@ -510,7 +525,7 @@ describe('mixed units', () => {
   describe('buildDropCurve', () => {
     it('buckets a meters log at its distance in yards', () => {
       const curve = buildDropCurve([log({ distance: 500, elevationCorrection: 5 }), inMeters()]);
-      expect(curve).toEqual([{ distance: 500, correction: 5, sampleCount: 2 }]);
+      expect(curve).toMatchObject([{ distance: 500, correction: 5, sampleCount: 2 }]);
     });
 
     it('converts MOA logs into the requested unit', () => {

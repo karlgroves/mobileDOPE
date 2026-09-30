@@ -1,17 +1,23 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 
+import { Colors } from '../../../src/constants/colors';
 import { AmmoProfile } from '../../../src/models/AmmoProfile';
 import { DOPELog } from '../../../src/models/DOPELog';
 import { EnvironmentSnapshot } from '../../../src/models/EnvironmentSnapshot';
 import { RifleProfile } from '../../../src/models/RifleProfile';
 import { DOPECurve } from '../../../src/screens/DOPECurve';
 import { environmentRepository } from '../../../src/services/database';
+import { useAppStore } from '../../../src/store';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useRifleStore } from '../../../src/store/useRifleStore';
+import { confidenceOpacity } from '../../../src/utils/chartConfidence';
+import { calculateConfidence } from '../../../src/utils/dopeAnalysis';
 import { predictElevation } from '../../../src/utils/solverInputs';
+import { contrastRatio } from '../../helpers/contrast';
 import { validAmmo, validEnvironment, validRifle } from '../../helpers/fixtures';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
 
@@ -61,9 +67,57 @@ jest.mock('../../../src/utils/solverInputs', () => {
       (yards: number) => (yards > maxYards ? undefined : standIn(yards, env, unit)),
   };
 });
+
+/**
+ * The chart is Skia, which cannot draw here. The stand-in runs the chart's
+ * render callback with one point per datum -- enough to see which distances get
+ * a marker and how each marker is drawn -- and records what was drawn.
+ */
+const mockDrawn: {
+  lines: Record<string, unknown>[];
+  circles: Record<string, unknown>[];
+  axisOptions?: Record<string, unknown>;
+} = {
+  lines: [],
+  circles: [],
+};
 jest.mock('victory-native', () => {
-  const mockNothing = () => null;
-  return { CartesianChart: mockNothing, Line: mockNothing };
+  const mockChart = ({
+    data,
+    xKey,
+    yKeys,
+    axisOptions,
+    children,
+  }: {
+    data: Record<string, number | undefined>[];
+    xKey: string;
+    yKeys: string[];
+    axisOptions?: Record<string, unknown>;
+    children: (arg: { points: Record<string, unknown[]> }) => React.ReactNode;
+  }) => {
+    mockDrawn.axisOptions = axisOptions;
+    const points = Object.fromEntries(
+      yKeys.map((key) => [
+        key,
+        data.map((d) => ({ x: d[xKey], xValue: d[xKey], y: d[key], yValue: d[key] })),
+      ])
+    );
+    return children({ points });
+  };
+  const mockLine = (props: Record<string, unknown>) => {
+    mockDrawn.lines.push(props);
+    return null;
+  };
+  return { CartesianChart: mockChart, Line: mockLine };
+});
+jest.mock('@shopify/react-native-skia', () => {
+  const mockCircle = (props: Record<string, unknown>) => {
+    mockDrawn.circles.push(props);
+    return null;
+  };
+  // A stand-in font: what matters is that the chart is given one at all.
+  const mockMatchFont = (style: Record<string, unknown>) => ({ mockFont: true, ...style });
+  return { Circle: mockCircle, matchFont: mockMatchFont };
 });
 jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
@@ -292,5 +346,200 @@ describe('DOPECurve: entries that disagree (#64)', () => {
 
     await findByText('Elevation Drop Curve');
     expect(queryByText('Entries that disagree')).toBeNull();
+  });
+});
+
+describe('DOPECurve: logged drop curve and confidence (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDrawn.lines.length = 0;
+    mockDrawn.circles.length = 0;
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  /** A well-evidenced log at 300 yd and a thin one at 600 yd. */
+  const solidAndThin = () => {
+    const [at300, at600] = logsAt([300, 600], 0);
+    return [
+      new DOPELog({ ...at300.toJSON(), shotCount: 5, hitCount: 5, groupSize: 1.5 }),
+      new DOPELog({ ...at600.toJSON(), shotCount: 1 }),
+    ];
+  };
+
+  /** The filled markers. The stand-in chart puts each point's x at its distance. */
+  const fills = () => mockDrawn.circles.filter((c) => c.style !== 'stroke');
+
+  it('draws a line through the logged points, separate from the calculated one', async () => {
+    seed(logsAt([300, 500, 700], 0.5));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    // The calculated curve has a value at every distance; the logged one only
+    // where something was logged.
+    const logged = mockDrawn.lines.find((l) =>
+      (l.points as { yValue?: number }[]).some((p) => p.yValue === undefined)
+    );
+    expect(logged).toBeDefined();
+    const drawnAt = (logged?.points as { xValue: number; yValue?: number }[])
+      .filter((p) => p.yValue !== undefined)
+      .map((p) => p.xValue);
+    expect(drawnAt).toEqual([300, 500, 700]);
+    // Gaps between logged distances are bridged, not left as breaks.
+    expect(logged?.connectMissingData).toBe(true);
+  });
+
+  it('marks each logged distance with opacity from its confidence', async () => {
+    const logs = solidAndThin();
+    seed(logs);
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const byDistance = new Map(fills().map((c) => [c.cx, c.opacity as number]));
+    expect([...byDistance.keys()]).toEqual([300, 600]);
+    expect(byDistance.get(300)).toBeCloseTo(
+      confidenceOpacity(calculateConfidence(logs[0]).score),
+      10
+    );
+    expect(byDistance.get(600)).toBeCloseTo(
+      confidenceOpacity(calculateConfidence(logs[1]).score),
+      10
+    );
+    expect(byDistance.get(300)).toBeGreaterThan(byDistance.get(600) as number);
+  });
+
+  it('outlines every marker at full opacity, so a faint one is still findable', async () => {
+    seed(solidAndThin());
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const outlines = mockDrawn.circles.filter((c) => c.style === 'stroke');
+    expect(outlines).toHaveLength(2);
+    for (const outline of outlines) {
+      expect(outline.opacity ?? 1).toBe(1);
+    }
+  });
+
+  it('describes every logged point and its confidence to a screen reader', async () => {
+    seed(solidAndThin());
+    const { findByLabelText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    const chart = await findByLabelText(/^Elevation drop curve/);
+    const label = chart.props.accessibilityLabel as string;
+    expect(label).toMatch(/300 yards, 3\.0 MIL, 1 log, strong confidence/);
+    expect(label).toMatch(/600 yards, 6\.0 MIL, 1 log, weak confidence/);
+  });
+});
+
+describe('DOPECurve: reading values off the chart (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDrawn.axisOptions = undefined;
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('gives the axes a font, so their numbers are drawn', async () => {
+    // With font: null, victory-native draws the grid and no tick labels at all
+    // -- seen on the iOS Simulator: no distances, no MIL values.
+    seed(logsAt([300, 500], 0));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    expect(mockDrawn.axisOptions?.font).toEqual(expect.objectContaining({ mockFont: true }));
+  });
+
+  it('names the axes and their units, following the unit toggle', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+
+    expect(await findByText('Elevation (MIL) by distance (yards)')).toBeTruthy();
+    fireEvent.press(getByText('MOA'));
+    expect(await findByText('Elevation (MOA) by distance (yards)')).toBeTruthy();
+  });
+
+  it('labels the elevation axis without a -0.0', async () => {
+    // The solver returns a hair below zero at the zero range; toFixed kept the sign.
+    seed(logsAt([300], 0));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const format = mockDrawn.axisOptions?.formatYLabel as (v: number) => string;
+    expect(format(-0.0001)).toBe('0.0');
+  });
+});
+
+describe('DOPECurve: the chart can be seen in every theme (#64)', () => {
+  /**
+   * WCAG 1.4.11: a graphical object needed to understand the content needs
+   * 3:1 against what it sits on. Seen on the iOS Simulator in the light theme:
+   * the calculated line (#4CAF50) is 2.78:1 on white and the logged line and
+   * marker outlines (#FF9800) 2.16:1. The faint marker fill is faint on
+   * purpose; the outline is what has to be found.
+   */
+  const MODES = ['dark', 'light', 'nightVision'] as const;
+
+  afterEach(() => {
+    useAppStore.setState((s) => ({ settings: { ...s.settings, themeMode: 'dark' } }));
+  });
+
+  it.each(MODES)('draws every line and outline at 3:1 or better in %s', async (mode) => {
+    useAppStore.setState((s) => ({ settings: { ...s.settings, themeMode: mode } }));
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+    mockDrawn.lines.length = 0;
+    mockDrawn.circles.length = 0;
+    seed(logsAt([300, 500], 0));
+
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const background = Colors[mode].background;
+    const strokes = [
+      ...mockDrawn.lines.map((l) => l.color as string),
+      ...mockDrawn.circles.filter((c) => c.style === 'stroke').map((c) => c.color as string),
+    ];
+    expect(strokes.length).toBeGreaterThanOrEqual(3);
+    for (const color of strokes) {
+      expect(contrastRatio(color, background)).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe('DOPECurve: what Export captures (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('includes the units caption and the legend, not just the plot', async () => {
+    // The exported PNG is read away from the app, where nothing else says what
+    // the axes are, which line is which, or what a faint point means.
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByTestId, getByRole } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+
+    const exported = within(getByTestId('chart-export'));
+    expect(exported.getByText('Elevation (MIL) by distance (yards)')).toBeTruthy();
+    expect(exported.getByText('Calculated Curve')).toBeTruthy();
+    expect(exported.getByText(/^Fainter points rest on less evidence/)).toBeTruthy();
+
+    fireEvent.press(getByRole('button', { name: 'Export' }));
+    await waitFor(() => expect(captureRef).toHaveBeenCalled());
+    const ref = (captureRef as jest.Mock).mock.calls[0][0] as {
+      current: { props: { testID?: string } };
+    };
+    expect(ref.current.props.testID).toBe('chart-export');
   });
 });
