@@ -9,7 +9,9 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfidenceBadge } from '../components/ConfidenceBadge';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useTheme } from '../contexts/ThemeContext';
+import { useDopeLog } from '../hooks/useDopeLog';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -24,11 +26,13 @@ export function DOPELogDetail({ route, navigation }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  const { getDopeById, deleteDopeLog } = useDOPEStore();
+  const { deleteDopeLog } = useDOPEStore();
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
 
-  const log = getDopeById(logId);
+  // Loaded by id when the store does not have it yet: a restored launch shows
+  // this screen before DOPE Logs has filled the store (#141).
+  const { log, status } = useDopeLog(logId);
   const rifle = log ? getRifleById(log.rifleId) : undefined;
   const ammo = log ? getAmmoById(log.ammoId) : undefined;
 
@@ -38,13 +42,13 @@ export function DOPELogDetail({ route, navigation }: Props) {
   const confidence = log ? calculateConfidence(log) : undefined;
 
   useEffect(() => {
-    if (!log) {
+    if (status === 'missing') {
       Alert.alert('Error', 'DOPE log not found', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [log]);
+  }, [status]);
 
   const handleEdit = () => {
     navigation.navigate('DOPELogEdit', { logId });
@@ -67,6 +71,14 @@ export function DOPELogDetail({ route, navigation }: Props) {
       },
     ]);
   };
+
+  if (status === 'loading') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
 
   if (!log) {
     return (

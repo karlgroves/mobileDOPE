@@ -46,6 +46,17 @@ describe('useDOPEStore', () => {
       expect(store().dopeLogs.map((l) => l.id)).toEqual([1]);
     });
 
+    it('never holds two copies of one log', () => {
+      // A log read by id (useDopeLog, #141) can land after DOPE Logs has
+      // already loaded the whole list. Appending it again duplicated it, and
+      // the list rendered two rows with one key (seen on the iOS Simulator).
+      store().setDopeLogs([{ id: 6, distance: 700 } as DOPELog]);
+
+      store().addDopeLogToStore({ id: 6, distance: 700 } as DOPELog);
+
+      expect(store().dopeLogs.filter((l) => l.id === 6)).toHaveLength(1);
+    });
+
     it('filters by rifle and ammo together, not either alone', () => {
       store().setDopeLogs([
         { id: 1, rifleId: 1, ammoId: 1 } as DOPELog,

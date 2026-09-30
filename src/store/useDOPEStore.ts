@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+
 import { DOPELog, DOPELogData } from '../models/DOPELog';
 import { dopeLogRepository } from '../services/database/DOPELogRepository';
 
@@ -31,9 +32,11 @@ interface DOPEState {
 export const useDOPEStore = create<DOPEState>((set, get) => ({
   dopeLogs: [],
   setDopeLogs: (logs) => set({ dopeLogs: logs }),
+  // Replaces a log already held rather than appending a second copy: a log read
+  // by id (useDopeLog, #141) can arrive after the full list has loaded.
   addDopeLogToStore: (log) =>
     set((state) => ({
-      dopeLogs: [...state.dopeLogs, log],
+      dopeLogs: [...state.dopeLogs.filter((d) => d.id === undefined || d.id !== log.id), log],
     })),
   updateDopeLogInStore: (log) =>
     set((state) => ({
