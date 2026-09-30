@@ -14,6 +14,13 @@ interface ButtonProps {
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  /**
+   * A fuller spoken name than the visible title. It must contain the title's
+   * words (WCAG 2.5.3), so a voice-control user can still say them.
+   */
+  accessibilityLabel?: string;
+  /** What pressing it does, when the name alone does not say. */
+  accessibilityHint?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -25,6 +32,8 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
   const { theme } = useTheme();
   const { colors } = theme;
@@ -73,6 +82,8 @@ export const Button: React.FC<ButtonProps> = ({
       testID={testID}
       accessible={true}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled }}
     >
       {loading ? (

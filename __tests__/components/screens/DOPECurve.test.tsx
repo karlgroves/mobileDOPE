@@ -76,10 +76,15 @@ jest.mock('../../../src/utils/solverInputs', () => {
 const mockDrawn: {
   lines: Record<string, unknown>[];
   circles: Record<string, unknown>[];
+  groups: Record<string, unknown>[];
   axisOptions?: Record<string, unknown>;
+  transformState?: { matrix: { value: number[] } };
+  transformConfig?: Record<string, unknown>;
+  customGestures?: unknown;
 } = {
   lines: [],
   circles: [],
+  groups: [],
 };
 jest.mock('victory-native', () => {
   const mockChart = ({
@@ -87,15 +92,35 @@ jest.mock('victory-native', () => {
     xKey,
     yKeys,
     axisOptions,
+    transformState,
+    transformConfig,
+    customGestures,
+    onChartBoundsChange,
     children,
   }: {
     data: Record<string, number | undefined>[];
     xKey: string;
     yKeys: string[];
     axisOptions?: Record<string, unknown>;
+    transformState?: { matrix: { value: number[] } };
+    transformConfig?: Record<string, unknown>;
+    customGestures?: unknown;
+    onChartBoundsChange?: (b: { left: number; right: number; top: number; bottom: number }) => void;
     children: (arg: { points: Record<string, unknown[]> }) => React.ReactNode;
   }) => {
+    // Each render replaces the last, as on screen: keep only this frame.
+    mockDrawn.lines.length = 0;
+    mockDrawn.circles.length = 0;
+    mockDrawn.groups.length = 0;
     mockDrawn.axisOptions = axisOptions;
+    mockDrawn.transformState = transformState;
+    mockDrawn.transformConfig = transformConfig;
+    mockDrawn.customGestures = customGestures;
+    // A plot 300 px wide, reported once as the real chart does after layout.
+    const { useEffect: mockUseEffect } = jest.requireActual('react');
+    mockUseEffect(() => {
+      onChartBoundsChange?.({ left: 40, right: 340, top: 0, bottom: 200 });
+    }, []);
     const points = Object.fromEntries(
       yKeys.map((key) => [
         key,
@@ -108,7 +133,46 @@ jest.mock('victory-native', () => {
     mockDrawn.lines.push(props);
     return null;
   };
-  return { CartesianChart: mockChart, Line: mockLine };
+  // victory-native's transform helpers, on the same matrix slots it uses:
+  // scaleX [0], scaleY [5], translateX [3], translateY [7].
+  const mockIdentity = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const mockUseChartTransformState = () => {
+    const { useRef: mockUseRef } = jest.requireActual('react');
+    const ref = mockUseRef({
+      state: {
+        matrix: { value: mockIdentity() },
+        zoomActive: { value: false },
+        panActive: { value: false },
+      },
+    });
+    return ref.current;
+  };
+  const mockSetScale = (m: number[], kx: number, ky?: number) => {
+    const c = m.slice(0);
+    c[0] = kx;
+    c[5] = ky ?? kx;
+    return c;
+  };
+  const mockSetTranslate = (m: number[], tx: number, ty: number) => {
+    const c = m.slice(0);
+    c[3] = tx;
+    c[7] = ty;
+    return c;
+  };
+  const mockGetTransformComponents = (m?: number[]) => ({
+    scaleX: m?.[0] || 1,
+    scaleY: m?.[5] || 1,
+    translateX: m?.[3] || 0,
+    translateY: m?.[7] || 0,
+  });
+  return {
+    CartesianChart: mockChart,
+    Line: mockLine,
+    useChartTransformState: mockUseChartTransformState,
+    setScale: mockSetScale,
+    setTranslate: mockSetTranslate,
+    getTransformComponents: mockGetTransformComponents,
+  };
 });
 jest.mock('@shopify/react-native-skia', () => {
   const mockCircle = (props: Record<string, unknown>) => {
@@ -117,8 +181,22 @@ jest.mock('@shopify/react-native-skia', () => {
   };
   // A stand-in font: what matters is that the chart is given one at all.
   const mockMatchFont = (style: Record<string, unknown>) => ({ mockFont: true, ...style });
-  return { Circle: mockCircle, matchFont: mockMatchFont };
+  const mockGroup = (props: Record<string, unknown> & { children?: React.ReactNode }) => {
+    mockDrawn.groups.push(props);
+    return props.children;
+  };
+  return { Circle: mockCircle, Group: mockGroup, matchFont: mockMatchFont };
 });
+// Evaluated once per render: enough to see what a marker is drawn under.
+jest.mock('react-native-reanimated', () => ({
+  useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
+  // Stable across renders, as the real one is: a write in one render must
+  // still be there in the next.
+  useSharedValue: (initial: unknown) =>
+    jest.requireActual('react').useRef({ value: initial }).current,
+  // Runs the reaction once per render with the value it watches.
+  useAnimatedReaction: (prepare: () => unknown, react: (v: unknown) => void) => react(prepare()),
+}));
 jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
 
@@ -541,5 +619,197 @@ describe('DOPECurve: what Export captures (#64)', () => {
       current: { props: { testID?: string } };
     };
     expect(ref.current.props.testID).toBe('chart-export');
+  });
+});
+
+describe('DOPECurve: zoom and pan (#64)', () => {
+  /**
+   * Pinch and pan zoom the distance axis; buttons do the same with a single
+   * tap, which WCAG 2.5.1 requires of multi-finger and path gestures. The
+   * stand-in chart reports a plot 300 px wide.
+   */
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  const view = () => {
+    const m = mockDrawn.transformState?.matrix.value ?? [];
+    return { scaleX: m[0], scaleY: m[5], translateX: m[3] };
+  };
+
+  const open = async () => {
+    seed(logsAt([300, 500, 700], 0));
+    const screen = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await screen.findByText('Elevation Drop Curve');
+    return screen;
+  };
+
+  it('pinches the distance axis only, keeping the MIL scale honest', async () => {
+    await open();
+
+    expect(mockDrawn.transformState).toBeDefined();
+    expect(mockDrawn.transformConfig).toEqual(
+      expect.objectContaining({ pinch: expect.objectContaining({ dimensions: 'x' }) })
+    );
+  });
+
+  it('pans with a gesture that lets a vertical drag scroll the page', async () => {
+    // victory-native's pan claimed every drag: on the Simulator a vertical drag
+    // on the chart did not scroll the screen. Its pan is off, and the chart's
+    // custom gesture includes a pan that fails on vertical movement.
+    await open();
+
+    expect(mockDrawn.transformConfig).toEqual(
+      expect.objectContaining({ pan: expect.objectContaining({ enabled: false }) })
+    );
+    const pans = JSON.stringify(mockDrawn.customGestures);
+    expect(pans).toMatch(/"failOffsetYStart":-\d+/);
+    expect(pans).toMatch(/"activeOffsetXStart":-\d+/);
+  });
+
+  it('zooms in and out with buttons, around the centre, never past 1x', async () => {
+    const { getByRole } = await open();
+
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    expect(view()).toEqual({ scaleX: 2, scaleY: 1, translateX: -150 });
+
+    fireEvent.press(getByRole('button', { name: 'Zoom out' }));
+    fireEvent.press(getByRole('button', { name: 'Zoom out' }));
+    expect(view()).toEqual({ scaleX: 1, scaleY: 1, translateX: 0 });
+  });
+
+  it('shows shorter and longer distances with buttons, within the curve', async () => {
+    const { getByRole } = await open();
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+
+    fireEvent.press(getByRole('button', { name: 'Show longer distances' }));
+    expect(view().translateX).toBe(-300);
+    fireEvent.press(getByRole('button', { name: 'Show longer distances' }));
+    expect(view().translateX).toBe(-300);
+
+    fireEvent.press(getByRole('button', { name: 'Show shorter distances' }));
+    expect(view().translateX).toBe(-150);
+  });
+
+  it('carries on from where a pinch left the chart', async () => {
+    // The buttons read the live matrix, so they continue from a gesture
+    // rather than jumping back to their own last position.
+    const { getByRole } = await open();
+    const state = mockDrawn.transformState as { matrix: { value: number[] } };
+    state.matrix.value = [4, 0, 0, -600, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+
+    expect(view().scaleX).toBe(8);
+  });
+
+  it('resets to the whole curve', async () => {
+    const { getByRole } = await open();
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    fireEvent.press(getByRole('button', { name: 'Show longer distances' }));
+
+    fireEvent.press(getByRole('button', { name: 'Show the whole curve' }));
+
+    expect(view()).toEqual({ scaleX: 1, scaleY: 1, translateX: 0 });
+  });
+});
+
+describe('DOPECurve: markers stay round when zoomed (#64)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  it('draws each marker under the inverse zoom, around its own centre', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText } = renderWithProviders(<DOPECurve route={route} navigation={navigation} />);
+    await findByText('Elevation Drop Curve');
+
+    const markerGroups = mockDrawn.groups.filter((g) => g.origin !== undefined);
+    expect(markerGroups).toHaveLength(2);
+    for (const group of markerGroups) {
+      // At 1x the inverse is 1; the helper's own tests cover other zooms.
+      expect((group.transform as { value: unknown }).value).toEqual([{ scaleX: 1 }]);
+    }
+    const centres = mockDrawn.circles
+      .filter((c) => c.style === 'stroke')
+      .map((c) => ({ x: c.cx, y: c.cy }));
+    expect(markerGroups.map((g) => g.origin)).toEqual(centres);
+  });
+});
+
+describe('DOPECurve: a gesture that goes too far snaps back (#64)', () => {
+  /**
+   * victory-native's pinch has no limits: on the Simulator a pinch zoomed out
+   * past 1x and squeezed the curve into half the chart. When the gestures go
+   * idle the view is brought back into range; while one is active it is left
+   * alone, so the pinch is not fought mid-gesture.
+   */
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(environmentRepository, 'getById')
+      .mockImplementation(async (id) => new EnvironmentSnapshot({ ...validEnvironment(), id }));
+  });
+
+  type MockState = {
+    matrix: { value: number[] };
+    zoomActive: { value: boolean };
+    panActive: { value: boolean };
+  };
+  const pinchedTo = (state: MockState, scaleX: number, translateX: number) => {
+    state.matrix.value = [scaleX, 0, 0, translateX, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  };
+
+  it('returns to the whole curve after a pinch past 1x', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+    const state = mockDrawn.transformState as unknown as MockState;
+
+    pinchedTo(state, 0.4, 30);
+    fireEvent.press(getByText('MOA')); // any re-render runs the reaction
+
+    expect(state.matrix.value[0]).toBe(1);
+    expect(state.matrix.value[3]).toBe(0);
+  });
+
+  it('keeps a zoom that is already in range', async () => {
+    // Seen on the Simulator: the plot width never reached the UI thread, so
+    // the snap-back measured against 0 and reset every zoom, button or pinch,
+    // to 1x. A re-render after zooming runs the snap-back here.
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByText, getByRole } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+    const state = mockDrawn.transformState as unknown as MockState;
+
+    fireEvent.press(getByRole('button', { name: 'Zoom in' }));
+    fireEvent.press(getByText('MOA'));
+
+    expect(state.matrix.value[0]).toBe(2);
+  });
+
+  it('leaves the view alone while a pinch is still under way', async () => {
+    seed(logsAt([300, 500], 0));
+    const { findByText, getByText } = renderWithProviders(
+      <DOPECurve route={route} navigation={navigation} />
+    );
+    await findByText('Elevation Drop Curve');
+    const state = mockDrawn.transformState as unknown as MockState;
+
+    state.zoomActive.value = true;
+    pinchedTo(state, 0.4, 30);
+    fireEvent.press(getByText('MOA'));
+
+    expect(state.matrix.value[0]).toBe(0.4);
   });
 });
