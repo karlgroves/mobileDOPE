@@ -125,6 +125,9 @@
     "eslint-plugin-react-native-a11y": {
       "eslint": "$eslint"
     },
+    "knip": {
+      "jiti": "2.6.1"
+    },
     "smol-toml": "^1.8.0"
   },
   "allowScripts": {
