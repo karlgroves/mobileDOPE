@@ -113,8 +113,10 @@ property that matters.
 
 The count moves in both directions. It was 15 when this register was written; two
 advisories left it by being **fixed** rather than renewed (`brace-expansion` and
-`undici`, in 5d98b34 and 855a330), and the heading went stale because nothing checks
-it. If this number and `audit-waivers.json` disagree, the JSON is right.
+`undici`, in 5d98b34 and 855a330), and the heading went stale because nothing checked
+it. `security/tests/waiverRegister.security.spec.ts` now does, so the two can no
+longer drift apart silently — if you are reading a checkout where they disagree,
+`audit-waivers.json` is the one to trust.
 
 ### Semgrep — 0 suppressions
 
