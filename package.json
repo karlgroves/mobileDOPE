@@ -128,7 +128,7 @@
     "knip": {
       "jiti": "~2.6.1"
     },
-    "markdown-it": "^15.0.3",
+    "markdown-it": "~15.0.3",
     "smol-toml": "^1.8.0"
   },
   "allowScripts": {
