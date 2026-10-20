@@ -92,8 +92,15 @@ const median = (values: number[]): number => {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 };
 
-/** A correction in `unit`, whatever unit it was logged in. */
-const correctionIn = (log: DOPELogData, unit: 'MIL' | 'MOA'): number =>
+/**
+ * A correction in `unit`, whatever unit it was logged in.
+ *
+ * Exported for `dopeAssistedElevation` (#168), which measures the same logged
+ * elevation against the solver and must read it on the same scale. A second
+ * copy of this rule is how #125's mixed-unit bug happened in three places at
+ * once.
+ */
+export const correctionIn = (log: DOPELogData, unit: 'MIL' | 'MOA'): number =>
   log.correctionUnit === unit
     ? log.elevationCorrection
     : unit === 'MIL'

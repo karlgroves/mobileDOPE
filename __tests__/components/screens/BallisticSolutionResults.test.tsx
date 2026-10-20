@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 import { DOPELog } from '../../../src/models/DOPELog';
@@ -9,6 +9,8 @@ import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useEnvironmentStore } from '../../../src/store/useEnvironmentStore';
 import { useRifleStore } from '../../../src/store/useRifleStore';
 import { calculateBallisticSolution } from '../../../src/utils/ballistics';
+import { NO_DATA_REASON } from '../../../src/utils/dopeAssistedElevation';
+import { elevationTable } from '../../../src/utils/solverInputs';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
 
 import type { DOPELogData } from '../../../src/models/DOPELog';
@@ -237,5 +239,182 @@ describe('BallisticSolutionResults shows relevant logged DOPE', () => {
     );
 
     expect(getByText('457m')).toBeTruthy();
+  });
+});
+
+/**
+ * The solver's elevation adjusted by the shooter's own DOPE (#168).
+ *
+ * The screen-level half of the feature: the pure arithmetic is covered in
+ * `dopeAssistedElevation.test.ts` and the layout in `DopeAdjustedElevation.test.tsx`,
+ * so what is asserted here is the wiring -- that real profiles and real snapshots
+ * reach the solver per log, and that the shooter can still see the unadjusted
+ * figure.
+ */
+describe('BallisticSolutionResults adjusts the elevation by logged DOPE', () => {
+  /** Profiles with the fields the solver actually reads. */
+  const rifleProfile = {
+    id: 1,
+    name: 'Tikka T3x',
+    caliber: '.308 Winchester',
+    barrelLength: 24,
+    twistRate: '1:10',
+    zeroDistance: 100,
+    scopeHeight: 1.5,
+    clickValueType: 'MIL',
+    clickValue: 0.1,
+  };
+  const ammoProfile = {
+    id: 1,
+    name: 'Federal 175',
+    caliber: '.308 Winchester',
+    bulletWeight: 168,
+    ballisticCoefficientG1: 0.462,
+    ballisticCoefficientG7: 0,
+    muzzleVelocity: 2650,
+  };
+
+  /** A full snapshot, as the solver needs humidity too. */
+  const conditions = (id: number) =>
+    ({
+      id,
+      temperature: 59,
+      humidity: 50,
+      pressure: 29.92,
+      altitude: 0,
+      densityAltitude: 0,
+      windSpeed: 0,
+      windDirection: 0,
+    }) as never;
+
+  /** The solver's own elevation for a 500-yard log in those conditions. */
+  const predicted = elevationTable(rifleProfile, ammoProfile, conditions(1), 500, 'MIL')(500)!;
+
+  const seedWithProfiles = (logs: DOPELog[]): void => {
+    useDOPEStore.setState({ dopeLogs: logs });
+    useEnvironmentStore.setState({
+      snapshots: [conditions(1)] as never,
+      current: conditions(1) as never,
+    });
+    useRifleStore.setState({ rifles: [rifleProfile] as never });
+    useAmmoStore.setState({ ammoProfiles: [ammoProfile] as never });
+  };
+
+  /** The signed number out of "Offset +0.40 MIL from 2 logs". */
+  const offsetNumber = (text: string): number => Number(/([+-][\d.]+)/.exec(text)?.[1]);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows the adjusted elevation beside the solver figure', () => {
+    // Two logs, each dialled 0.4 MIL more than the solver predicted for them.
+    // Two matches fill the weight budget, so the whole 0.4 is applied.
+    seedWithProfiles([
+      log({ id: 1, environmentId: 1, elevationCorrection: predicted + 0.4 }),
+      log({ id: 2, environmentId: 1, elevationCorrection: predicted + 0.4 }),
+    ]);
+
+    const { getByTestId, getByText } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    const solver = Number(getByTestId('dope-adjustment-solver').props.children);
+    const adjusted = Number(getByTestId('dope-adjustment-adjusted').props.children);
+    const offset = getByTestId('dope-adjustment-offset').props.children as string;
+
+    expect(getByText('SOLVER')).toBeTruthy();
+    expect(getByText('DOPE-ADJUSTED')).toBeTruthy();
+    expect(offsetNumber(offset)).toBeCloseTo(0.4, 1);
+    expect(adjusted - solver).toBeCloseTo(0.4, 1);
+    expect(offset).toContain('2 logs');
+  });
+
+  it('keeps the solver figure and says why when nothing is logged', () => {
+    seedWithProfiles([]);
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    expect(getByTestId('dope-adjustment-status').props.children).toBe(NO_DATA_REASON);
+    expect(Number(getByTestId('dope-adjustment-solver').props.children)).toBeGreaterThan(0);
+  });
+
+  it('switches the adjustment off and leaves the solver value', () => {
+    seedWithProfiles([
+      log({ id: 1, environmentId: 1, elevationCorrection: predicted + 0.4 }),
+      log({ id: 2, environmentId: 1, elevationCorrection: predicted + 0.4 }),
+    ]);
+
+    const { getByTestId, queryByText } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+    const before = getByTestId('dope-adjustment-solver').props.children;
+
+    fireEvent(getByTestId('dope-adjustment-switch'), 'valueChange', false);
+
+    expect(queryByText('DOPE-ADJUSTED')).toBeNull();
+    expect(getByTestId('dope-adjustment-solver').props.children).toBe(before);
+    expect(getByTestId('dope-adjustment-status').props.children as string).toMatch(/not applied/i);
+  });
+
+  it('offers no adjustment when the profiles have no solver inputs', () => {
+    // What the rest of this suite seeds: a rifle with a name and nothing else.
+    // Predicting a log from that would be arithmetic on undefined, so the screen
+    // reports no data rather than a number built out of NaN.
+    seed([log({ id: 1, environmentId: 1 })], [conditions(1)], conditions(1));
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    expect(getByTestId('dope-adjustment-status').props.children).toBe(NO_DATA_REASON);
+  });
+
+  it('offers no adjustment for a profile the solver cannot integrate', () => {
+    // A zero muzzle velocity, or a zero ballistic coefficient, is finite and
+    // nonsensical: the integrator never reaches the target and runs its full
+    // 100,000 iterations, on the render path, per snapshot. Measured outside the
+    // suite, that does not return. `canPredict` is what stops the solve being
+    // attempted -- remove it and this test hangs rather than failing cleanly,
+    // which is itself the signal.
+    useDOPEStore.setState({
+      dopeLogs: [log({ id: 1, environmentId: 1, elevationCorrection: 3.4 })],
+    });
+    useEnvironmentStore.setState({
+      snapshots: [conditions(1)] as never,
+      current: conditions(1) as never,
+    });
+    useRifleStore.setState({ rifles: [rifleProfile] as never });
+    useAmmoStore.setState({
+      ammoProfiles: [{ ...ammoProfile, muzzleVelocity: 0 }] as never,
+    });
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    expect(getByTestId('dope-adjustment-status').props.children).toBe(NO_DATA_REASON);
+  });
+
+  it('leaves a log with no recorded conditions out of the offset', () => {
+    // The same rule `inputCorrections` applies: predicting an unconditioned log
+    // in a standard atmosphere reads an unusual day as shooter error. Log 2 has
+    // no snapshot, so only log 1 is behind the offset -- and one log is capped.
+    jest.spyOn(environmentRepository, 'getById').mockResolvedValue(null as never);
+    seedWithProfiles([
+      log({ id: 1, environmentId: 1, elevationCorrection: predicted + 0.4 }),
+      log({ id: 2, environmentId: 99, elevationCorrection: predicted + 0.4 }),
+    ]);
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    const offset = getByTestId('dope-adjustment-offset').props.children as string;
+
+    expect(offset).toContain('1 log');
+    expect(offset).not.toContain('2 logs');
   });
 });
