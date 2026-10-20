@@ -88,21 +88,35 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 15 advisories, expire 2026-11-24
+### npm audit — 13 advisories, expire 2026-11-24
 
-All 15 are transitive through the React Native / Expo build toolchain and are
-DoS-class (quadratic parsing, unbounded recursion) in code paths the shipped app does
-not reach. The compensating control is structural rather than procedural: **this app
-has no network layer**, issues no requests, runs no server, and parses no untrusted
-input except a user-selected import file, which has its own allowlist and adversarial
-test suite (`security/tests/import.security.spec.ts`).
+All 13 are transitive through the React Native / Expo build toolchain, in code paths
+the shipped app does not reach. Twelve are DoS-class (quadratic parsing, unbounded
+recursion). The thirteenth is not: `node-forge` (GHSA-86w9-cpqp-85rv) is a signature
+verification flaw, waived because the Expo CLI reaches it only to sign
+`expo-updates` manifests and this app configures no `updates` or `codeSigning` block
+at all — it neither produces nor verifies a signature. The compensating control for
+the rest is structural rather than procedural: **this app has no network layer**,
+issues no requests, runs no server, and parses no untrusted input except a
+user-selected import file, which has its own allowlist and adversarial test suite
+(`security/tests/import.security.spec.ts`).
 
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for all 15 is `blocked-on-upstream`: they clear when Expo SDK ships a
-dependency set that resolves them. `npm run security:audit` fails the moment a new
-advisory appears that is not on that list, which is the property that matters.
+Disposition for all 13 is `blocked-on-upstream`: they clear when the toolchain ships
+a dependency set that resolves them. For `braces` (#170) and `node-forge` (#169) that
+is the only route — neither has a patched release at any version, and npm's only
+offered fix for each is a semver-major bump of the parent. `npm run security:audit`
+fails the moment a new advisory appears that is not on that list, which is the
+property that matters.
+
+The count moves in both directions. It was 15 when this register was written; two
+advisories left it by being **fixed** rather than renewed (`brace-expansion` and
+`undici`, in 5d98b34 and 855a330), and the heading went stale because nothing checked
+it. `security/tests/waiverRegister.security.spec.ts` now does, so the two can no
+longer drift apart silently — if you are reading a checkout where they disagree,
+`audit-waivers.json` is the one to trust.
 
 ### Semgrep — 0 suppressions
 

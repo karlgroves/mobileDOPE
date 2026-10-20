@@ -42,6 +42,16 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
+      "id": "GHSA-86w9-cpqp-85rv",
+      "package": "node-forge",
+      "severity": "high",
+      "reason": "Reached only at build time through the Expo CLI (expo -> @expo/cli -> node-forge, and again via @expo/code-signing-certificates), which uses it to sign expo-updates manifests. This app declares no updates or codeSigning block in app.config.ts and never imports expo-updates, so it neither produces nor verifies a signature, and the shipped bundle contains no RSA verifier. No patched release exists at any version -- npm's only offered fix is a semver-major expo bump, which would change the SDK. Advisory: node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/169"
+    },
+    {
       "id": "GHSA-8x88-c5mf-7j5w",
       "package": "tar",
       "severity": "high",
@@ -90,6 +100,16 @@
       "owner": "karlgroves",
       "expires": "2026-11-24",
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "reason": "Reached only at build time through Metro's file map (expo -> @expo/metro -> metro-file-map -> micromatch -> braces), which expands glob patterns this repository writes itself in its Metro and Jest configuration. No pattern is attacker-controlled, and the shipped bundle contains no glob expander. No patched release exists at any version -- npm's only offered fix is a semver-major @jest/transform bump. Advisory: braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/170"
     },
     {
       "id": "GHSA-w3rx-r6r6-pgpr",
