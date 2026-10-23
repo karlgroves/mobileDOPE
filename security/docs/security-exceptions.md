@@ -119,7 +119,7 @@ longer drift apart silently — if you are reading a checkout where they disagre
 `audit-waivers.json` is the one to trust.
 
 It fell from 13 to 4 when `npm audit fix --package-lock-only` resolved nine of them
-outright — `tar` ×4, `nanoid`, `shell-quote`, `ws`, `form-data` and `ip-address` — by
+outright — `tar` ×3, `shell-quote` ×2, `nanoid`, `ws`, `form-data` and `ip-address` — by
 moving the toolchain forward rather than by renewing anything. That is the
 `blocked-on-upstream` disposition doing what it says: the waivers were removed, not
 re-dated.
