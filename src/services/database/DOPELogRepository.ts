@@ -20,8 +20,9 @@ export class DOPELogRepository {
       `INSERT INTO dope_logs (
         rifle_id, ammo_id, environment_id, distance, distance_unit,
         elevation_correction, windage_correction, correction_unit,
-        target_type, group_size, hit_count, shot_count, notes, timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
+        target_type, group_size, hit_count, shot_count,
+        cold_bore_shot, shot_number_in_session, notes, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
       [
         log.rifleId,
         log.ammoId,
@@ -36,6 +37,10 @@ export class DOPELogRepository {
         log.groupSize ?? null,
         log.hitCount ?? null,
         log.shotCount ?? null,
+        // Barrel state unrecorded stays NULL: a 0 would claim a warm bore
+        // nobody observed, and #165 reads these as evidence.
+        log.coldBoreShot === undefined ? null : log.coldBoreShot ? 1 : 0,
+        log.shotNumberInSession ?? null,
         log.notes || null,
         log.timestamp ?? null,
       ]
@@ -157,7 +162,8 @@ export class DOPELogRepository {
         rifle_id = ?, ammo_id = ?, environment_id = ?, distance = ?,
         distance_unit = ?, elevation_correction = ?, windage_correction = ?,
         correction_unit = ?, target_type = ?, group_size = ?,
-        hit_count = ?, shot_count = ?, notes = ?
+        hit_count = ?, shot_count = ?, cold_bore_shot = ?,
+        shot_number_in_session = ?, notes = ?
       WHERE id = ?`,
       [
         updated.rifleId,
@@ -172,6 +178,8 @@ export class DOPELogRepository {
         updated.groupSize ?? null,
         updated.hitCount ?? null,
         updated.shotCount ?? null,
+        updated.coldBoreShot === undefined ? null : updated.coldBoreShot ? 1 : 0,
+        updated.shotNumberInSession ?? null,
         updated.notes || null,
         id,
       ]
