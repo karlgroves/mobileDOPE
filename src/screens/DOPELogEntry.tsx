@@ -16,10 +16,12 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { TextInput } from '../components/TextInput';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDopeLog } from '../hooks/useDopeLog';
+import { dopeLogRepository } from '../services/database';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { COLD_BORE_GAP_MINUTES, suggestColdBore } from '../utils/coldBore';
 
 import type { DOPELogData, DOPELog } from '../models/DOPELog';
 import type { LogsStackScreenProps } from '../navigation/types';
@@ -121,6 +123,19 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   const [groupSize, setGroupSize] = useState<number | undefined>(existingLog?.groupSize);
   const [hitCount, setHitCount] = useState<number | undefined>(existingLog?.hitCount);
   const [shotCount, setShotCount] = useState<number | undefined>(existingLog?.shotCount);
+  // Barrel state (#164). Three-valued on purpose: "Not recorded" is a real
+  // answer, and the one every log written before this feature carries. Stored
+  // as a string because SegmentedControl's values are strings.
+  const [coldBoreChoice, setColdBoreChoice] = useState<'unknown' | 'cold' | 'warm'>(
+    existingLog?.coldBoreShot === undefined ? 'unknown' : existingLog.coldBoreShot ? 'cold' : 'warm'
+  );
+  // Whether the current choice came from the gap rule rather than from a tap,
+  // so the screen can say so instead of presenting a guess as the shooter's.
+  const [coldBoreSuggested, setColdBoreSuggested] = useState(false);
+  // Set by the first tap on the control, and never cleared. Without it,
+  // choosing "Not recorded" deliberately looked identical to the untouched
+  // default and the suggestion immediately overwrote it.
+  const [coldBoreTouched, setColdBoreTouched] = useState(false);
   const [notes, setNotes] = useState(existingLog?.notes || '');
 
   // Environment ID will be set when saving
@@ -141,6 +156,42 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
       }
     }
   };
+
+  /**
+   * Suggest cold bore from the gap since this rifle last fired (#164).
+   *
+   * Reads the gap from the database rather than the DOPE store: only DOPE Logs
+   * fills that store, so a shooter who opens New DOPE Log directly would be
+   * judged against an empty list and told "cold bore" however recently they
+   * fired.
+   *
+   * Runs only on a new log, and only until the shooter touches the control.
+   * An edited log already carries whatever was recorded at the time, and a
+   * deliberate answer -- "Not recorded" included -- must not be argued with.
+   * `coldBoreSuggested` marks the value as the rule's rather than theirs,
+   * which is what the hint below the control reports: #164 asks that cold bore
+   * is never silently assumed.
+   */
+  useEffect(() => {
+    if (existingLog || coldBoreTouched || selectedRifleId === undefined) return;
+
+    let current = true;
+    dopeLogRepository
+      .getLastFiredAt(selectedRifleId)
+      .then((lastFiredAt) => {
+        if (!current) return;
+        setColdBoreChoice(suggestColdBore(lastFiredAt) ? 'cold' : 'warm');
+        setColdBoreSuggested(true);
+      })
+      .catch(() => {
+        // The suggestion is a convenience. If the read fails the control stays
+        // where it is -- unanswered by default, which is a valid recording.
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [existingLog, coldBoreTouched, selectedRifleId]);
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
   const filteredAmmo = selectedRifle
@@ -208,6 +259,10 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
         groupSize,
         hitCount,
         shotCount,
+        coldBoreShot: coldBoreChoice === 'unknown' ? undefined : coldBoreChoice === 'cold',
+        // Set by range session mode, not here: a log typed on this screen has
+        // no string to be a position in. An edited log keeps whatever it had.
+        shotNumberInSession: existingLog?.shotNumberInSession,
         notes: notes.trim() || undefined,
       };
 
@@ -396,6 +451,28 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
               />
             </View>
           </View>
+
+          {/* Barrel state (#164). Three options, because "not recorded" is the
+              honest answer for a shot nobody watched the clock on. */}
+          <Text style={[styles.fieldLabel, { color: colors.text.primary }]}>Barrel state</Text>
+          <SegmentedControl
+            options={[
+              { label: 'Not recorded', value: 'unknown' },
+              { label: 'Cold bore', value: 'cold' },
+              { label: 'Warm bore', value: 'warm' },
+            ]}
+            selectedValue={coldBoreChoice}
+            onValueChange={(value) => {
+              setColdBoreChoice(value as 'unknown' | 'cold' | 'warm');
+              setColdBoreSuggested(false);
+              setColdBoreTouched(true);
+            }}
+          />
+          <Text style={[styles.fieldHint, { color: colors.text.secondary }]}>
+            {coldBoreSuggested
+              ? `Suggested from the ${COLD_BORE_GAP_MINUTES} minutes since this rifle last fired. Change it if that is wrong.`
+              : 'Cold bore shots print differently. Leave it unrecorded if you are not sure.'}
+          </Text>
         </Card>
 
         {/* Notes */}
@@ -478,6 +555,16 @@ const styles = StyleSheet.create({
   },
   shotCountField: {
     flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  fieldHint: {
+    fontSize: 13,
+    marginTop: 8,
   },
   envTitle: {
     fontSize: 14,

@@ -163,7 +163,8 @@ export async function exportAllRifleProfilesJSON(rifles: RifleProfile[]): Promis
  * Hits and shots are separate columns: a log of 0 from 5 used to export as a
  * hit, and a single "3/5" cell opens in a spreadsheet as the 5th of March
  * (#138). Conditions come from each log's own snapshot, in the units the app
- * records them in. Latitude is deliberately not exported (PRIVACY.md).
+ * records them in. Barrel state (#164) exports as yes/no, or blank where it was
+ * never recorded. Latitude is deliberately not exported (PRIVACY.md).
  */
 function dopeLogsToCSV(
   logs: DOPELog[],
@@ -197,6 +198,8 @@ function dopeLogsToCSV(
     'Shots',
     'Target Type',
     'Group Size',
+    'Cold Bore',
+    'Shot # in Session',
     'Temperature (°F)',
     'Humidity (%)',
     'Pressure (inHg)',
@@ -222,6 +225,10 @@ function dopeLogsToCSV(
       sanitizeCsvCell(log.shotCount),
       sanitizeCsvCell(log.targetType),
       sanitizeCsvCell(log.groupSize),
+      // Empty, not "no": barrel state is unrecorded on every log from before
+      // #164, and a blank cell says that where a `no` would misreport it.
+      sanitizeCsvCell(log.coldBoreShot === undefined ? '' : log.coldBoreShot ? 'yes' : 'no'),
+      sanitizeCsvCell(log.shotNumberInSession),
       sanitizeCsvCell(env?.temperature),
       sanitizeCsvCell(env?.humidity),
       sanitizeCsvCell(env?.pressure),

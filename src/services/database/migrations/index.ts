@@ -9,6 +9,7 @@ import migration003 from './003_fix_empty_caliber';
 import migration004 from './004_remove_rifle_id_from_ammo';
 import migration005 from './005_drop_longitude_coarsen_latitude';
 import migration006 from './006_drop_longitude_column';
+import migration007 from './007_add_barrel_state_to_dope_logs';
 import migrationRunner from './MigrationRunner';
 
 // Register all migrations
@@ -18,6 +19,7 @@ migrationRunner.register(migration003);
 migrationRunner.register(migration004);
 migrationRunner.register(migration005);
 migrationRunner.register(migration006);
+migrationRunner.register(migration007);
 
 // Export for use in app initialization
 export { migrationRunner };

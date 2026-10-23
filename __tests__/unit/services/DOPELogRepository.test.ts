@@ -31,6 +31,101 @@ describe('DOPELogRepository', () => {
 
   const ids = () => ({ rifleId, ammoId, environmentId });
 
+  describe('barrel state (#164)', () => {
+    it('persists a cold-bore shot and its position in the string', async () => {
+      const created = await dopeLogRepository.create(
+        validDopeLog(ids(), { coldBoreShot: true, shotNumberInSession: 1 })
+      );
+
+      const read = await dopeLogRepository.getById(created.id as number);
+      expect(read?.coldBoreShot).toBe(true);
+      expect(read?.shotNumberInSession).toBe(1);
+    });
+
+    it('persists a recorded warm bore as warm, not as unrecorded', async () => {
+      // `false` has to survive the round trip through a 0 column. `||` instead
+      // of `??` anywhere on this path turns an observed warm bore into a NULL,
+      // which is the same mistake #136 fixed for a hit count of 0.
+      const created = await dopeLogRepository.create(validDopeLog(ids(), { coldBoreShot: false }));
+
+      expect((await dopeLogRepository.getById(created.id as number))?.coldBoreShot).toBe(false);
+    });
+
+    it('leaves both NULL when nothing was recorded', async () => {
+      const created = await dopeLogRepository.create(validDopeLog(ids()));
+
+      const read = await dopeLogRepository.getById(created.id as number);
+      expect(read?.coldBoreShot).toBeUndefined();
+      expect(read?.shotNumberInSession).toBeUndefined();
+    });
+
+    it('updates barrel state on an existing log', async () => {
+      const created = await dopeLogRepository.create(validDopeLog(ids()));
+
+      await dopeLogRepository.update(created.id as number, {
+        coldBoreShot: true,
+        shotNumberInSession: 4,
+      });
+
+      const read = await dopeLogRepository.getById(created.id as number);
+      expect(read?.coldBoreShot).toBe(true);
+      expect(read?.shotNumberInSession).toBe(4);
+    });
+
+    describe('getLastFiredAt', () => {
+      it('returns nothing for a rifle that has never fired', async () => {
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBeUndefined();
+      });
+
+      it('returns the most recent timestamp, not the first inserted', async () => {
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-01-01T10:00:00.000Z' })
+        );
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-06-01T10:00:00.000Z' })
+        );
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-03-01T10:00:00.000Z' })
+        );
+
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBe('2026-06-01T10:00:00.000Z');
+      });
+
+      it('only looks at the rifle asked for', async () => {
+        // A different rifle fired a minute ago says nothing about this barrel,
+        // and the cold-bore suggestion would be wrong if it counted.
+        const otherRifleId = (await rifleProfileRepository.create(validRifle())).id as number;
+        await dopeLogRepository.create(
+          validDopeLog(
+            { ...ids(), rifleId: otherRifleId },
+            {
+              timestamp: '2026-06-01T10:00:00.000Z',
+            }
+          )
+        );
+
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBeUndefined();
+        expect(await dopeLogRepository.getLastFiredAt(otherRifleId)).toBe(
+          '2026-06-01T10:00:00.000Z'
+        );
+      });
+    });
+
+    it('keeps barrel state through an unrelated update', async () => {
+      // `update` rebuilds the row from `toJSON()` plus the patch, so a field
+      // the patch does not mention has to come back out of the existing log.
+      const created = await dopeLogRepository.create(
+        validDopeLog(ids(), { coldBoreShot: true, shotNumberInSession: 2 })
+      );
+
+      await dopeLogRepository.update(created.id as number, { notes: 'mirage picked up' });
+
+      const read = await dopeLogRepository.getById(created.id as number);
+      expect(read?.coldBoreShot).toBe(true);
+      expect(read?.shotNumberInSession).toBe(2);
+    });
+  });
+
   describe('create', () => {
     it('persists the log and returns the assigned id', async () => {
       const created = await dopeLogRepository.create(validDopeLog(ids()));
