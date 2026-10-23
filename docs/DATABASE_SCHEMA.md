@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS dope_logs (
   group_size REAL,
   hit_count INTEGER,
   shot_count INTEGER,
+  cold_bore_shot INTEGER,
+  shot_number_in_session INTEGER,
   notes TEXT,
   timestamp INTEGER NOT NULL,
   FOREIGN KEY (rifle_id) REFERENCES rifle_profiles(id) ON DELETE CASCADE,
@@ -178,6 +180,8 @@ CREATE TABLE IF NOT EXISTS dope_logs (
 - `group_size`: Group size in inches
 - `hit_count`: Number of hits
 - `shot_count`: Total shots fired
+- `cold_bore_shot`: 1 cold, 0 warm, NULL not recorded (migration 007, #164)
+- `shot_number_in_session`: 1-based position in the day's string, NULL if unknown
 - `notes`: Optional notes
 - `timestamp`: Timestamp of engagement
 

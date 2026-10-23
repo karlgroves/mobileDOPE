@@ -197,6 +197,8 @@ const DOPE_LOG_ALLOWED_FIELDS = [
   'hitCount',
   'shotCount',
   'hitPercentage',
+  'coldBoreShot',
+  'shotNumberInSession',
   'notes',
   'timestamp',
 ];

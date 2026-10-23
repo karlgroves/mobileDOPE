@@ -16,6 +16,14 @@ export interface DOPELogData {
   groupSize?: number;
   hitCount?: number;
   shotCount?: number;
+  /**
+   * Barrel state (#164). `undefined` means not recorded -- true of every log
+   * written before migration 007, and of any the user left unanswered. `false`
+   * is an observed warm bore, which #165 treats quite differently.
+   */
+  coldBoreShot?: boolean;
+  /** 1-based position in the day's string; set automatically in range session mode. */
+  shotNumberInSession?: number;
   notes?: string;
   timestamp?: string;
 }
@@ -34,6 +42,14 @@ export class DOPELog {
   groupSize?: number;
   hitCount?: number;
   shotCount?: number;
+  /**
+   * Barrel state (#164). `undefined` means not recorded -- true of every log
+   * written before migration 007, and of any the user left unanswered. `false`
+   * is an observed warm bore, which #165 treats quite differently.
+   */
+  coldBoreShot?: boolean;
+  /** 1-based position in the day's string; set automatically in range session mode. */
+  shotNumberInSession?: number;
   notes?: string;
   timestamp?: string;
 
@@ -53,6 +69,8 @@ export class DOPELog {
     this.groupSize = data.groupSize;
     this.hitCount = data.hitCount;
     this.shotCount = data.shotCount;
+    this.coldBoreShot = data.coldBoreShot;
+    this.shotNumberInSession = data.shotNumberInSession;
     this.notes = data.notes;
     this.timestamp = data.timestamp;
   }
@@ -96,6 +114,16 @@ export class DOPELog {
     ) {
       throw new Error('Hit count cannot exceed shot count');
     }
+    // 1-based whole numbers. Shot 0 does not exist, and a 0 arriving from an
+    // import is far more likely to be a default someone wrote than a shot
+    // anyone fired. One check rather than two: `validate` is already at the
+    // top of this file's complexity budget.
+    if (
+      data.shotNumberInSession !== undefined &&
+      (!Number.isInteger(data.shotNumberInSession) || data.shotNumberInSession < 1)
+    ) {
+      throw new Error('Shot number in session must be a whole number of 1 or greater');
+    }
   }
 
   /**
@@ -115,6 +143,10 @@ export class DOPELog {
       group_size: this.groupSize,
       hit_count: this.hitCount,
       shot_count: this.shotCount,
+      // SQLite has no boolean; `undefined` stays undefined so the column keeps
+      // its NULL rather than becoming a recorded 0.
+      cold_bore_shot: this.coldBoreShot === undefined ? undefined : this.coldBoreShot ? 1 : 0,
+      shot_number_in_session: this.shotNumberInSession,
       notes: this.notes,
     };
   }
@@ -137,6 +169,8 @@ export class DOPELog {
       groupSize: orUndefined(row.group_size),
       hitCount: orUndefined(row.hit_count),
       shotCount: orUndefined(row.shot_count),
+      coldBoreShot: row.cold_bore_shot == null ? undefined : row.cold_bore_shot === 1,
+      shotNumberInSession: orUndefined(row.shot_number_in_session),
       notes: orUndefined(row.notes),
       timestamp: row.timestamp,
     });
@@ -160,6 +194,8 @@ export class DOPELog {
       groupSize: this.groupSize,
       hitCount: this.hitCount,
       shotCount: this.shotCount,
+      coldBoreShot: this.coldBoreShot,
+      shotNumberInSession: this.shotNumberInSession,
       notes: this.notes,
       timestamp: this.timestamp,
     };

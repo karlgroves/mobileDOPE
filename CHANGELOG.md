@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- DOPE logs record barrel state: whether the shot was a cold bore, and its
+  position in the day's string. New DOPE Log suggests cold bore when the rifle
+  has not fired for ten minutes, and the suggestion can be overruled or left
+  unanswered. Both fields export to JSON and CSV, and an older backup without
+  them still imports.
+
 ### Fixed
 
 - The DOPE log CSV has a `Distance Unit` column. Each log keeps its own

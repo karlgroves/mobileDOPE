@@ -69,6 +69,11 @@ export interface DOPELogRow {
   group_size?: number; // inches
   hit_count?: number;
   shot_count?: number;
+  // Barrel state (#164). Both are nullable and NULL means "not recorded" --
+  // every log written before migration 007, and any the user left unanswered.
+  // 0 is a recorded warm bore, which is not the same thing.
+  cold_bore_shot?: number; // 0 or 1
+  shot_number_in_session?: number; // 1-based position in the day's string
   notes?: string;
   timestamp: string;
 }
@@ -187,6 +192,8 @@ export const DB_SCHEMA = {
       group_size REAL,
       hit_count INTEGER,
       shot_count INTEGER,
+      cold_bore_shot INTEGER,
+      shot_number_in_session INTEGER,
       notes TEXT,
       timestamp TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (rifle_id) REFERENCES rifle_profiles(id) ON DELETE CASCADE,
