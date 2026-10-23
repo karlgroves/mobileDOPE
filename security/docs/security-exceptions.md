@@ -88,11 +88,11 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 13 advisories, expire 2026-11-24
+### npm audit — 4 advisories, expire 2026-11-24
 
-All 13 are transitive through the React Native / Expo build toolchain, in code paths
-the shipped app does not reach. Twelve are DoS-class (quadratic parsing, unbounded
-recursion). The thirteenth is not: `node-forge` (GHSA-86w9-cpqp-85rv) is a signature
+All 4 are transitive through the React Native / Expo build toolchain, in code paths
+the shipped app does not reach. Three are DoS-class (quadratic parsing, unbounded
+recursion). The fourth is not: `node-forge` (GHSA-86w9-cpqp-85rv) is a signature
 verification flaw, waived because the Expo CLI reaches it only to sign
 `expo-updates` manifests and this app configures no `updates` or `codeSigning` block
 at all — it neither produces nor verifies a signature. The compensating control for
@@ -104,7 +104,7 @@ user-selected import file, which has its own allowlist and adversarial test suit
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for all 13 is `blocked-on-upstream`: they clear when the toolchain ships
+Disposition for all 4 is `blocked-on-upstream`: they clear when the toolchain ships
 a dependency set that resolves them. For `braces` (#170) and `node-forge` (#169) that
 is the only route — neither has a patched release at any version, and npm's only
 offered fix for each is a semver-major bump of the parent. `npm run security:audit`
@@ -117,6 +117,12 @@ advisories left it by being **fixed** rather than renewed (`brace-expansion` and
 it. `security/tests/waiverRegister.security.spec.ts` now does, so the two can no
 longer drift apart silently — if you are reading a checkout where they disagree,
 `audit-waivers.json` is the one to trust.
+
+It fell from 13 to 4 when `npm audit fix --package-lock-only` resolved nine of them
+outright — `tar` ×4, `nanoid`, `shell-quote`, `ws`, `form-data` and `ip-address` — by
+moving the toolchain forward rather than by renewing anything. That is the
+`blocked-on-upstream` disposition doing what it says: the waivers were removed, not
+re-dated.
 
 ### Semgrep — 0 suppressions
 
