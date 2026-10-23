@@ -8,13 +8,12 @@
  * free of the ballistics engine.
  */
 
-import { logDistanceInYards } from './distanceUnits';
 import {
   compareLogsToSolver,
   suggestBallisticCoefficient,
   suggestMuzzleVelocity,
 } from './dopeAnalysis';
-import { elevationTable } from './solverInputs';
+import { perLogElevation } from './perLogElevation';
 
 import type { DropComparison, InputCorrection } from './dopeAnalysis';
 import type { AmmoProfileData } from '../models/AmmoProfile';
@@ -67,24 +66,10 @@ export const inputCorrectionsFor = ({
   const withoutConditions = logs.length - withConditions.length;
 
   // One trajectory per snapshot, out to the furthest log shot in it, rather
-  // than a full solve per log.
-  const furthest = new Map<number, number>();
-  for (const log of withConditions) {
-    const yards = Math.round(logDistanceInYards(log));
-    furthest.set(log.environmentId, Math.max(furthest.get(log.environmentId) ?? 0, yards));
-  }
-  const tables = new Map(
-    [...furthest].map(([id, maxYards]) => [
-      id,
-      elevationTable(rifle, ammo, environmentById.get(id), maxYards, unit),
-    ])
-  );
+  // than a full solve per log (#124).
+  const predict = perLogElevation(withConditions, rifle, ammo, environmentById, unit);
 
-  const comparisons = compareLogsToSolver(
-    withConditions,
-    (log, yards) => tables.get(log.environmentId)?.(yards),
-    unit
-  );
+  const comparisons = compareLogsToSolver(withConditions, predict, unit);
   const distances = comparisons.map((c) => c.distance);
   const distanceCount = distances.length;
   const spanYards = distanceCount ? Math.max(...distances) - Math.min(...distances) : 0;

@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has not fired for ten minutes, and the suggestion can be overruled or left
   unanswered. Both fields export to JSON and CSV, and an older backup without
   them still imports.
+- The ballistic solution can be adjusted by your own logged DOPE. The relevant
+  logs are compared against what the solver predicted for each of them, and the
+  difference is applied to today's answer, weighted by how well each log
+  matches. The solver's own figure stays on screen, a switch turns the
+  adjustment off, and with no relevant logs nothing changes.
 
 ### Fixed
 
