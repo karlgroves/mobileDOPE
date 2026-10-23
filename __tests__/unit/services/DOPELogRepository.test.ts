@@ -72,6 +72,45 @@ describe('DOPELogRepository', () => {
       expect(read?.shotNumberInSession).toBe(4);
     });
 
+    describe('getLastFiredAt', () => {
+      it('returns nothing for a rifle that has never fired', async () => {
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBeUndefined();
+      });
+
+      it('returns the most recent timestamp, not the first inserted', async () => {
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-01-01T10:00:00.000Z' })
+        );
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-06-01T10:00:00.000Z' })
+        );
+        await dopeLogRepository.create(
+          validDopeLog(ids(), { timestamp: '2026-03-01T10:00:00.000Z' })
+        );
+
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBe('2026-06-01T10:00:00.000Z');
+      });
+
+      it('only looks at the rifle asked for', async () => {
+        // A different rifle fired a minute ago says nothing about this barrel,
+        // and the cold-bore suggestion would be wrong if it counted.
+        const otherRifleId = (await rifleProfileRepository.create(validRifle())).id as number;
+        await dopeLogRepository.create(
+          validDopeLog(
+            { ...ids(), rifleId: otherRifleId },
+            {
+              timestamp: '2026-06-01T10:00:00.000Z',
+            }
+          )
+        );
+
+        expect(await dopeLogRepository.getLastFiredAt(rifleId)).toBeUndefined();
+        expect(await dopeLogRepository.getLastFiredAt(otherRifleId)).toBe(
+          '2026-06-01T10:00:00.000Z'
+        );
+      });
+    });
+
     it('keeps barrel state through an unrelated update', async () => {
       // `update` rebuilds the row from `toJSON()` plus the patch, so a field
       // the patch does not mention has to come back out of the existing log.

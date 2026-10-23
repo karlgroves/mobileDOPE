@@ -76,6 +76,26 @@ export class DOPELogRepository {
   }
 
   /**
+   * When this rifle last fired, as the timestamp of its most recent DOPE log,
+   * or `undefined` if it has none.
+   *
+   * One row, not the rifle's whole history: New DOPE Log only needs the gap
+   * since the last shot to suggest cold bore (#164), and the in-memory store
+   * is no use for it -- only DOPE Logs fills that, so a shooter who opens New
+   * DOPE Log directly would be judged against an empty list.
+   */
+  async getLastFiredAt(rifleId: number): Promise<string | undefined> {
+    const db = databaseService.getDatabase();
+
+    const row = await db.getFirstAsync<{ timestamp: string }>(
+      'SELECT timestamp FROM dope_logs WHERE rifle_id = ? ORDER BY timestamp DESC LIMIT 1',
+      [rifleId]
+    );
+
+    return row?.timestamp;
+  }
+
+  /**
    * Get all DOPE logs for a specific ammo profile
    */
   async getByAmmoId(ammoId: number): Promise<DOPELog[]> {

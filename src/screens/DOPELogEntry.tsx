@@ -16,6 +16,7 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { TextInput } from '../components/TextInput';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDopeLog } from '../hooks/useDopeLog';
+import { dopeLogRepository } from '../services/database';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
@@ -73,7 +74,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   const { rifles, loadRifles } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
   const { current: currentEnv, saveCurrent } = useEnvironmentStore();
-  const { createDopeLog, updateDopeLog, loading, dopeLogs } = useDOPEStore();
+  const { createDopeLog, updateDopeLog, loading } = useDOPEStore();
 
   // Load the profiles this screen needs rather than rely on another screen
   // having done it: relaunching restores straight into this screen, before
@@ -131,6 +132,10 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   // Whether the current choice came from the gap rule rather than from a tap,
   // so the screen can say so instead of presenting a guess as the shooter's.
   const [coldBoreSuggested, setColdBoreSuggested] = useState(false);
+  // Set by the first tap on the control, and never cleared. Without it,
+  // choosing "Not recorded" deliberately looked identical to the untouched
+  // default and the suggestion immediately overwrote it.
+  const [coldBoreTouched, setColdBoreTouched] = useState(false);
   const [notes, setNotes] = useState(existingLog?.notes || '');
 
   // Environment ID will be set when saving
@@ -155,26 +160,38 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   /**
    * Suggest cold bore from the gap since this rifle last fired (#164).
    *
-   * Only ever moves a choice the shooter has not touched, and only on a new
-   * log: re-deriving it would overwrite a deliberate answer, and an edited log
-   * already carries whatever was recorded at the time. `coldBoreSuggested`
-   * marks the value as the rule's rather than theirs, which is what the hint
-   * below the control reports -- #164 asks that this is never silently
-   * assumed.
+   * Reads the gap from the database rather than the DOPE store: only DOPE Logs
+   * fills that store, so a shooter who opens New DOPE Log directly would be
+   * judged against an empty list and told "cold bore" however recently they
+   * fired.
+   *
+   * Runs only on a new log, and only until the shooter touches the control.
+   * An edited log already carries whatever was recorded at the time, and a
+   * deliberate answer -- "Not recorded" included -- must not be argued with.
+   * `coldBoreSuggested` marks the value as the rule's rather than theirs,
+   * which is what the hint below the control reports: #164 asks that cold bore
+   * is never silently assumed.
    */
   useEffect(() => {
-    if (existingLog) return;
-    if (coldBoreChoice !== 'unknown' && !coldBoreSuggested) return;
+    if (existingLog || coldBoreTouched || selectedRifleId === undefined) return;
 
-    const suggestion = suggestColdBore(dopeLogs, selectedRifleId);
-    if (suggestion === undefined) return;
+    let current = true;
+    dopeLogRepository
+      .getLastFiredAt(selectedRifleId)
+      .then((lastFiredAt) => {
+        if (!current) return;
+        setColdBoreChoice(suggestColdBore(lastFiredAt) ? 'cold' : 'warm');
+        setColdBoreSuggested(true);
+      })
+      .catch(() => {
+        // The suggestion is a convenience. If the read fails the control stays
+        // where it is -- unanswered by default, which is a valid recording.
+      });
 
-    setColdBoreChoice(suggestion ? 'cold' : 'warm');
-    setColdBoreSuggested(true);
-    // `coldBoreChoice` is read but deliberately not a dependency: including it
-    // would re-run this on the shooter's own tap and argue with them.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingLog, dopeLogs, selectedRifleId, coldBoreSuggested]);
+    return () => {
+      current = false;
+    };
+  }, [existingLog, coldBoreTouched, selectedRifleId]);
 
   const selectedRifle = rifles.find((r) => r.id === selectedRifleId);
   const filteredAmmo = selectedRifle
@@ -448,6 +465,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
             onValueChange={(value) => {
               setColdBoreChoice(value as 'unknown' | 'cold' | 'warm');
               setColdBoreSuggested(false);
+              setColdBoreTouched(true);
             }}
           />
           <Text style={[styles.fieldHint, { color: colors.text.secondary }]}>
