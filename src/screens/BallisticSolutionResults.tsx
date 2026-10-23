@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
 
 import { Card, Button } from '../components';
 import { RelevantDopeList } from '../components/RelevantDopeList';
@@ -21,7 +21,9 @@ import {
   describeAdvancedCorrections,
 } from '../utils/advancedCorrections';
 import { toSolverYards } from '../utils/distanceUnits';
+import { adjustElevation, SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
 import { rankMatches } from '../utils/dopeMatching';
+import { perLogElevation } from '../utils/perLogElevation';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { CalculatorStackScreenProps } from '../navigation/types';
@@ -99,6 +101,49 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
+
+  /**
+   * Today's elevation, adjusted by what the relevant logs say the solver gets
+   * wrong for this shooter (#168).
+   *
+   * Each log's offset is measured against the solver *in that log's own air*,
+   * so the difference in density altitude between then and now is already
+   * accounted for and needs no separate term -- which is why #70 §4 is not
+   * implemented as a step of its own.
+   *
+   * `perLogElevation` builds one trajectory per snapshot rather than a full
+   * solve per log; with at most `DEFAULT_MATCH_LIMIT` matches that is a handful
+   * of solves, not the 60 that cost 660 ms on the DOPE curve (#124).
+   */
+  const [useDopeAdjustment, setUseDopeAdjustment] = useState(true);
+
+  const dopeAdjusted = useMemo(() => {
+    if (!rifle || !ammo || relevantDope.length === 0) return undefined;
+
+    const environmentById = new Map(
+      relevantDope
+        .map(({ log }) => [log.environmentId, log.environment] as const)
+        .filter(
+          (entry): entry is [number, NonNullable<(typeof entry)[1]>] => entry[1] !== undefined
+        )
+    );
+
+    const predict = perLogElevation(
+      relevantDope.map(({ log }) => log),
+      rifle,
+      ammo,
+      // The matcher's environment shape has what the solver reads, except
+      // humidity, which `atmosphereFor` is happy to take as undefined.
+      environmentById as never,
+      angularUnit
+    );
+
+    return adjustElevation(relevantDope, predict, elevation, angularUnit);
+  }, [relevantDope, rifle, ammo, elevation, angularUnit]);
+
+  const adjustmentApplies =
+    useDopeAdjustment && dopeAdjusted !== undefined && dopeAdjusted.contributions.length > 0;
+  const shownElevation = adjustmentApplies ? dopeAdjusted.adjustedElevation : elevation;
 
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -217,9 +262,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </Text>
           <View style={styles.primaryResult}>
             <View style={styles.primaryColumn}>
-              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>ELEVATION</Text>
-              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
-                {elevation.toFixed(2)}
+              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>
+                {adjustmentApplies ? 'ELEVATION (ADJUSTED)' : 'ELEVATION'}
+              </Text>
+              <Text
+                style={[styles.primaryValue, { color: colors.primaryText }]}
+                testID="elevation-value"
+              >
+                {shownElevation.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -275,14 +325,60 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </Card>
         )}
 
-        {/* What this shooter actually dialled in conditions like these (#70) */}
+        {/* What this shooter actually dialled in conditions like these (#70),
+            and the adjustment derived from it (#168). The solver's own figure
+            is always on screen, whatever the switch says. */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Your logged DOPE
           </Text>
-          <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-            Shown beside the solution, not merged into it.
-          </Text>
+
+          <View style={styles.adjustRow}>
+            <Text style={[styles.adjustLabel, { color: colors.text.primary }]}>
+              Adjust by my DOPE
+            </Text>
+            <Switch
+              value={useDopeAdjustment}
+              onValueChange={setUseDopeAdjustment}
+              accessibilityLabel="Adjust by my DOPE"
+              accessibilityHint="Off shows the solver's own elevation with no correction from your logs"
+              testID="dope-adjust-switch"
+            />
+          </View>
+
+          {adjustmentApplies ? (
+            <View testID="dope-adjustment-summary">
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  Solver alone:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {elevation.toFixed(2)} {angularUnit}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  Offset applied:
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                  {dopeAdjusted.offset >= 0 ? '+' : ''}
+                  {dopeAdjusted.offset.toFixed(2)} {angularUnit}
+                </Text>
+              </View>
+              <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
+                {`Based on ${dopeAdjusted.contributions.length} ${
+                  dopeAdjusted.contributions.length === 1 ? 'log' : 'logs'
+                } from similar conditions.`}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
+              {useDopeAdjustment
+                ? (dopeAdjusted?.reason ?? SOLVER_ONLY_REASON)
+                : 'Adjustment off. Showing the solver alone.'}
+            </Text>
+          )}
+
           <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
         </Card>
 
@@ -398,6 +494,19 @@ const styles = StyleSheet.create({
   highlightCard: {
     borderWidth: 2,
     borderColor: 'rgba(74, 144, 226, 0.3)',
+  },
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    marginBottom: 8,
+  },
+  adjustLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    flexShrink: 1,
+    paddingRight: 12,
   },
   matchesCaption: {
     fontSize: 12,
