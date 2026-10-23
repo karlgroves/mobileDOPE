@@ -26,6 +26,7 @@ import { rankMatches } from '../utils/dopeMatching';
 import { perLogElevation } from '../utils/perLogElevation';
 
 import type { DOPELogData } from '../models/DOPELog';
+import type { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import type { CalculatorStackScreenProps } from '../navigation/types';
 import type { MatchableEnvironment } from '../utils/dopeMatching';
 
@@ -120,26 +121,27 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
   const dopeAdjusted = useMemo(() => {
     if (!rifle || !ammo || relevantDope.length === 0) return undefined;
 
-    const environmentById = new Map(
-      relevantDope
-        .map(({ log }) => [log.environmentId, log.environment] as const)
-        .filter(
-          (entry): entry is [number, NonNullable<(typeof entry)[1]>] => entry[1] !== undefined
-        )
-    );
+    // The full snapshots, not the reduced shape the matcher scores on: the
+    // solver reads humidity too, and `MatchableEnvironment` does not carry it.
+    // Same two sources `relevantDope` ranks against -- the store's recent
+    // snapshots, with each log's own loaded over the top (#122).
+    const environmentById = new Map<number, EnvironmentSnapshotData>([
+      ...snapshots.flatMap((snapshot) =>
+        snapshot.id === undefined ? [] : [[snapshot.id, snapshot] as const]
+      ),
+      ...(loadedSnapshots ?? []),
+    ]);
 
     const predict = perLogElevation(
       relevantDope.map(({ log }) => log),
       rifle,
       ammo,
-      // The matcher's environment shape has what the solver reads, except
-      // humidity, which `atmosphereFor` is happy to take as undefined.
-      environmentById as never,
+      environmentById,
       angularUnit
     );
 
     return adjustElevation(relevantDope, predict, elevation, angularUnit);
-  }, [relevantDope, rifle, ammo, elevation, angularUnit]);
+  }, [relevantDope, snapshots, loadedSnapshots, rifle, ammo, elevation, angularUnit]);
 
   const adjustmentApplies =
     useDopeAdjustment && dopeAdjusted !== undefined && dopeAdjusted.contributions.length > 0;
