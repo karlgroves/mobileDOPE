@@ -91,6 +91,17 @@ const log = (over: Partial<DOPELogData> = {}): DOPELog =>
     ...over,
   } as DOPELogData);
 
+/**
+ * The fields `calculateConfidence` reads, set to a well-shot group.
+ *
+ * Needed wherever a test seeds a *single* log, because #161 gates the
+ * adjustment on confidence and one log that records neither a shot count nor a
+ * group size does not clear the threshold. These tests are about the wiring,
+ * not about the gate, so they say plainly that their one log is a good one.
+ * The gate itself is asserted separately, at the bottom of this file.
+ */
+const WELL_EVIDENCED = { shotCount: 5, hitCount: 5, groupSize: 3 };
+
 const navigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
@@ -158,7 +169,7 @@ describe('DOPE-adjusted elevation on the solution screen (#168)', () => {
   });
 
   it('keeps the solver’s own figure on screen beside it', async () => {
-    seed([log({ elevationCorrection: solverElevation + 0.5 })]);
+    seed([log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })]);
 
     const screen = render();
 
@@ -183,7 +194,7 @@ describe('DOPE-adjusted elevation on the solution screen (#168)', () => {
   });
 
   it('says "log", singular, for one', async () => {
-    seed([log({ elevationCorrection: solverElevation + 0.4 })]);
+    seed([log({ elevationCorrection: solverElevation + 0.4, ...WELL_EVIDENCED })]);
 
     const screen = render();
 
@@ -193,7 +204,7 @@ describe('DOPE-adjusted elevation on the solution screen (#168)', () => {
   });
 
   it('returns the solver’s number when the switch is turned off', async () => {
-    seed([log({ elevationCorrection: solverElevation + 0.5 })]);
+    seed([log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })]);
 
     const screen = render();
     await waitFor(() => {
@@ -249,5 +260,132 @@ describe('DOPE-adjusted elevation on the solution screen (#168)', () => {
     });
     expect(screen.getByText(/^-0\.\d\d MIL$/)).toBeTruthy();
     expect(shown(screen)).toBeLessThan(solverElevation);
+  });
+});
+
+/**
+ * Confidence in the adjustment, on screen (#161).
+ *
+ * The score itself is covered in `adjustmentConfidence.test.ts` and the badge
+ * in `AdjustmentConfidenceBadge.test.tsx`. What is asserted here is that the
+ * screen gates on it: that a weak set of logs stops moving the headline, that
+ * the shooter is told why rather than just shown an unchanged number, and that
+ * the badge appears beside the adjustment rather than instead of it.
+ */
+describe('confidence in the adjustment, on the solution screen (#161)', () => {
+  it('shows the badge beside an adjustment it did apply', async () => {
+    seed([
+      log({ id: 1, elevationCorrection: solverElevation + 0.4, ...WELL_EVIDENCED }),
+      log({
+        id: 2,
+        elevationCorrection: solverElevation + 0.4,
+        environmentId: 2,
+        ...WELL_EVIDENCED,
+      }),
+    ]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('adjustment-confidence')).toBeTruthy();
+    });
+    expect(screen.getByText('Confidence in this adjustment')).toBeTruthy();
+    expect(screen.getByTestId('dope-adjustment-summary')).toBeTruthy();
+  });
+
+  it('leaves the headline on the solver when the logs flatly disagree', async () => {
+    // Four logs at this distance, every one well evidenced, saying four
+    // different things. There is plenty of evidence and none of it agrees, so
+    // their mean is not a measurement and must not be dialled.
+    seed(
+      [+0.8, -0.7, +0.6, -0.9].map((delta, i) =>
+        log({
+          id: i + 1,
+          elevationCorrection: solverElevation + delta,
+          environmentId: (i % 3) + 1,
+          ...WELL_EVIDENCED,
+        })
+      )
+    );
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByText('Confidence too low, using solver only')).toBeTruthy();
+    });
+    expect(shown(screen)).toBe(SOLVER_SHOWN);
+    expect(screen.getByText('ELEVATION')).toBeTruthy();
+    expect(screen.queryByTestId('dope-adjustment-summary')).toBeNull();
+  });
+
+  it('still shows the badge when it withheld the adjustment, with the reason', async () => {
+    // The case the shooter most needs the reasons for: the number did not
+    // move, and without the badge there is nothing on screen saying why.
+    seed(
+      [+0.8, -0.7, +0.6, -0.9].map((delta, i) =>
+        log({
+          id: i + 1,
+          elevationCorrection: solverElevation + delta,
+          environmentId: (i % 3) + 1,
+          ...WELL_EVIDENCED,
+        })
+      )
+    );
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('adjustment-confidence')).toBeTruthy();
+    });
+    expect(screen.getByText(/not applied/)).toBeTruthy();
+    expect(screen.getByText(/Logs disagree by/)).toBeTruthy();
+  });
+
+  it('withholds the adjustment from one log that records nothing about itself', async () => {
+    // No shot count and no group size: `calculateConfidence` marks it down,
+    // and one such log is not enough to move a dialled correction. This is the
+    // case the three wiring tests above opt out of with WELL_EVIDENCED.
+    seed([log({ elevationCorrection: solverElevation + 0.5 })]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByText('Confidence too low, using solver only')).toBeTruthy();
+    });
+    expect(shown(screen)).toBe(SOLVER_SHOWN);
+  });
+
+  it('hides the badge while the switch is off, rather than describing an absent number', async () => {
+    seed([
+      log({ id: 1, elevationCorrection: solverElevation + 0.4, ...WELL_EVIDENCED }),
+      log({
+        id: 2,
+        elevationCorrection: solverElevation + 0.4,
+        environmentId: 2,
+        ...WELL_EVIDENCED,
+      }),
+    ]);
+
+    const screen = render();
+    await waitFor(() => {
+      expect(screen.getByTestId('adjustment-confidence')).toBeTruthy();
+    });
+
+    fireEvent(screen.getByTestId('dope-adjust-switch'), 'valueChange', false);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('adjustment-confidence')).toBeNull();
+    });
+  });
+
+  it('shows no badge at all when nothing matched', async () => {
+    seed([log({ distance: 2000 })]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByText('No historical data, using solver only')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('adjustment-confidence')).toBeNull();
   });
 });

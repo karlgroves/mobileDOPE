@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   difference is applied to today's answer, weighted by how well each log
   matches. The solver's own figure stays on screen, a switch turns the
   adjustment off, and with no relevant logs nothing changes.
+- The DOPE-adjusted elevation carries a confidence figure of its own, shown
+  beside it in the same form as the per-log confidence. It reads how much
+  relevant DOPE there is, how well evidenced those logs are, how closely they
+  agree and how near they were shot to today's distance, and it names the weak
+  one in plain words. Below 40% the solver's own figure stands and the screen
+  says why, so logs that disagree with each other no longer average into a
+  correction nobody measured.
 
 ### Fixed
 
