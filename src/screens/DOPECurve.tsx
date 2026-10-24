@@ -28,6 +28,7 @@ import {
 
 import { Card, LoadingSpinner, EmptyState, SegmentedControl, Button } from '../components';
 import { confidenceBand } from '../components/ConfidenceBadge';
+import { DopeCoverage } from '../components/DopeCoverage';
 import { InputCorrectionsCard } from '../components/InputCorrectionsCard';
 import { OutlierList } from '../components/OutlierList';
 import { useTheme } from '../contexts/ThemeContext';
@@ -592,6 +593,11 @@ export const DOPECurve: React.FC<Props> = ({ route }) => {
 
         <InputCorrectionsCard corrections={corrections} onApply={applyCorrection} />
         <OutlierList outliers={outliers} unit={correctionUnit} />
+
+        {/* Which distances have DOPE and where the holes are (#162). Reads the
+            same logged distances the solution screen interpolates across, so
+            the two cannot disagree about where a value would be filled in. */}
+        <DopeCoverage points={loggedCurve} testID="dope-coverage" />
 
         {/* Data Table */}
         <Card style={styles.tableCard}>
