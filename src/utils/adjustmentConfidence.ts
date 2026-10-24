@@ -262,8 +262,13 @@ export const adjustmentConfidence = <T extends MatchableLog>(
   // this distance whatever the others were shot at. Each read in yards,
   // because a metric log's raw number is 9% short and would look 55 yards off
   // at 600 (#106).
-  const nearestLogYards = Math.min(
-    ...contributions.map((c) => Math.abs(logDistanceInYards(c.log) - distanceYards))
+  // Folded rather than spread into Math.min: `rankMatches` caps matches at
+  // DEFAULT_MATCH_LIMIT, but this function is exported and takes any
+  // adjustment, and a spread large enough overflows the call stack -- which
+  // throws instead of returning a number.
+  const nearestLogYards = contributions.reduce(
+    (nearest, c) => Math.min(nearest, Math.abs(logDistanceInYards(c.log) - distanceYards)),
+    Number.POSITIVE_INFINITY
   );
   const proximity = Math.exp(
     -(nearestLogYards * nearestLogYards) / (2 * PROXIMITY_SIGMA_YARDS * PROXIMITY_SIGMA_YARDS)
