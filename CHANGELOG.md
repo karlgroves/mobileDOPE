@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   difference is applied to today's answer, weighted by how well each log
   matches. The solver's own figure stays on screen, a switch turns the
   adjustment off, and with no relevant logs nothing changes.
+- The DOPE Curve says which distances you have DOPE at and which gaps are worth
+  practising, so a thin spot in your data is visible rather than implied. Gaps
+  narrower than 150 yards are not flagged, since interpolating across them is
+  sound.
 
 ### Fixed
 
