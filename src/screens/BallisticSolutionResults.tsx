@@ -7,6 +7,7 @@ import React, { useMemo, useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
 
 import { Card, Button } from '../components';
+import { AdjustmentConfidenceBadge } from '../components/AdjustmentConfidenceBadge';
 import { RelevantDopeList } from '../components/RelevantDopeList';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSnapshotsFor } from '../hooks/useSnapshotsFor';
@@ -16,6 +17,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { adjustmentConfidence, applyConfidence } from '../utils/adjustmentConfidence';
 import {
   applyAdvancedCorrections,
   describeAdvancedCorrections,
@@ -143,9 +145,37 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     return adjustElevation(relevantDope, predict, elevation, angularUnit);
   }, [relevantDope, snapshots, loadedSnapshots, rifle, ammo, elevation, angularUnit]);
 
+  /**
+   * How much of that offset is worth applying (#161).
+   *
+   * Scales the adjustment, and below the threshold drops it entirely. It reads
+   * `rawOffset` rather than #168's already-damped `offset`: `trust` and this
+   * module's `evidence` factor both measure how much relevance-weight is
+   * behind the offset, so applying both would charge thin evidence twice. The
+   * reasoning is written out at the top of `adjustmentConfidence.ts`.
+   */
+  const confidence = useMemo(
+    () =>
+      dopeAdjusted === undefined
+        ? undefined
+        : adjustmentConfidence(dopeAdjusted, toSolverYards(distance, distanceUnit), angularUnit),
+    [dopeAdjusted, distance, distanceUnit, angularUnit]
+  );
+
+  const confident = useMemo(
+    () =>
+      dopeAdjusted === undefined || confidence === undefined
+        ? undefined
+        : applyConfidence(dopeAdjusted, confidence),
+    [dopeAdjusted, confidence]
+  );
+
   const adjustmentApplies =
-    useDopeAdjustment && dopeAdjusted !== undefined && dopeAdjusted.contributions.length > 0;
-  const shownElevation = adjustmentApplies ? dopeAdjusted.adjustedElevation : elevation;
+    useDopeAdjustment &&
+    dopeAdjusted !== undefined &&
+    confident !== undefined &&
+    !confident.solverOnly;
+  const shownElevation = adjustmentApplies ? confident.adjustedElevation : elevation;
 
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -363,8 +393,8 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                   Offset applied:
                 </Text>
                 <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                  {dopeAdjusted.offset >= 0 ? '+' : ''}
-                  {dopeAdjusted.offset.toFixed(2)} {angularUnit}
+                  {confident.offset >= 0 ? '+' : ''}
+                  {confident.offset.toFixed(2)} {angularUnit}
                 </Text>
               </View>
               <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
@@ -376,9 +406,28 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           ) : (
             <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
               {useDopeAdjustment
-                ? (dopeAdjusted?.reason ?? SOLVER_ONLY_REASON)
+                ? (confident?.reason ?? dopeAdjusted?.reason ?? SOLVER_ONLY_REASON)
                 : 'Adjustment off. Showing the solver alone.'}
             </Text>
+          )}
+
+          {/* Confidence in the adjustment itself (#161), as distinct from the
+              per-log confidence `RelevantDopeList` shows against each entry.
+              Rendered whenever there are logs to judge -- including when the
+              figure was too low to apply, which is the case the shooter most
+              needs the reasons for. Hidden while the switch is off, where it
+              would be describing a number that is not on screen. */}
+          {useDopeAdjustment && confidence !== undefined && confidence.contributingLogs > 0 && (
+            <View style={styles.confidenceBlock}>
+              <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                Confidence in this adjustment
+              </Text>
+              <AdjustmentConfidenceBadge
+                confidence={confidence}
+                solverOnly={confident?.solverOnly ?? false}
+                testID="adjustment-confidence"
+              />
+            </View>
           )}
 
           <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
@@ -496,6 +545,10 @@ const styles = StyleSheet.create({
   highlightCard: {
     borderWidth: 2,
     borderColor: 'rgba(74, 144, 226, 0.3)',
+  },
+  confidenceBlock: {
+    gap: 6,
+    marginTop: 12,
   },
   adjustRow: {
     flexDirection: 'row',
