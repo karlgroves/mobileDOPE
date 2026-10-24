@@ -22,20 +22,30 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/169"
     },
     {
-      "id": "GHSA-vfj7-8cjw-p6xm",
-      "package": "braces",
-      "severity": "high",
-      "reason": "Reached only at build time through Metro's file map (expo -> @expo/metro -> metro-file-map -> micromatch -> braces), which expands glob patterns this repository writes itself in its Metro and Jest configuration. No pattern is attacker-controlled, and the shipped bundle contains no glob expander. No patched release exists at any version -- npm's only offered fix is a semver-major @jest/transform bump. Advisory: braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/170"
-    },
-    {
       "id": "GHSA-w3rx-r6r6-pgpr",
       "package": "image-size",
       "severity": "high",
       "reason": "Transitive through Expo asset processing at build time, on images committed to this repository. The app decodes no untrusted image dimensions. Advisory: image-size: ICNS parser allows denial of service through an infinite loop",
+      "disposition": "blocked-on-upstream",
+      "owner": "karlgroves",
+      "expires": "2026-11-24",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-xjj6-f33q-929c",
+      "package": "undici",
+      "severity": "high",
+      "reason": "Install-time only, and not in the shipped bundle. undici 6.29.0 is marked dev in package-lock.json and its sole dependent in the tree is node-gyp, which fetches prebuilt binaries while native modules are compiled on a developer machine. The app itself has no network layer at all -- PRIVACY.md and __tests__/unit/offlineFirst.test.ts both assert that there is no HTTP client anywhere under src/, and nothing under src/ references undici. A patched release above 6.29.0 exists, so this is a lockfile bump rather than a blocked upgrade; it is deferred only because dependency resolution is unavailable in the environment this waiver was written in, and it should be taken as soon as a tree can be re-resolved. Advisory: undici vulnerable to Denial of Service via unhandled error on excessive content-encodings",
+      "disposition": "fixable-now",
+      "owner": "karlgroves",
+      "expires": "2026-11-07",
+      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
+    },
+    {
+      "id": "GHSA-mrhx-c7xc-m3w5",
+      "package": "zod",
+      "severity": "high",
+      "reason": "Two copies, neither reachable from the app. node_modules/zod 4.6.5 is marked dev and is pulled in by eslint-plugin-react-hooks, knip and zod-validation-error -- lint and dead-code tooling, which parse this repository's own source and configuration. node_modules/expo/node_modules/zod 3.25.76 comes from @expo/cli and runs only while a build is produced. Nothing under src/ imports zod, so the shipped bundle contains no Zod validator and no oversized collection reaches one. The dev copy would clear on a bump to 4.6.6, but the advisory stays reported until Expo's nested 3.x copy moves: npm's only offered fix is expo 54.0.38, a semver-major downgrade from the SDK 55 this project is on -- the same position as the node-forge waiver above. Advisory: Zod can exhaust memory while validating oversized constrained collections",
       "disposition": "blocked-on-upstream",
       "owner": "karlgroves",
       "expires": "2026-11-24",

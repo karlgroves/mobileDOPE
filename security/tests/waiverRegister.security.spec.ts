@@ -23,36 +23,71 @@ const ROOT = path.join(__dirname, '../..');
 
 const waivers = (
   JSON.parse(fs.readFileSync(path.join(ROOT, 'security/config/audit-waivers.json'), 'utf8')) as {
-    waivers: { id: string; tracking: string }[];
+    waivers: { id: string; tracking: string; disposition: string; expires: string }[];
   }
 ).waivers;
 
+/** How many waivers are waiting on the toolchain rather than on us. */
+const blockedOnUpstream = waivers.filter(
+  (waiver) => waiver.disposition === 'blocked-on-upstream'
+).length;
+
 const register = fs.readFileSync(path.join(ROOT, 'security/docs/security-exceptions.md'), 'utf8');
 
-/** Every count the register states about the npm-audit waiver list. */
-const statedCounts = (): number[] => {
-  const patterns = [
-    /### npm audit — (\d+) advisories/,
-    /All (\d+) are transitive through/,
-    /Disposition for all (\d+) is/,
-  ];
-  return patterns.map((pattern) => {
-    const match = pattern.exec(register);
-    if (!match) {
-      throw new Error(
-        `security-exceptions.md no longer states a count matching ${String(pattern)}. ` +
-          'If the register was reworded, update this guard to match it -- do not delete it.'
-      );
-    }
-    return Number(match[1]);
-  });
+/** The one capture a register pattern must yield, or a thrown explanation. */
+const statedCount = (pattern: RegExp, group = 1): number => {
+  const match = pattern.exec(register);
+  if (!match) {
+    throw new Error(
+      `security-exceptions.md no longer states a count matching ${String(pattern)}. ` +
+        'If the register was reworded, update this guard to match it -- do not delete it.'
+    );
+  }
+  return Number(match[group]);
 };
+
+/** Every count the register states about the *size* of the npm-audit waiver list. */
+const statedTotals = (): number[] => [
+  statedCount(/### npm audit — (\d+) advisories/),
+  statedCount(/All (\d+) are transitive through/),
+  // The disposition sentence states the total as well as the split, so the
+  // two cannot be updated independently of each other.
+  statedCount(/Disposition for (\d+) of the (\d+) is/, 2),
+];
 
 describe('the security register matches the waiver file', () => {
   it('states the number of waivers actually on file, everywhere it states one', () => {
-    for (const stated of statedCounts()) {
+    for (const stated of statedTotals()) {
       expect(stated).toBe(waivers.length);
     }
+  });
+
+  it('names every expiry date the waiver file actually uses', () => {
+    // The count was guarded and the date was not, so the heading went on
+    // claiming a single "expire 2026-11-24" after a waiver was added that
+    // expires sooner -- which would have scheduled the review of the one
+    // time-critical entry two and a half weeks late. A date is a promise about
+    // when someone looks again; it is worth the same guard as the count.
+    const heading = /### npm audit — \d+ advisories, expire ([^\n]+)/.exec(register);
+    if (!heading) {
+      throw new Error(
+        'security-exceptions.md no longer states the npm audit expiry dates in its heading. ' +
+          'If the register was reworded, update this guard to match it -- do not delete it.'
+      );
+    }
+
+    for (const expires of new Set(waivers.map((waiver) => waiver.expires))) {
+      expect(heading[1]).toContain(expires);
+    }
+  });
+
+  it('states how many are blocked on upstream, which is no longer all of them', () => {
+    // Once one waiver is `fixable-now` the register stops being able to say
+    // "all N are blocked on upstream", and that distinction is the whole point
+    // of the disposition field -- a debt with a date on it reads differently
+    // from a decision. So the split is guarded too, not just the total.
+    expect(statedCount(/Disposition for (\d+) of the (\d+) is/)).toBe(blockedOnUpstream);
+    expect(blockedOnUpstream).toBeLessThan(waivers.length);
   });
 
   it('points every waiver at a tracking issue in this repository', () => {

@@ -88,12 +88,12 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 4 advisories, expire 2026-11-24
+### npm audit — 5 advisories, expire 2026-11-07 and 2026-11-24
 
-All 4 are transitive through the React Native / Expo build toolchain, in code paths
-the shipped app does not reach. Three are DoS-class (quadratic parsing, unbounded
-recursion). The fourth is not: `node-forge` (GHSA-86w9-cpqp-85rv) is a signature
-verification flaw, waived because the Expo CLI reaches it only to sign
+All 5 are transitive through the React Native / Expo build toolchain, in code paths
+the shipped app does not reach. Four are DoS-class (quadratic parsing, unbounded
+recursion, unbounded memory). The fifth is not: `node-forge` (GHSA-86w9-cpqp-85rv)
+is a signature verification flaw, waived because the Expo CLI reaches it only to sign
 `expo-updates` manifests and this app configures no `updates` or `codeSigning` block
 at all — it neither produces nor verifies a signature. The compensating control for
 the rest is structural rather than procedural: **this app has no network layer**,
@@ -104,12 +104,23 @@ user-selected import file, which has its own allowlist and adversarial test suit
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for all 4 is `blocked-on-upstream`: they clear when the toolchain ships
-a dependency set that resolves them. For `braces` (#170) and `node-forge` (#169) that
-is the only route — neither has a patched release at any version, and npm's only
-offered fix for each is a semver-major bump of the parent. `npm run security:audit`
-fails the moment a new advisory appears that is not on that list, which is the
-property that matters.
+Disposition for 4 of the 5 is `blocked-on-upstream`: they clear when the toolchain
+ships a dependency set that resolves them. For `node-forge` (#169) that is the only route —
+it has no patched release at any version, and npm's only offered fix is a
+semver-major bump of the parent. `zod` (GHSA-mrhx-c7xc-m3w5) is the same shape for
+the copy that matters: the dev copy would clear on a bump to 4.6.6, but Expo's nested
+3.x copy keeps the advisory reported and npm's only offered fix is `expo` 54.0.38, a
+semver-major **downgrade** from the SDK 55 this project is on.
+
+`undici` (GHSA-xjj6-f33q-929c) is the exception and is marked `fixable-now`, with a
+deliberately shorter expiry. It is install-time only — dev-flagged, reached solely by
+`node-gyp` — and a patched release above 6.29.0 exists, so it wants a lockfile bump
+rather than a waiver. It is waived only because dependency resolution was unavailable
+when it appeared, and it should be taken as soon as a tree can be re-resolved. A
+`fixable-now` waiver is a debt with a date on it, not a decision.
+
+`npm run security:audit` fails the moment a new advisory appears that is not on that
+list, which is the property that matters.
 
 The count moves in both directions. It was 15 when this register was written; two
 advisories left it by being **fixed** rather than renewed (`brace-expansion` and
@@ -123,6 +134,14 @@ outright — `tar` ×3, `shell-quote` ×2, `nanoid`, `ws`, `form-data` and `ip-a
 moving the toolchain forward rather than by renewing anything. That is the
 `blocked-on-upstream` disposition doing what it says: the waivers were removed, not
 re-dated.
+
+It then moved again, in both directions at once. `braces`
+(GHSA-vfj7-8cjw-p6xm, #170) **was withdrawn upstream** on 2026-10-23 and is no longer
+reported at all, so its waiver was deleted rather than re-dated — a withdrawn advisory
+is not a waived one, and leaving the entry in place would have claimed a review of
+something that no longer exists. Issue #170 is left open for the maintainer to close.
+In the same advisory-database refresh `undici` returned under a second id and `zod`
+appeared for the first time, which is why the net count went from 4 to 5.
 
 ### Semgrep — 0 suppressions
 
