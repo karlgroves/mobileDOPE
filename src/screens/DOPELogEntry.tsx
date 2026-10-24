@@ -21,7 +21,7 @@ import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { COLD_BORE_GAP_MINUTES, suggestColdBore } from '../utils/coldBore';
+import { describeColdBoreSuggestion, suggestColdBore } from '../utils/coldBore';
 
 import type { DOPELogData, DOPELog } from '../models/DOPELog';
 import type { LogsStackScreenProps } from '../navigation/types';
@@ -131,7 +131,14 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   );
   // Whether the current choice came from the gap rule rather than from a tap,
   // so the screen can say so instead of presenting a guess as the shooter's.
-  const [coldBoreSuggested, setColdBoreSuggested] = useState(false);
+  /**
+   * The hint under the barrel-state control, set when the rule decides.
+   *
+   * Held as the sentence rather than as a flag, because the sentence depends on
+   * the gap the effect read from the database and nothing else on this screen
+   * knows it. An empty string means the rule has not spoken.
+   */
+  const [coldBoreSuggested, setColdBoreSuggested] = useState('');
   // Set by the first tap on the control, and never cleared. Without it,
   // choosing "Not recorded" deliberately looked identical to the untouched
   // default and the suggestion immediately overwrote it.
@@ -181,7 +188,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
       .then((lastFiredAt) => {
         if (!current) return;
         setColdBoreChoice(suggestColdBore(lastFiredAt) ? 'cold' : 'warm');
-        setColdBoreSuggested(true);
+        setColdBoreSuggested(describeColdBoreSuggestion(lastFiredAt));
       })
       .catch(() => {
         // The suggestion is a convenience. If the read fails the control stays
@@ -464,14 +471,14 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
             selectedValue={coldBoreChoice}
             onValueChange={(value) => {
               setColdBoreChoice(value as 'unknown' | 'cold' | 'warm');
-              setColdBoreSuggested(false);
+              setColdBoreSuggested('');
               setColdBoreTouched(true);
             }}
           />
           <Text style={[styles.fieldHint, { color: colors.text.secondary }]}>
-            {coldBoreSuggested
-              ? `Suggested from the ${COLD_BORE_GAP_MINUTES} minutes since this rifle last fired. Change it if that is wrong.`
-              : 'Cold bore shots print differently. Leave it unrecorded if you are not sure.'}
+            {coldBoreSuggested === ''
+              ? 'Cold bore shots print differently. Leave it unrecorded if you are not sure.'
+              : coldBoreSuggested}
           </Text>
         </Card>
 
