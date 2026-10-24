@@ -75,7 +75,39 @@ describe('barrel state on New DOPE Log (#164)', () => {
     await waitFor(() => {
       expect(chosenBarrelState(screen)).toBe('Cold bore');
     });
-    expect(screen.getByText(/Suggested from the 10 minutes/)).toBeTruthy();
+    // The real gap, not the threshold. The hint used to read "Suggested from
+    // the 10 minutes since this rifle last fired" whatever the gap was, which
+    // on this fixture -- 45 minutes -- was simply false. #164 asks that cold
+    // bore is never silently assumed, and a hint stating the wrong reason
+    // cannot be checked by the shooter it is shown to.
+    expect(screen.getByText(/45 minutes ago, more than the 10-minute cold-bore gap/)).toBeTruthy();
+  });
+
+  it('says the rifle has no earlier logs rather than citing a gap it never measured', async () => {
+    jest.spyOn(dopeLogRepository, 'getLastFiredAt').mockResolvedValue(undefined);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByText(/no earlier logs/)).toBeTruthy();
+    });
+    expect(chosenBarrelState(screen)).toBe('Cold bore');
+    expect(screen.queryByText(/cold-bore gap/)).toBeNull();
+  });
+
+  it('names the gap on the warm side too, so the two sides read the same way', async () => {
+    jest
+      .spyOn(dopeLogRepository, 'getLastFiredAt')
+      .mockResolvedValue(new Date(Date.now() - 4 * 60_000).toISOString());
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(chosenBarrelState(screen)).toBe('Warm bore');
+    });
+    expect(
+      screen.getByText(/fired 4 minutes ago, inside the 10-minute cold-bore gap/)
+    ).toBeTruthy();
   });
 
   it('suggests warm bore when the rifle fired a minute ago', async () => {
@@ -112,7 +144,7 @@ describe('barrel state on New DOPE Log (#164)', () => {
 
     const screen = render();
     await waitFor(() => {
-      expect(screen.getByText(/Suggested from the 10 minutes/)).toBeTruthy();
+      expect(screen.getByText(/Suggested because/)).toBeTruthy();
     });
 
     fireEvent.press(screen.getByLabelText('Not recorded'));
@@ -121,7 +153,7 @@ describe('barrel state on New DOPE Log (#164)', () => {
       expect(screen.getByText(/Leave it unrecorded if you are not sure/)).toBeTruthy();
     });
     expect(chosenBarrelState(screen)).toBe('Not recorded');
-    expect(screen.queryByText(/Suggested from the 10 minutes/)).toBeNull();
+    expect(screen.queryByText(/Suggested because/)).toBeNull();
   });
 
   it('stops calling the suggestion a suggestion once it has been overruled', async () => {
@@ -129,13 +161,13 @@ describe('barrel state on New DOPE Log (#164)', () => {
 
     const screen = render();
     await waitFor(() => {
-      expect(screen.getByText(/Suggested from the 10 minutes/)).toBeTruthy();
+      expect(screen.getByText(/Suggested because/)).toBeTruthy();
     });
 
     fireEvent.press(screen.getByLabelText('Warm bore'));
 
     await waitFor(() => {
-      expect(screen.queryByText(/Suggested from the 10 minutes/)).toBeNull();
+      expect(screen.queryByText(/Suggested because/)).toBeNull();
     });
     expect(chosenBarrelState(screen)).toBe('Warm bore');
   });

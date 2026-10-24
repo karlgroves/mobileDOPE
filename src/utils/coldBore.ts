@@ -42,3 +42,64 @@ export const suggestColdBore = (
 
   return !firedRecently;
 };
+
+/** "4 minutes", "5 hours", "3 days" -- the gap, at the coarsest useful scale. */
+const describeGap = (minutes: number): string => {
+  const plural = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? '' : 's'}`;
+
+  if (minutes < 60) return plural(minutes, 'minute');
+  if (minutes < 24 * 60) return plural(Math.floor(minutes / 60), 'hour');
+  return plural(Math.floor(minutes / (24 * 60)), 'day');
+};
+
+/**
+ * Why the barrel-state control is pre-set the way it is, in the shooter's words.
+ *
+ * #164 requires that cold bore is never silently assumed, which is what the hint
+ * under the control is for: it lets the shooter check the app's reasoning before
+ * accepting it.
+ *
+ * It therefore has to state the reasoning *that actually applied*. The first cut
+ * interpolated {@link COLD_BORE_GAP_MINUTES} into "Suggested from the 10 minutes
+ * since this rifle last fired", which reads as a claim about the elapsed time and
+ * was false for every gap except one of almost exactly ten minutes -- a rifle
+ * last fired three days ago was told it had been ten minutes. A hint that
+ * misstates the reason is worse than no hint, because it invites the shooter to
+ * confirm something they cannot.
+ *
+ * So the three reasons the rule can have are reported as three different
+ * sentences, each naming the real gap and distinguishing the threshold from it.
+ * {@link suggestColdBore} remains the single decision; this only explains it, and
+ * a test asserts the two never disagree about which side of the gap a timestamp
+ * falls on.
+ */
+export const describeColdBoreSuggestion = (
+  lastFiredAt: string | undefined,
+  now: Date = new Date()
+): string => {
+  const tail = 'Change it if that is wrong.';
+
+  // The first shot of the first string is a cold bore by definition, and no gap
+  // was measured -- so the gap rule must not be cited as though it had been.
+  if (lastFiredAt === undefined) {
+    return `Suggested because this rifle has no earlier logs, so this is its first recorded shot. ${tail}`;
+  }
+
+  const at = new Date(lastFiredAt).getTime();
+  const elapsed = now.getTime() - at;
+
+  // Unparseable, or dated in the future by a skewed clock. `suggestColdBore`
+  // still answers "cold" for both, which is the safe side -- but there is no
+  // honest elapsed time to print, and inventing one here would be the same
+  // class of defect this function exists to remove.
+  if (Number.isNaN(at) || elapsed < 0) {
+    return `Suggested because this rifle's last shot time could not be read. ${tail}`;
+  }
+
+  const minutes = Math.floor(elapsed / 60_000);
+  const gap = `the ${COLD_BORE_GAP_MINUTES}-minute cold-bore gap`;
+
+  return suggestColdBore(lastFiredAt, now)
+    ? `Suggested because this rifle last fired ${describeGap(minutes)} ago, more than ${gap}. ${tail}`
+    : `Suggested because this rifle fired ${describeGap(minutes)} ago, inside ${gap}. ${tail}`;
+};

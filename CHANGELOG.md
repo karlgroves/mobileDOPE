@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
+  used to read "Suggested from the 10 minutes since this rifle last fired"
+  whatever the real gap was — so a rifle last fired three days ago was told it
+  had been ten minutes. It now names the actual gap, distinguishes it from the
+  ten-minute threshold, and says plainly when the rifle has no earlier logs or
+  when its last shot time could not be read.
 - The DOPE log CSV has a `Distance Unit` column. Each log keeps its own
   distance unit, so a distance of 500 could have been yards or meters.
 
