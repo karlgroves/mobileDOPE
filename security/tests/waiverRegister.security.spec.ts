@@ -23,7 +23,7 @@ const ROOT = path.join(__dirname, '../..');
 
 const waivers = (
   JSON.parse(fs.readFileSync(path.join(ROOT, 'security/config/audit-waivers.json'), 'utf8')) as {
-    waivers: { id: string; tracking: string; disposition: string }[];
+    waivers: { id: string; tracking: string; disposition: string; expires: string }[];
   }
 ).waivers;
 
@@ -59,6 +59,25 @@ describe('the security register matches the waiver file', () => {
   it('states the number of waivers actually on file, everywhere it states one', () => {
     for (const stated of statedTotals()) {
       expect(stated).toBe(waivers.length);
+    }
+  });
+
+  it('names every expiry date the waiver file actually uses', () => {
+    // The count was guarded and the date was not, so the heading went on
+    // claiming a single "expire 2026-11-24" after a waiver was added that
+    // expires sooner -- which would have scheduled the review of the one
+    // time-critical entry two and a half weeks late. A date is a promise about
+    // when someone looks again; it is worth the same guard as the count.
+    const heading = /### npm audit — \d+ advisories, expire ([^\n]+)/.exec(register);
+    if (!heading) {
+      throw new Error(
+        'security-exceptions.md no longer states the npm audit expiry dates in its heading. ' +
+          'If the register was reworded, update this guard to match it -- do not delete it.'
+      );
+    }
+
+    for (const expires of new Set(waivers.map((waiver) => waiver.expires))) {
+      expect(heading[1]).toContain(expires);
     }
   });
 

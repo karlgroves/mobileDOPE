@@ -88,7 +88,7 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 5 advisories, expire 2026-11-24
+### npm audit — 5 advisories, expire 2026-11-07 and 2026-11-24
 
 All 5 are transitive through the React Native / Expo build toolchain, in code paths
 the shipped app does not reach. Four are DoS-class (quadratic parsing, unbounded
