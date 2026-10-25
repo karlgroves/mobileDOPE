@@ -78,6 +78,27 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
   );
   const loadedSnapshots = useSnapshotsFor(candidateLogs);
 
+  /**
+   * The air to rank against: what the shooter set, else the most recent
+   * snapshot (#187).
+   *
+   * `current` is null until the Environment screen is opened and "Update
+   * Current" tapped, which on a cold launch is almost never before the first
+   * solve. With no environment here `environmentSimilarity` returns its neutral
+   * 0.5 for every candidate, so a quarter of the ranking weight -- the factor
+   * that decides whether a log was shot in air like today's -- stops
+   * discriminating, silently and with nothing on screen to say so.
+   *
+   * `snapshots[0]` is the most recent: the repository orders by timestamp
+   * descending and `createSnapshot` prepends. It is the same figure Start
+   * Session already presents as Current Conditions, so the fallback gives the
+   * app one notion of today's air rather than two.
+   *
+   * `undefined` when there is no snapshot either. That is honest -- nothing is
+   * known -- and the caption below says so instead of claiming similarity.
+   */
+  const matchEnvironment: MatchableEnvironment | undefined = currentEnv ?? snapshots[0];
+
   const relevantDope = useMemo(() => {
     if (dopeLogs.length === 0) return [];
 
@@ -98,9 +119,18 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
       ammoId,
       // The solver's unit, because that is what the matcher compares against.
       distance: toSolverYards(distance, distanceUnit),
-      environment: currentEnv ?? undefined,
+      environment: matchEnvironment,
     });
-  }, [dopeLogs, snapshots, loadedSnapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
+  }, [
+    dopeLogs,
+    snapshots,
+    loadedSnapshots,
+    rifleId,
+    ammoId,
+    distance,
+    distanceUnit,
+    matchEnvironment,
+  ]);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -407,9 +437,12 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                 </Text>
               </View>
               <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
+                {/* The similarity is only claimed when it was actually
+                    judged: with no conditions to compare against, every log
+                    scored neutral on that factor (#187). */}
                 {`Based on ${dopeAdjusted.contributions.length} ${
                   dopeAdjusted.contributions.length === 1 ? 'log' : 'logs'
-                } from similar conditions.`}
+                }${matchEnvironment ? ' from similar conditions' : ''}.`}
               </Text>
             </View>
           ) : (

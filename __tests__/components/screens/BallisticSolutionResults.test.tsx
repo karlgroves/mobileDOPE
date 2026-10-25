@@ -193,6 +193,36 @@ describe('BallisticSolutionResults shows relevant logged DOPE', () => {
     expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
   });
 
+  it('matches against the most recent snapshot when no conditions have been set', async () => {
+    // `current` is null until the shooter opens Environment and taps "Update
+    // Current", which on a cold launch is almost never before they solve (#187).
+    // With no environment in the shot context every log scores the neutral 0.5
+    // on the environment factor, and a quarter of the ranking weight stops
+    // discriminating. The most recent snapshot is the app's own answer to
+    // "today's air" -- Start Session already shows it as Current Conditions.
+    //
+    // Without the fallback both logs score alike and the tie breaks on id, so
+    // the 12,000 ft log comes first and this fails.
+    seed(
+      [
+        log({ id: 1, environmentId: 1, elevationCorrection: 9.9 }),
+        log({ id: 2, environmentId: 2, elevationCorrection: 1.1 }),
+      ],
+      [snapshot(2, 500), snapshot(1, 12000)],
+      null
+    );
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    const labels = getByTestId('relevant-dope').props.children as {
+      props: { accessibilityLabel: string };
+    }[];
+
+    expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
+  });
+
   it("ranks by conditions even when the store holds none of the logs' snapshots", async () => {
     // What the app actually has (#122): the Dashboard loads one snapshot into the
     // store, so an older log's conditions are only reachable by id. Reading
