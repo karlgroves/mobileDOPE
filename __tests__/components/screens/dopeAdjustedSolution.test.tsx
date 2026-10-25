@@ -1,5 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 import { DOPELog } from '../../../src/models/DOPELog';
 import { BallisticSolutionResults } from '../../../src/screens/BallisticSolutionResults';
@@ -11,6 +12,7 @@ import { calculateBallisticSolution } from '../../../src/utils/ballistics';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
 
 import type { DOPELogData } from '../../../src/models/DOPELog';
+import type { AlertButton } from 'react-native';
 
 /**
  * The solution adjusted by the shooter's own DOPE, on screen (#168).
@@ -146,6 +148,7 @@ const SOLVER_SHOWN = Number(solverElevation.toFixed(2));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('DOPE-adjusted elevation on the solution screen (#168)', () => {
@@ -387,5 +390,79 @@ describe('confidence in the adjustment, on the solution screen (#161)', () => {
       expect(screen.getByText('No historical data, using solver only')).toBeTruthy();
     });
     expect(screen.queryByTestId('adjustment-confidence')).toBeNull();
+  });
+});
+
+/**
+ * What "Save to DOPE Log" actually records (#185).
+ *
+ * The headline can read `ELEVATION (ADJUSTED)` while the log stores the
+ * solver's own figure. That is deliberate -- the offset is measured against the
+ * solver, so storing an adjusted number would fold the offset in again on the
+ * next solve, and again on the one after -- but nothing on screen said so, and
+ * nothing pinned the choice, which is how it comes to be "fixed" by saving the
+ * figure the shooter can see.
+ */
+describe('what Save to DOPE Log records (#185)', () => {
+  const saveWithAdjustment = async () => {
+    seed([
+      log({ id: 1, elevationCorrection: solverElevation + 0.5 }),
+      log({ id: 2, elevationCorrection: solverElevation + 0.5, environmentId: 2 }),
+      log({ id: 3, elevationCorrection: solverElevation + 0.5, environmentId: 3 }),
+    ]);
+    const createDopeLog = jest.fn().mockResolvedValue(undefined);
+    useDOPEStore.setState({ createDopeLog } as never);
+    useEnvironmentStore.setState({
+      saveCurrent: jest.fn().mockResolvedValue({ id: 7 }),
+    } as never);
+
+    const screen = render();
+    await waitFor(() => expect(screen.getByTestId('dope-adjustment-summary')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Save to DOPE Log'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls.at(-1)?.[2] as AlertButton[];
+    await buttons.find((b) => b.text === 'Steel')?.onPress?.();
+
+    return { screen, createDopeLog };
+  };
+
+  it('records the solver’s elevation, not the adjusted one', async () => {
+    const { screen, createDopeLog } = await saveWithAdjustment();
+
+    // The headline is the adjusted figure, so this is the gap the note exists
+    // to explain. Asserting both halves in one test is deliberate: either alone
+    // would pass if the screen stopped adjusting at all.
+    expect(shown(screen)).toBeGreaterThan(SOLVER_SHOWN);
+    await waitFor(() => expect(createDopeLog).toHaveBeenCalledTimes(1));
+    expect(createDopeLog.mock.calls[0][0].elevationCorrection).toBeCloseTo(solverElevation, 10);
+  });
+
+  it('tells the shooter which of the two figures it is about to store', async () => {
+    const { screen } = await saveWithAdjustment();
+
+    const note = screen.getByTestId('save-records-note').props.children as string;
+    expect(note).toContain(`${solverElevation.toFixed(2)} MIL`);
+    expect(note).toContain(shown(screen).toFixed(2));
+  });
+
+  it('says nothing when the figure on screen is the one being stored', async () => {
+    // Adjustment off: the headline is already the solver's own number, so a
+    // note distinguishing them would be describing a difference that is not
+    // there.
+    seed([log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })]);
+
+    const screen = render();
+    await waitFor(() => expect(screen.getByTestId('dope-adjustment-summary')).toBeTruthy());
+    fireEvent(screen.getByTestId('dope-adjust-switch'), 'valueChange', false);
+
+    expect(screen.queryByTestId('save-records-note')).toBeNull();
+  });
+
+  it('says nothing when there is no logged DOPE to adjust by', async () => {
+    seed([]);
+
+    const screen = render();
+
+    expect(screen.queryByTestId('save-records-note')).toBeNull();
   });
 });
