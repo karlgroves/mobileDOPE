@@ -227,3 +227,46 @@ describe('no component reads the static theme', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('every Switch follows the theme', () => {
+  it('each <Switch> in src sets trackColor and thumbColor', () => {
+    // Without them iOS draws its own system green (#30D158) rather than the
+    // app's primary (#4CAF50), so one control on the screen is a different
+    // colour from every other (#186). Scanned rather than rendered: the defect
+    // is "someone added a Switch and forgot", and a per-screen render test only
+    // covers the screens someone remembered to write one for.
+    const ROOT = path.join(__dirname, '../..');
+    const files = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) return files(p);
+        return /\.tsx$/.test(e.name) ? [p] : [];
+      });
+
+    const offenders = files(path.join(ROOT, 'src')).flatMap((file) => {
+      const source = fs.readFileSync(file, 'utf8');
+      const at = (index: number) =>
+        `${path.relative(ROOT, file)}:${source.slice(0, index).split('\n').length}`;
+
+      // `[^<]` holds the match inside one element. Allowing anything would let a
+      // Switch this pattern cannot read run on to the next element's `/>` and
+      // borrow its colours, which is a guard that passes by not looking.
+      const elements = new Map(
+        [...source.matchAll(/<Switch\b[^<]*?\/>/g)].map((m) => [m.index as number, m[0]])
+      );
+
+      return [...source.matchAll(/<Switch\b/g)].flatMap((m) => {
+        const element = elements.get(m.index as number);
+        // Every Switch in this app is self-closing, so an unreadable one means
+        // the pattern has stopped covering the code. Fail rather than skip it.
+        if (element === undefined)
+          return [`${at(m.index as number)} (not readable as one element)`];
+        return element.includes('trackColor') && element.includes('thumbColor')
+          ? []
+          : [at(m.index as number)];
+      });
+    });
+
+    expect(offenders).toEqual([]);
+  });
+});

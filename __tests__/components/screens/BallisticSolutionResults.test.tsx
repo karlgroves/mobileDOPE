@@ -1,6 +1,7 @@
 import { waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+import { Colors } from '../../../src/constants/colors';
 import { DOPELog } from '../../../src/models/DOPELog';
 import { BallisticSolutionResults } from '../../../src/screens/BallisticSolutionResults';
 import { environmentRepository } from '../../../src/services/database';
@@ -224,6 +225,26 @@ describe('BallisticSolutionResults shows relevant logged DOPE', () => {
     });
     expect(environmentRepository.getById).toHaveBeenCalledWith(1);
     expect(environmentRepository.getById).toHaveBeenCalledWith(2);
+  });
+
+  it('draws the adjustment switch in the theme, not the iOS system green', () => {
+    // Omitting these leaves iOS drawing its own green, which is a different
+    // colour from every other switch in the app (#186). Asserted here as well as
+    // in the source scan, because the scan only proves the props are present and
+    // not that they carry the palette's colours.
+    seed([log()]);
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    // React Native flattens the Switch's colour props before they reach the
+    // host element: `trackColor.false` arrives as `tintColor`, `trackColor.true`
+    // as `onTintColor` and `thumbColor` as `thumbTintColor`.
+    const { tintColor, onTintColor, thumbTintColor } = getByTestId('dope-adjust-switch').props;
+    expect(tintColor).toBe(Colors.dark.border);
+    expect(onTintColor).toBe(Colors.dark.primary);
+    expect(thumbTintColor).toBe('#ffffff');
   });
 
   it('matches a metric log against a yard shot', () => {
