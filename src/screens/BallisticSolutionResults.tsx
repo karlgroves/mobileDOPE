@@ -372,6 +372,8 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <Switch
               value={useDopeAdjustment}
               onValueChange={setUseDopeAdjustment}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={useDopeAdjustment ? '#ffffff' : '#f4f3f4'}
               accessibilityLabel="Adjust by my DOPE"
               accessibilityHint="Off shows the solver's own elevation with no correction from your logs"
               testID="dope-adjust-switch"

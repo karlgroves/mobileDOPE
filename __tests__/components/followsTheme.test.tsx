@@ -227,3 +227,29 @@ describe('no component reads the static theme', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('every Switch follows the theme', () => {
+  it('each <Switch> in src sets trackColor and thumbColor', () => {
+    // Without them iOS draws its own system green (#30D158) rather than the
+    // app's primary (#4CAF50), so one control on the screen is a different
+    // colour from every other (#186). Scanned rather than rendered: the defect
+    // is "someone added a Switch and forgot", and a per-screen render test only
+    // covers the screens someone remembered to write one for.
+    const ROOT = path.join(__dirname, '../..');
+    const files = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) return files(p);
+        return /\.tsx$/.test(e.name) ? [p] : [];
+      });
+
+    const offenders = files(path.join(ROOT, 'src')).flatMap((file) => {
+      const source = fs.readFileSync(file, 'utf8');
+      return [...source.matchAll(/<Switch\b[\s\S]*?\/>/g)]
+        .filter((m) => !(m[0].includes('trackColor') && m[0].includes('thumbColor')))
+        .map((m) => `${path.relative(ROOT, file)}:${source.slice(0, m.index).split('\n').length}`);
+    });
+
+    expect(offenders).toEqual([]);
+  });
+});
