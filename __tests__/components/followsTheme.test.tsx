@@ -245,9 +245,26 @@ describe('every Switch follows the theme', () => {
 
     const offenders = files(path.join(ROOT, 'src')).flatMap((file) => {
       const source = fs.readFileSync(file, 'utf8');
-      return [...source.matchAll(/<Switch\b[\s\S]*?\/>/g)]
-        .filter((m) => !(m[0].includes('trackColor') && m[0].includes('thumbColor')))
-        .map((m) => `${path.relative(ROOT, file)}:${source.slice(0, m.index).split('\n').length}`);
+      const at = (index: number) =>
+        `${path.relative(ROOT, file)}:${source.slice(0, index).split('\n').length}`;
+
+      // `[^<]` holds the match inside one element. Allowing anything would let a
+      // Switch this pattern cannot read run on to the next element's `/>` and
+      // borrow its colours, which is a guard that passes by not looking.
+      const elements = new Map(
+        [...source.matchAll(/<Switch\b[^<]*?\/>/g)].map((m) => [m.index as number, m[0]])
+      );
+
+      return [...source.matchAll(/<Switch\b/g)].flatMap((m) => {
+        const element = elements.get(m.index as number);
+        // Every Switch in this app is self-closing, so an unreadable one means
+        // the pattern has stopped covering the code. Fail rather than skip it.
+        if (element === undefined)
+          return [`${at(m.index as number)} (not readable as one element)`];
+        return element.includes('trackColor') && element.includes('thumbColor')
+          ? []
+          : [at(m.index as number)];
+      });
     });
 
     expect(offenders).toEqual([]);
