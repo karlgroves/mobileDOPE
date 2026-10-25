@@ -245,6 +245,13 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
         // solution that reached this screen. (#106)
         distance,
         distanceUnit,
+        // The solver's own figure, deliberately, even when the headline shows
+        // the adjusted one (#185). Every offset in `adjustElevation` is logged
+        // minus solver-predicted, so a log holding an adjusted elevation would
+        // be read back as further disagreement with the solver and shift the
+        // next solution again -- the offset compounding once per save. What is
+        // worth recording is what the rifle did, not what the app suggested.
+        // The note under the save button says so on screen.
         elevationCorrection: elevation,
         windageCorrection: windage,
         correctionUnit: angularUnit,
@@ -495,6 +502,17 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             style={styles.button}
             disabled={isSaving}
           />
+          {/* Only when the two differ. With the adjustment off or unapplied the
+              headline already *is* the stored figure, and a note drawing a
+              distinction would be describing one that is not there (#185). */}
+          {adjustmentApplies && (
+            <Text
+              style={[styles.saveNote, { color: colors.text.secondary }]}
+              testID="save-records-note"
+            >
+              {`Saves the solver's ${elevation.toFixed(2)} ${angularUnit}, not the adjusted ${shownElevation.toFixed(2)}. Your logs are measured against the solver, so storing the adjusted figure would fold the offset in twice.`}
+            </Text>
+          )}
           <Button
             title={isExporting ? 'Exporting...' : 'Export PDF'}
             onPress={handleExportPDF}
@@ -636,6 +654,13 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 12,
     marginTop: 8,
+  },
+  saveNote: {
+    fontSize: 13,
+    lineHeight: 18,
+    // Pulls back part of buttonContainer's 12pt gap, so the note reads as part
+    // of the save button above it rather than as a label for Export PDF below.
+    marginTop: -4,
   },
   button: {
     flex: 1,
