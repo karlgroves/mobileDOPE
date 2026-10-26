@@ -13,7 +13,10 @@ import { Picker } from '../components/Picker';
 import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
+import { isBarometerAvailable, readBarometerHpa } from '../services/deviceBarometer';
+import { useAppStore } from '../store/useAppStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { stationPressureFromSensor } from '../utils/barometer';
 import { coarsenLatitude } from '../utils/geoPrecision';
 
 // Wind direction options in degrees
@@ -64,6 +67,7 @@ export function EnvironmentInput() {
   const { theme } = useTheme();
   const { colors } = theme;
   const { current, setCurrent, saveCurrent, loading } = useEnvironmentStore();
+  const barometerOffset = useAppStore((state) => state.settings.barometerOffsetInHg);
 
   // Environmental parameters
   const [temperature, setTemperature] = useState<number | undefined>(current?.temperature || 59);
@@ -79,6 +83,10 @@ export function EnvironmentInput() {
   // Sensor availability
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [locationPermission, setLocationPermission] = useState(false);
+  // Only offered where the device has one (#62). Most phones do; many tablets
+  // and some budget Android handsets do not.
+  const [barometerAvailable, setBarometerAvailable] = useState(false);
+  const [readingBarometer, setReadingBarometer] = useState(false);
 
   // Density altitude (calculated)
   const [densityAltitude, setDensityAltitude] = useState<number>(0);
@@ -186,6 +194,44 @@ export function EnvironmentInput() {
   };
 
   /**
+   * Fill station pressure from the device barometer (#62).
+   *
+   * The phone reports the absolute pressure at the handset -- station pressure,
+   * which is what this field asks for -- so the reading is converted from hPa
+   * and offset by the user's calibration, and never corrected to sea level. See
+   * `src/utils/barometer.ts`. One short read: the sensor is released as soon as
+   * it has a few samples, or after a timeout.
+   */
+  const readBarometer = async () => {
+    setReadingBarometer(true);
+    try {
+      const samples = await readBarometerHpa();
+      const station = stationPressureFromSensor(samples, barometerOffset);
+      if (station === null) {
+        Alert.alert(
+          'No Barometer Reading',
+          samples.length === 0
+            ? 'The barometer did not respond. On iPhone, check that Mobile DOPE is ' +
+                'allowed under Settings › Privacy & Security › Motion & Fitness. You can ' +
+                'enter station pressure by hand.'
+            : 'The barometer gave a reading outside the range a station pressure can be, ' +
+                'so it was not used. Check the calibration offset in Settings, or enter ' +
+                'station pressure by hand.'
+        );
+        return;
+      }
+      setPressure(station);
+    } catch (_error) {
+      Alert.alert(
+        'No Barometer Reading',
+        'The barometer could not be read. You can enter station pressure by hand.'
+      );
+    } finally {
+      setReadingBarometer(false);
+    }
+  };
+
+  /**
    * Calculate density altitude
    * Formula: DA = PA + (120 * (OAT - ISA))
    */
@@ -207,6 +253,16 @@ export function EnvironmentInput() {
   useEffect(() => {
     checkSensorPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void isBarometerAvailable().then((available) => {
+      if (mounted) setBarometerAvailable(available);
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -355,6 +411,18 @@ export function EnvironmentInput() {
             required
           />
 
+          {barometerAvailable && (
+            <View style={styles.sensorButtonContainer}>
+              <Button
+                title="Read Barometer"
+                onPress={readBarometer}
+                variant="secondary"
+                loading={readingBarometer}
+                accessibilityHint="Fills station pressure from this device's barometer"
+              />
+            </View>
+          )}
+
           <NumberInput
             label="Altitude"
             value={altitude}
@@ -486,6 +554,9 @@ const styles = StyleSheet.create({
   presetText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  sensorButtonContainer: {
+    marginBottom: 16,
   },
   gpsButtonContainer: {
     marginTop: 8,

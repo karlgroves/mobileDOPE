@@ -3,7 +3,7 @@
  * User preferences and app configuration
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -16,8 +16,10 @@ import {
 } from 'react-native';
 
 import { Card, Button, SegmentedControl } from '../components';
+import { NumberInput } from '../components/NumberInput';
 import { useTheme } from '../contexts/ThemeContext';
 import { environmentRepository } from '../services/database/EnvironmentRepository';
+import { isBarometerAvailable } from '../services/deviceBarometer';
 import {
   exportFullBackup,
   exportAllRifleProfilesJSON,
@@ -31,6 +33,7 @@ import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { MAX_BAROMETER_OFFSET_INHG, isValidBarometerOffset } from '../utils/barometer';
 import { MergeStrategy } from '../utils/importMerge';
 
 import type { RootStackScreenProps } from '../navigation/types';
@@ -52,6 +55,35 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   // Distance preset customization state
   const [newPresetValue, setNewPresetValue] = useState<string>('');
+
+  // Barometer calibration (#62). Shown only where the device has a barometer,
+  // the same condition under which the Environment screen offers to read it.
+  const [barometerAvailable, setBarometerAvailable] = useState(false);
+  const [barometerOffset, setBarometerOffset] = useState<number | undefined>(
+    settings.barometerOffsetInHg
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    void isBarometerAvailable().then((available) => {
+      if (mounted) setBarometerAvailable(available);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /**
+   * Keep what the user is typing, but persist only a usable offset. A half-typed
+   * "-" or an offset past the limit stays in the field, where NumberInput shows
+   * the limit, and never reaches the readings.
+   */
+  const handleBarometerOffsetChange = async (value: number | undefined) => {
+    setBarometerOffset(value);
+    if (value !== undefined && isValidBarometerOffset(value)) {
+      await updateSettings({ barometerOffsetInHg: value });
+    }
+  };
 
   const handleAddPreset = async () => {
     const value = parseInt(newPresetValue, 10);
@@ -584,6 +616,33 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
         </Card>
+
+        {/* Barometer calibration (#62) */}
+        {barometerAvailable && (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Barometer</Text>
+            <NumberInput
+              label="Barometer Offset"
+              helperText={
+                "Added to every reading from this phone's barometer. Compare the phone " +
+                'with a trusted station-pressure source, such as a Kestrel, and enter the ' +
+                'difference: if the phone reads 0.03 low, enter 0.03; if it reads high, ' +
+                'enter -0.03. Leave at 0 if you have nothing to compare against. A pressure ' +
+                'typed by hand is never changed.'
+              }
+              value={barometerOffset}
+              onChangeValue={handleBarometerOffsetChange}
+              min={-MAX_BAROMETER_OFFSET_INHG}
+              max={MAX_BAROMETER_OFFSET_INHG}
+              precision={2}
+              unit="inHg"
+              // The iOS decimal pad has no minus key, so the step buttons are how a
+              // negative offset is entered there.
+              showButtons
+              step={0.01}
+            />
+          </Card>
+        )}
 
         {/* Privacy */}
         <Card style={styles.card}>
