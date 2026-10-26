@@ -25,6 +25,7 @@ import {
 import { toSolverYards } from '../utils/distanceUnits';
 import { adjustElevation, SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
 import { rankMatches } from '../utils/dopeMatching';
+import { conditionsToMatch, matchesCaption } from '../utils/matchConditions';
 import { perLogElevation } from '../utils/perLogElevation';
 
 import type { DOPELogData } from '../models/DOPELog';
@@ -79,25 +80,19 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
   const loadedSnapshots = useSnapshotsFor(candidateLogs);
 
   /**
-   * The air to rank against: what the shooter set, else the most recent
-   * snapshot (#187).
-   *
-   * `current` is null until the Environment screen is opened and "Update
-   * Current" tapped, which on a cold launch is almost never before the first
-   * solve. With no environment here `environmentSimilarity` returns its neutral
-   * 0.5 for every candidate, so a quarter of the ranking weight -- the factor
-   * that decides whether a log was shot in air like today's -- stops
-   * discriminating, silently and with nothing on screen to say so.
-   *
-   * `snapshots[0]` is the most recent: the repository orders by timestamp
-   * descending and `createSnapshot` prepends. It is the same figure Start
-   * Session already presents as Current Conditions, so the fallback gives the
-   * app one notion of today's air rather than two.
-   *
-   * `undefined` when there is no snapshot either. That is honest -- nothing is
-   * known -- and the caption below says so instead of claiming similarity.
+   * The air to rank against: what the shooter set, else the latest snapshot
+   * while it is under a day old (#187). `current` is null on a cold launch until
+   * the Environment screen is opened, and without an environment every log
+   * scores neutral on a quarter of the ranking weight. An older snapshot is not
+   * used -- it would be a wrong opinion about today's air where neutral is no
+   * opinion -- and `matchConditions.source` lets the caption say which case
+   * applied. See `conditionsToMatch`.
    */
-  const matchEnvironment: MatchableEnvironment | undefined = currentEnv ?? snapshots[0];
+  const matchConditions = useMemo(
+    () => conditionsToMatch(currentEnv, snapshots),
+    [currentEnv, snapshots]
+  );
+  const matchEnvironment = matchConditions.environment;
 
   const relevantDope = useMemo(() => {
     if (dopeLogs.length === 0) return [];
@@ -437,12 +432,9 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                 </Text>
               </View>
               <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-                {/* The similarity is only claimed when it was actually
-                    judged: with no conditions to compare against, every log
-                    scored neutral on that factor (#187). */}
-                {`Based on ${dopeAdjusted.contributions.length} ${
-                  dopeAdjusted.contributions.length === 1 ? 'log' : 'logs'
-                }${matchEnvironment ? ' from similar conditions' : ''}.`}
+                {/* Says what the logs were compared with, and claims a
+                    similarity only when one was actually judged (#187). */}
+                {matchesCaption(dopeAdjusted.contributions.length, matchConditions.source)}
               </Text>
             </View>
           ) : (

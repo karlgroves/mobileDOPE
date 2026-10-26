@@ -144,6 +144,19 @@ const seedWithoutConditions = (logs: DOPELog[]): void => {
   useEnvironmentStore.setState({ snapshots: [] as never, current: null });
 };
 
+/**
+ * `current` null, as on a cold launch, with only a latest snapshot taken the
+ * given number of hours ago to stand in for today's air.
+ */
+const seedWithLatestSnapshot = (logs: DOPELog[], hoursOld: number): void => {
+  seed(logs);
+  const timestamp = new Date(Date.now() - hoursOld * 3600000).toISOString();
+  useEnvironmentStore.setState({
+    snapshots: [{ ...(snapshot(1) as object), timestamp }] as never,
+    current: null,
+  });
+};
+
 const render = () =>
   renderWithProviders(<BallisticSolutionResults route={route} navigation={navigation} />);
 
@@ -492,6 +505,40 @@ describe('when today’s conditions are unknown (#187)', () => {
     await waitFor(() => expect(screen.getByTestId('dope-adjustment-summary')).toBeTruthy());
     expect(screen.getByText('Based on 1 log.')).toBeTruthy();
     expect(screen.queryByText(/similar conditions/)).toBeNull();
+  });
+
+  it('names the latest snapshot when that is what the logs were compared with', async () => {
+    seedWithLatestSnapshot(
+      [log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })],
+      2
+    );
+
+    const screen = render();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Based on 1 log from conditions similar to your latest snapshot.')
+      ).toBeTruthy()
+    );
+  });
+
+  it('says conditions were not compared when the latest snapshot is over a day old', async () => {
+    jest.spyOn(environmentRepository, 'getById').mockResolvedValue(snapshot(1));
+    seedWithLatestSnapshot(
+      [log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })],
+      25
+    );
+
+    const screen = render();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Based on 1 log. Conditions not compared: the latest snapshot is over 24 hours old.'
+        )
+      ).toBeTruthy()
+    );
+    expect(screen.queryByText(/similar/)).toBeNull();
   });
 
   it('still says so when it does know them', async () => {
