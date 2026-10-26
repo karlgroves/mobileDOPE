@@ -81,20 +81,70 @@ export const CALIBERS: Caliber[] = [
 ];
 
 /**
+ * A caliber the shooter added (#67). The name is both what is stored on a
+ * profile and what the picker shows; the diameter is required for the same
+ * reason the seeded table carries one -- spin drift needs it, and the name is
+ * not a safe source of it.
+ */
+export interface CustomCaliber {
+  name: string;
+  /** Bullet (groove) diameter in inches. */
+  diameter: number;
+}
+
+/**
  * The picker options, derived rather than written out.
  *
- * Both profile forms import this. Two hand-maintained copies is how the lists
+ * Both profile forms read these, through `useCaliberOptions`, which adds the
+ * shooter's own after them. Two hand-maintained copies is how the lists
  * drifted apart in the first place.
  */
 export const CALIBER_OPTIONS: { label: string; value: string }[] = CALIBERS.map(
   ({ label, value }) => ({ label, value })
 );
 
+/**
+ * The seeded options followed by the shooter's custom calibers, each marked
+ * "(custom)" so it reads as theirs rather than as one the app vouches for.
+ */
+export const caliberOptionsWith = (
+  custom: readonly CustomCaliber[]
+): { label: string; value: string }[] => [
+  ...CALIBER_OPTIONS,
+  ...custom.map(({ name }) => ({ label: `${name} (custom)`, value: name })),
+];
+
 /** Case-insensitive index, built once. */
 const BY_VALUE = new Map(CALIBERS.map((caliber) => [caliber.value.toLowerCase(), caliber]));
 
+/** Seeded labels, lower-cased, so a custom name cannot impersonate one. */
+const SEEDED_LABELS = new Set(CALIBERS.map((caliber) => caliber.label.toLowerCase()));
+
+/** Whether `name` is already a built-in caliber, by value or by label. */
+export const isSeededCaliber = (name: string): boolean => {
+  const key = name.trim().toLowerCase();
+  return BY_VALUE.has(key) || SEEDED_LABELS.has(key);
+};
+
 /**
- * Bullet diameter for a caliber this app offers, in inches.
+ * The custom calibers' diameters, by lower-cased name.
+ *
+ * Module state rather than an argument because the solver reaches
+ * `caliberDiameter` from deep inside `utils/ballistics.ts` with only the
+ * profile's caliber string, and threading the settings store through the
+ * solver for one lookup would couple the maths to the UI. The app store keeps
+ * this in step with the saved list (`setCustomCalibers` on load and on every
+ * change), so it is never staler than the settings themselves.
+ */
+let customDiameters = new Map<string, number>();
+
+/** Replace the custom calibers `caliberDiameter` knows about. */
+export const setCustomCalibers = (custom: readonly CustomCaliber[]): void => {
+  customDiameters = new Map(custom.map(({ name, diameter }) => [name.toLowerCase(), diameter]));
+};
+
+/**
+ * Bullet diameter for a caliber this app offers, built in or custom, in inches.
  *
  * Returns undefined rather than a guess for anything else -- an imported profile
  * or a caliber from an older version of the list. The caller decides what to do
@@ -105,5 +155,6 @@ const BY_VALUE = new Map(CALIBERS.map((caliber) => [caliber.value.toLowerCase(),
  */
 export const caliberDiameter = (value: string | undefined | null): number | undefined => {
   if (typeof value !== 'string') return undefined;
-  return BY_VALUE.get(value.trim().toLowerCase())?.diameter;
+  const key = value.trim().toLowerCase();
+  return BY_VALUE.get(key)?.diameter ?? customDiameters.get(key);
 };

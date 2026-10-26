@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { CaliberManagerScreen } from '../screens/CaliberManagerScreen';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { useAppStore } from '../store';
@@ -93,6 +94,15 @@ const RestoringNavigator: React.FC = () => {
           options={{
             headerShown: true,
             title: 'Privacy Policy',
+            ...stackHeaderOptions(colors),
+          }}
+        />
+        <Stack.Screen
+          name="Calibers"
+          component={CaliberManagerScreen}
+          options={{
+            headerShown: true,
+            title: 'Manage Calibers',
             ...stackHeaderOptions(colors),
           }}
         />

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Custom calibers. Settings → Manage Calibers adds calibers that are not in the
+  built-in list, each with its bullet diameter so spin drift uses the real
+  figure rather than a guess from the name. They appear in the rifle and ammo
+  caliber pickers marked "(custom)". Renaming one moves every rifle and ammo
+  profile that uses it to the new name, after saying how many; deleting one is
+  refused while any profile still uses it. The built-in calibers cannot be
+  changed or deleted.
 - DOPE logs record barrel state: whether the shot was a cold bore, and its
   position in the day's string. New DOPE Log suggests cold bore when the rifle
   has not fired for ten minutes, and the suggestion can be overruled or left

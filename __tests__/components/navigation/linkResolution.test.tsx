@@ -48,6 +48,7 @@ describe('a link opens the screen it names', () => {
     ['calculator/wind/1/2/600', 'WindTable'],
     ['settings', 'Settings'],
     ['privacy', 'PrivacyPolicy'],
+    ['calibers', 'Calibers'],
     ['home', 'Dashboard'],
   ])('%s opens %s', (path, screen) => {
     expect(resolve(path).screen).toBe(screen);

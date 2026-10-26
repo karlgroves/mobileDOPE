@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { caliberDiameter, setCustomCalibers } from '../../../src/constants/calibers';
 import { DEFAULT_DISTANCE_PRESETS, useAppStore } from '../../../src/store/useAppStore';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -134,6 +135,34 @@ describe('useAppStore', () => {
       mockStorage.removeItem.mockRejectedValueOnce(new Error('locked'));
 
       await expect(store().resetSettings()).rejects.toThrow('locked');
+    });
+  });
+
+  describe('custom calibers (#67)', () => {
+    const wildcat = { name: '6.5 Wildcat', diameter: 0.264 };
+    afterEach(() => setCustomCalibers([]));
+
+    it('start empty, including for settings saved before they existed', async () => {
+      mockStorage.getItem.mockResolvedValueOnce(JSON.stringify({ themeMode: 'light' }));
+      await store().loadSettings();
+      expect(store().settings.customCalibers).toEqual([]);
+    });
+
+    it('are known to the solver as soon as they are loaded', async () => {
+      // The solver looks diameters up without the store, so loading has to
+      // tell the caliber database; otherwise a custom caliber would fall
+      // through to a guess from its name until something else saved settings.
+      mockStorage.getItem.mockResolvedValueOnce(JSON.stringify({ customCalibers: [wildcat] }));
+      await store().loadSettings();
+      expect(caliberDiameter('6.5 Wildcat')).toBe(0.264);
+    });
+
+    it('are known to the solver as soon as they are saved, and forgotten on reset', async () => {
+      await store().updateSettings({ customCalibers: [wildcat] });
+      expect(caliberDiameter('6.5 Wildcat')).toBe(0.264);
+
+      await store().resetSettings();
+      expect(caliberDiameter('6.5 Wildcat')).toBeUndefined();
     });
   });
 

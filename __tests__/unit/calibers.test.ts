@@ -50,12 +50,15 @@ describe('no screen keeps its own caliber list', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('and both forms import the shared one', () => {
+  it('and both forms read the shared one, custom calibers included (#67)', () => {
+    // Through the hook rather than CALIBER_OPTIONS directly: a form that read
+    // the constant would offer only the built-in calibers.
     for (const form of ['RifleProfileForm.tsx', 'AmmoProfileForm.tsx']) {
       const source = fs.readFileSync(path.join(screensDir, form), 'utf8');
       expect(source).toMatch(
-        /import\s*\{[^}]*CALIBER_OPTIONS[^}]*\}\s*from\s*'\.\.\/constants\/calibers'/
+        /import\s*\{[^}]*useCaliberOptions[^}]*\}\s*from\s*'\.\.\/hooks\/useCaliberOptions'/
       );
+      expect(source).not.toMatch(/CALIBER_OPTIONS/);
     }
   });
 });
