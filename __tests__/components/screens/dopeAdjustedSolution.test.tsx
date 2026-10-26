@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { DOPELog } from '../../../src/models/DOPELog';
 import { BallisticSolutionResults } from '../../../src/screens/BallisticSolutionResults';
+import { environmentRepository } from '../../../src/services/database';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useEnvironmentStore } from '../../../src/store/useEnvironmentStore';
@@ -130,6 +131,30 @@ const seed = (logs: DOPELog[]): void => {
   });
   useRifleStore.setState({ rifles: [rifle] as never });
   useAmmoStore.setState({ ammoProfiles: [ammo] as never });
+};
+
+/**
+ * The same seed with no notion of today's air: nothing in the store's snapshot
+ * list, and `current` null as it is on every cold launch until the Environment
+ * screen is opened (#187). The logs' own snapshots stay reachable by id, so the
+ * adjustment still happens -- what is missing is the air to compare it against.
+ */
+const seedWithoutConditions = (logs: DOPELog[]): void => {
+  seed(logs);
+  useEnvironmentStore.setState({ snapshots: [] as never, current: null });
+};
+
+/**
+ * `current` null, as on a cold launch, with only a latest snapshot taken the
+ * given number of hours ago to stand in for today's air.
+ */
+const seedWithLatestSnapshot = (logs: DOPELog[], hoursOld: number): void => {
+  seed(logs);
+  const timestamp = new Date(Date.now() - hoursOld * 3600000).toISOString();
+  useEnvironmentStore.setState({
+    snapshots: [{ ...(snapshot(1) as object), timestamp }] as never,
+    current: null,
+  });
 };
 
 const render = () =>
@@ -464,5 +489,68 @@ describe('what Save to DOPE Log records (#185)', () => {
     const screen = render();
 
     expect(screen.queryByTestId('save-records-note')).toBeNull();
+  });
+});
+
+describe('when today’s conditions are unknown (#187)', () => {
+  it('does not claim the matches came from similar conditions', async () => {
+    // Every log scored the neutral 0.5 on the environment factor, because there
+    // was nothing to compare them against. Saying "from similar conditions"
+    // asserts a similarity nothing checked.
+    jest.spyOn(environmentRepository, 'getById').mockResolvedValue(snapshot(1));
+    seedWithoutConditions([log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })]);
+
+    const screen = render();
+
+    await waitFor(() => expect(screen.getByTestId('dope-adjustment-summary')).toBeTruthy());
+    expect(screen.getByText('Based on 1 log.')).toBeTruthy();
+    expect(screen.queryByText(/similar conditions/)).toBeNull();
+  });
+
+  it('names the latest snapshot when that is what the logs were compared with', async () => {
+    seedWithLatestSnapshot(
+      [log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })],
+      2
+    );
+
+    const screen = render();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Based on 1 log from conditions similar to your latest snapshot.')
+      ).toBeTruthy()
+    );
+  });
+
+  it('says conditions were not compared when the latest snapshot is over a day old', async () => {
+    jest.spyOn(environmentRepository, 'getById').mockResolvedValue(snapshot(1));
+    seedWithLatestSnapshot(
+      [log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })],
+      25
+    );
+
+    const screen = render();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Based on 1 log. Conditions not compared: the latest snapshot is over 24 hours old.'
+        )
+      ).toBeTruthy()
+    );
+    expect(screen.queryByText(/similar/)).toBeNull();
+  });
+
+  it('still says so when it does know them', async () => {
+    // The claim is worth making when it is true, so the fallback and the
+    // wording have to be asserted together -- dropping the phrase everywhere
+    // would pass the test above and lose the information.
+    seed([log({ elevationCorrection: solverElevation + 0.5, ...WELL_EVIDENCED })]);
+
+    const screen = render();
+
+    await waitFor(() =>
+      expect(screen.getByText('Based on 1 log from similar conditions.')).toBeTruthy()
+    );
   });
 });

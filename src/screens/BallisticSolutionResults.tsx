@@ -25,6 +25,7 @@ import {
 import { toSolverYards } from '../utils/distanceUnits';
 import { adjustElevation, SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
 import { rankMatches } from '../utils/dopeMatching';
+import { conditionsToMatch, matchesCaption } from '../utils/matchConditions';
 import { perLogElevation } from '../utils/perLogElevation';
 
 import type { DOPELogData } from '../models/DOPELog';
@@ -78,6 +79,21 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
   );
   const loadedSnapshots = useSnapshotsFor(candidateLogs);
 
+  /**
+   * The air to rank against: what the shooter set, else the latest snapshot
+   * while it is under a day old (#187). `current` is null on a cold launch until
+   * the Environment screen is opened, and without an environment every log
+   * scores neutral on a quarter of the ranking weight. An older snapshot is not
+   * used -- it would be a wrong opinion about today's air where neutral is no
+   * opinion -- and `matchConditions.source` lets the caption say which case
+   * applied. See `conditionsToMatch`.
+   */
+  const matchConditions = useMemo(
+    () => conditionsToMatch(currentEnv, snapshots),
+    [currentEnv, snapshots]
+  );
+  const matchEnvironment = matchConditions.environment;
+
   const relevantDope = useMemo(() => {
     if (dopeLogs.length === 0) return [];
 
@@ -98,9 +114,18 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
       ammoId,
       // The solver's unit, because that is what the matcher compares against.
       distance: toSolverYards(distance, distanceUnit),
-      environment: currentEnv ?? undefined,
+      environment: matchEnvironment,
     });
-  }, [dopeLogs, snapshots, loadedSnapshots, rifleId, ammoId, distance, distanceUnit, currentEnv]);
+  }, [
+    dopeLogs,
+    snapshots,
+    loadedSnapshots,
+    rifleId,
+    ammoId,
+    distance,
+    distanceUnit,
+    matchEnvironment,
+  ]);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -407,9 +432,9 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                 </Text>
               </View>
               <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-                {`Based on ${dopeAdjusted.contributions.length} ${
-                  dopeAdjusted.contributions.length === 1 ? 'log' : 'logs'
-                } from similar conditions.`}
+                {/* Says what the logs were compared with, and claims a
+                    similarity only when one was actually judged (#187). */}
+                {matchesCaption(dopeAdjusted.contributions.length, matchConditions.source)}
               </Text>
             </View>
           ) : (

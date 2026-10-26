@@ -87,8 +87,11 @@ const route = {
 } as unknown as Parameters<typeof BallisticSolutionResults>[0]['route'];
 
 /** A snapshot shaped as the matcher reads it. */
-const snapshot = (id: number, densityAltitude: number) =>
-  ({ id, temperature: 59, pressure: 29.92, altitude: 0, densityAltitude }) as never;
+const snapshot = (id: number, densityAltitude: number, timestamp?: string) =>
+  ({ id, temperature: 59, pressure: 29.92, altitude: 0, densityAltitude, timestamp }) as never;
+
+/** An ISO timestamp the given number of hours before now. */
+const hoursAgo = (hours: number): string => new Date(Date.now() - hours * 3600000).toISOString();
 
 const seed = (logs: DOPELog[], snapshots: unknown[] = [], current: unknown = null): void => {
   useDOPEStore.setState({ dopeLogs: logs });
@@ -191,6 +194,61 @@ describe('BallisticSolutionResults shows relevant logged DOPE', () => {
 
     // The log shot at 500 ft density altitude, matching today's air, comes first.
     expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
+  });
+
+  it('matches against the most recent snapshot when no conditions have been set', async () => {
+    // `current` is null until the shooter opens Environment and taps "Update
+    // Current", which on a cold launch is almost never before they solve (#187).
+    // With no environment in the shot context every log scores the neutral 0.5
+    // on the environment factor, and a quarter of the ranking weight stops
+    // discriminating. The most recent snapshot is the app's own answer to
+    // "today's air" -- Start Session already shows it as Current Conditions.
+    //
+    // Without the fallback both logs score alike and the tie breaks on id, so
+    // the 12,000 ft log comes first and this fails.
+    seed(
+      [
+        log({ id: 1, environmentId: 1, elevationCorrection: 9.9 }),
+        log({ id: 2, environmentId: 2, elevationCorrection: 1.1 }),
+      ],
+      [snapshot(2, 500, hoursAgo(1)), snapshot(1, 12000, hoursAgo(30))],
+      null
+    );
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    const labels = getByTestId('relevant-dope').props.children as {
+      props: { accessibilityLabel: string };
+    }[];
+
+    expect(labels[0].props.accessibilityLabel).toMatch(/elevation 1\.1/);
+  });
+
+  it('does not rank against a latest snapshot over a day old', async () => {
+    // A snapshot from another range weeks ago is a wrong opinion about today's
+    // air; with nothing recent the environment factor must stay neutral, as it
+    // was before the fallback. Same logs as above, latest snapshot 25 hours
+    // old: neutral scores tie, the tie breaks on id, the 12,000 ft log leads.
+    seed(
+      [
+        log({ id: 1, environmentId: 1, elevationCorrection: 9.9 }),
+        log({ id: 2, environmentId: 2, elevationCorrection: 1.1 }),
+      ],
+      [snapshot(2, 500, hoursAgo(25)), snapshot(1, 12000, hoursAgo(30))],
+      null
+    );
+
+    const { getByTestId } = renderWithProviders(
+      <BallisticSolutionResults route={route} navigation={navigation} />
+    );
+
+    const labels = getByTestId('relevant-dope').props.children as {
+      props: { accessibilityLabel: string };
+    }[];
+
+    expect(labels[0].props.accessibilityLabel).toMatch(/elevation 9\.9/);
   });
 
   it("ranks by conditions even when the store holds none of the logs' snapshots", async () => {
