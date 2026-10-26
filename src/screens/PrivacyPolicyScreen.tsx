@@ -40,6 +40,18 @@ const SECTIONS: Section[] = [
       'Rifle and ammunition profiles, environmental readings, DOPE logs, range ' +
         'sessions, shot strings and your app settings. All of it is written to a ' +
         "private database inside the app's own storage, readable only by this app.",
+      'Marked targets: where each shot landed, the width of the target, and a photo ' +
+        'of it if you chose one.',
+    ],
+  },
+  {
+    heading: 'Target photos',
+    paragraphs: [
+      'A target photo is chosen in the system photo picker, which needs no permission ' +
+        'and gives the app only the photo you pick. The camera is never opened.',
+      'Before the photo is kept, its location and other metadata are removed. Only the ' +
+        'image, its colour profile and its orientation are stored. Removing the target ' +
+        'or deleting its DOPE log deletes the photo, and photos are not exported.',
     ],
   },
   {
@@ -81,7 +93,8 @@ const SECTIONS: Section[] = [
     paragraphs: [
       'Location while in use is the only runtime permission this app requests. Camera, ' +
         'photo library, microphone and motion permissions are explicitly blocked in the ' +
-        'build configuration so that bundled libraries cannot introduce them.',
+        'build configuration so that bundled libraries cannot introduce them. Choosing ' +
+        'a target photo uses the system picker, which needs none of them.',
     ],
   },
 ];
@@ -99,7 +112,7 @@ export const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>
         accessibilityHint="Scroll to read how Mobile DOPE handles your data"
       >
         <Text style={[styles.updated, { color: colors.text.secondary }]}>
-          Last updated 26 August 2026 · applies to this release
+          Last updated 26 October 2026 · applies to this release
         </Text>
 
         {SECTIONS.map((section) => (

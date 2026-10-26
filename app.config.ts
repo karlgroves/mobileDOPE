@@ -66,9 +66,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'android.permission.ACCESS_FINE_LOCATION',
       ],
       blockedPermissions: [
-        // expo-image-picker is a dependency but is not used anywhere in `src/`. Left
-        // unblocked, autolinking would add CAMERA and media permissions that the app
-        // never exercises -- a broader manifest than the app can justify.
+        // expo-image-picker is used for one thing: choosing a target photo (#63) with
+        // `launchImageLibraryAsync`, which opens the system photo picker
+        // (PickVisualMedia). That needs no permission -- the picker grants access to
+        // the chosen image only -- and the app never opens the camera. Left
+        // unblocked, autolinking would still add CAMERA and media permissions that
+        // nothing exercises. See src/services/TargetPhotoService.ts.
         'android.permission.CAMERA',
         'android.permission.READ_MEDIA_IMAGES',
         'android.permission.READ_EXTERNAL_STORAGE',
@@ -100,9 +103,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // expo-location carries the plugin form so the purpose string reaches both
     // platforms from one place. expo-document-picker needs no plugin or usage
     // description (UIDocumentPickerViewController is user-driven and grants access to
-    // the chosen file only). expo-image-picker is deliberately absent: nothing in
-    // `src/` uses it, and declaring camera/photo purpose strings for a capability the
-    // app never invokes is both a review risk and an unearned permission.
+    // the chosen file only). expo-image-picker's plugin is deliberately absent: the
+    // app only picks a target photo through the system pickers (PHPicker on iOS,
+    // the Android photo picker), which need no permission and no usage string. The
+    // plugin would seed camera, microphone and photo-library purpose strings for
+    // capabilities the app never invokes -- a review risk and an unearned
+    // permission. See src/services/TargetPhotoService.ts (#63).
     plugins: [
       'expo-sqlite',
       'expo-sharing',

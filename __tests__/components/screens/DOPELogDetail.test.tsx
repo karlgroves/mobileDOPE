@@ -43,6 +43,8 @@ const log = (over: Partial<DOPELogData> = {}): DOPELogData =>
 const navigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
+  // Re-reads the log's marked target on focus (#63).
+  addListener: jest.fn(() => jest.fn()),
 } as unknown as Parameters<typeof DOPELogDetail>[0]['navigation'];
 
 const route = (logId: number) =>

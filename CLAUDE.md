@@ -230,6 +230,13 @@ because this section said the app collected nothing while it was storing precise
   for altitude (density-altitude term) and latitude (Coriolis term). Latitude is
   coarsened to one decimal place -- ~11 km -- by `src/utils/geoPrecision.ts` before it
   is persisted. **Longitude is never recorded**; nothing calculates with it.
+- **A target photo the shooter picks is stored, stripped of metadata.** Mark Target
+  (#63) uses expo-image-picker's library picker (PHPicker / Android photo picker), which
+  needs no permission. `src/services/TargetPhotoService.ts` keeps a copy in
+  `Documents/targets/` only after `src/utils/imageMetadata.ts` has removed EXIF/XMP/IPTC
+  -- a photo's GPS would otherwise contradict the longitude claim above -- and refuses
+  formats it cannot clean. Keep `allowsEditing` and `exif` off, and never add the
+  expo-image-picker config plugin.
 - **User-initiated exports are the only egress.** A full JSON backup includes the
   coarsened latitude, and the export flow warns and offers to omit it.
 

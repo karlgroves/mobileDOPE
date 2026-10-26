@@ -1,6 +1,6 @@
 # Privacy Policy — Mobile DOPE
 
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-26
 **Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
@@ -28,6 +28,27 @@ storage area, readable only by the app:
   notes, and the time of the engagement.
 - **Range sessions and shot strings** — including chronograph readings.
 - **App settings** — units, distance presets, and display preferences.
+- **Marked targets** — where each shot of a group landed, the target's width, and,
+  if you chose one, a photo of the target (see below).
+
+## Target photos
+
+When you mark a group on a DOPE log you can mark it on a photo of your own target
+instead of the plain target the app draws.
+
+**No permission is asked for.** The photo is chosen in the system photo picker,
+which runs outside the app and hands it only the one photo you pick. The app never
+sees the rest of your library and never opens the camera.
+
+**Location is removed before the photo is kept.** Phone photos usually record the
+GPS position they were taken at. The app copies the photo you pick into its own
+private storage with that metadata — EXIF, XMP and IPTC, including any location —
+removed; only the image itself, its colour profile and its orientation are kept. A
+photo the app cannot clean this way (anything but JPEG or PNG) is refused rather
+than stored as it is.
+
+**Deleting it.** Removing the target, choosing a different photo, or deleting the
+DOPE log deletes the stored photo. Target photos are not included in exports.
 
 ## Location
 
@@ -83,8 +104,9 @@ only the latitude is missing.
 - No cloud sync or remote backup.
 - No sale or sharing of data with third parties — there is no mechanism by which
   data could reach a third party.
-- No collection of contacts, photos, microphone, camera, motion, or health data.
-  The app declares no permission for any of these.
+- No collection of contacts, microphone, camera, motion, or health data, and no
+  access to your photo library. The app declares no permission for any of these;
+  the only photo it holds is a target photo you choose yourself, as above.
 
 ## Retention and deletion
 
@@ -109,7 +131,8 @@ anyone, of any age.
 No other runtime permission is requested. Camera, photo library and shared
 storage, microphone, and physical activity (motion) permissions are explicitly
 blocked in the app's build configuration so that autolinked libraries cannot
-introduce them. Files you export are written to the app's own storage and handed
+introduce them. Choosing a target photo uses the system photo picker, which needs
+none of them. Files you export are written to the app's own storage and handed
 to the system share sheet, which needs no storage permission.
 
 ## Changes to this policy

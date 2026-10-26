@@ -76,6 +76,8 @@ export type HistoryStackParamList = {
   DOPELogDetail: { logId: number };
   DOPELogEdit: { logId?: number };
   DOPECurve: { rifleId: number; ammoId: number };
+  /** Marks points of impact on the target for a log (#63). */
+  TargetMarking: { logId: number };
 };
 
 /**
