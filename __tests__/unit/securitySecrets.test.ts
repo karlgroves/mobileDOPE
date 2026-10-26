@@ -62,6 +62,10 @@ const runScan = (env: Record<string, string> = {}) =>
     env: { ...process.env, ...env },
   });
 
+/** The pre-push mode: the whole history of whatever is checked out in `cwd`. */
+const runHistoryScan = (cwd: string) =>
+  spawnSync(process.execPath, [scriptPath], { cwd, encoding: 'utf8', env: process.env });
+
 beforeEach(() => {
   repo = fs.mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-test-'));
   git('init', '--quiet');
@@ -144,6 +148,58 @@ describe('security-secrets.mjs', () => {
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('secret scan clean');
+    });
+  });
+
+  /**
+   * The pre-push scan from a linked worktree.
+   *
+   * In a worktree `.git` is a file pointing at the main repository, not a
+   * directory, and trufflehog's `git file://` source cannot open it: it stopped
+   * with "failed to read index file ... not a directory", and the hook treated
+   * that as a failure. So no branch could be pushed from a worktree at all --
+   * which is how sessions are told to work in this repo.
+   */
+  maybe('history scan from a linked worktree', () => {
+    let worktree: string;
+
+    beforeEach(() => {
+      fs.writeFileSync(path.join(repo, 'README.md'), '# fixture\n');
+      git('add', 'README.md');
+      git('commit', '--quiet', '-m', 'init');
+      worktree = fs.mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-wt-'));
+      fs.rmSync(worktree, { recursive: true, force: true });
+      git('worktree', 'add', '--quiet', '-b', 'feature/x', worktree);
+    });
+
+    afterEach(() => {
+      fs.rmSync(worktree, { recursive: true, force: true });
+    });
+
+    const commitIn = (dir: string, file: string, content: string): void => {
+      fs.writeFileSync(path.join(dir, file), content);
+      execFileSync('git', ['add', file], { cwd: dir });
+      execFileSync('git', ['commit', '--quiet', '-m', `add ${file}`], { cwd: dir });
+    };
+
+    it('scans a clean branch and passes', () => {
+      commitIn(worktree, 'clean.ts', 'export const GREETING = "hello";\n');
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.stderr).not.toContain('not a findings exit');
+      expect(result.status).toBe(0);
+    });
+
+    it('scans the worktree’s own branch, not the main checkout’s', () => {
+      // The main checkout stays clean; only the branch being pushed carries the
+      // key. Scanning the main checkout's HEAD would wave it through.
+      commitIn(worktree, 'leak.ts', `export const KEY = \`${PRIVATE_KEY}\`;\n`);
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Secret scan found credentials');
     });
   });
 });

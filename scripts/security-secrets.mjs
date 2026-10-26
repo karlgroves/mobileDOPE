@@ -59,6 +59,38 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
 }).trim();
 
+/** `git rev-parse` in the repository being scanned, trimmed. */
+const revParse = (...args) =>
+  execFileSync('git', ['rev-parse', ...args], { cwd: repoRoot, encoding: 'utf8' }).trim();
+
+/**
+ * Where trufflehog's `git` source should read the history from.
+ *
+ * In an ordinary checkout that is the checkout itself, and the scan covers the
+ * branch checked out in it.
+ *
+ * In a linked worktree it cannot be. There `.git` is a file pointing at the
+ * main repository, and trufflehog's `file://` source opens the index directly:
+ * it stopped with "failed to read index file ... not a directory", the scan
+ * exited non-zero, and the pre-push hook refused every push from a worktree --
+ * the way work in this repository is meant to be done. So the history is read
+ * through the main checkout, which shares every object and ref with the
+ * worktree, and `--branch` names the worktree's own branch. Without that, the
+ * scan would cover whatever the *main* checkout has checked out, and a key
+ * committed only on the branch being pushed would pass.
+ *
+ * A detached HEAD is named by its commit.
+ */
+const historySource = () => {
+  const gitDir = revParse('--absolute-git-dir');
+  const commonDir = revParse('--path-format=absolute', '--git-common-dir');
+  if (gitDir === commonDir) return [`file://${repoRoot}`];
+
+  const mainRepo = path.basename(commonDir) === '.git' ? path.dirname(commonDir) : commonDir;
+  const branch = revParse('--abbrev-ref', 'HEAD');
+  return [`file://${mainRepo}`, '--branch', branch === 'HEAD' ? revParse('HEAD') : branch];
+};
+
 /** trufflehog exits 183 when `--fail` is set and it found something. */
 const FINDINGS_EXIT = 183;
 
@@ -205,7 +237,7 @@ try {
     }
     status = scan(['filesystem', scratch]);
   } else {
-    status = scan(['git', `file://${repoRoot}`]);
+    status = scan(['git', ...historySource()]);
   }
 } finally {
   if (scratch) rmSync(scratch, { recursive: true, force: true });
