@@ -554,3 +554,115 @@ describe('when today’s conditions are unknown (#187)', () => {
     );
   });
 });
+
+/**
+ * The offset interpolated across logged distances, on screen (#162).
+ *
+ * PR #182 built `interpolateOffset` and nothing called it: with no log near
+ * today's distance the screen fell straight back to the solver. What is pinned
+ * here is that it now reads the curve, labels the figure as interpolated, and
+ * warns when it was held past the last log -- and that it stays out of the way
+ * of a matched adjustment that was good enough on its own.
+ */
+describe('interpolating between logged distances (#162)', () => {
+  /** The solver's elevation at `yards`, in the same air every snapshot here has. */
+  const solverAt = (yards: number): number =>
+    calculateBallisticSolution(
+      {
+        zeroDistance: 100,
+        sightHeight: 1.5,
+        twistRate: '1:10',
+        barrelLength: 24,
+        caliber: '.308 Winchester',
+      },
+      { bulletWeight: 168, ballisticCoefficient: 0.462, dragModel: 'G1', muzzleVelocity: 2650 },
+      { distance: yards, angle: 0, windSpeed: 10, windDirection: 90 },
+      { temperature: 59, pressure: 29.92, humidity: 50, altitude: 0, densityAltitude: 0 },
+      false
+    ).elevationMIL;
+
+  /** Three well-evidenced logs at `yards`, each `offset` MIL above the solver there. */
+  const logsAt = (yards: number, offset: number, firstId: number): DOPELog[] =>
+    [0, 1, 2].map((i) =>
+      log({
+        id: firstId + i,
+        distance: yards,
+        environmentId: i + 1,
+        elevationCorrection: solverAt(yards) + offset,
+        ...WELL_EVIDENCED,
+      })
+    );
+
+  it('interpolates the offset when no log is near enough to match', async () => {
+    // 430 and 560 yd are both outside the 50-yard matching window around 500,
+    // so before #162 this showed the solver alone.
+    seed([...logsAt(430, 0.3, 1), ...logsAt(560, 0.3, 10)]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dope-adjustment-caption')).toBeTruthy();
+    });
+    expect(screen.getByText('Interpolated between your 430 and 560 yd logs')).toBeTruthy();
+    expect(screen.getByText('ELEVATION (ADJUSTED)')).toBeTruthy();
+    expect(shown(screen)).toBeGreaterThan(SOLVER_SHOWN);
+    expect(shown(screen)).toBeLessThanOrEqual(Number((solverElevation + 0.3).toFixed(2)));
+    expect(screen.getByTestId('adjustment-confidence')).toBeTruthy();
+    expect(screen.queryByTestId('dope-extrapolated-warning')).toBeNull();
+  });
+
+  it('warns when the figure was held past the last logged distance', async () => {
+    // The logs near 500 disagree with each other as a set -- 0.0 at 470, 0.6 at
+    // 480 -- so the matched adjustment is withheld. Read as a curve they agree
+    // within each distance, and 500 lies past the furthest, at 480.
+    seed([...logsAt(470, 0, 1), ...logsAt(480, 0.6, 10)]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dope-extrapolated-warning')).toBeTruthy();
+    });
+    expect(
+      screen.getByText('Extrapolated beyond your logged distances: nearest is 480 yd, 20 yd away')
+    ).toBeTruthy();
+    expect(shown(screen)).toBeGreaterThan(SOLVER_SHOWN);
+  });
+
+  it('shows the solver alone across a gap too wide to interpolate', async () => {
+    seed([...logsAt(200, 0.3, 1), ...logsAt(800, 0.3, 10)]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByText('No historical data, using solver only')).toBeTruthy();
+    });
+    expect(shown(screen)).toBe(SOLVER_SHOWN);
+    expect(screen.queryByTestId('dope-adjustment-caption')).toBeNull();
+  });
+
+  it('leaves a matched adjustment alone when it was good enough by itself', async () => {
+    seed([...logsAt(500, 0.4, 1), ...logsAt(800, -1.0, 10)]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dope-adjustment-caption')).toBeTruthy();
+    });
+    expect(screen.queryByText(/Interpolated/)).toBeNull();
+    expect(screen.getByText(/^Based on 3 logs/)).toBeTruthy();
+  });
+
+  it('returns the solver’s number when the switch is turned off', async () => {
+    seed([...logsAt(430, 0.3, 1), ...logsAt(560, 0.3, 10)]);
+
+    const screen = render();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dope-adjustment-caption')).toBeTruthy();
+    });
+    fireEvent(screen.getByTestId('dope-adjust-switch'), 'valueChange', false);
+
+    expect(shown(screen)).toBe(SOLVER_SHOWN);
+    expect(screen.queryByTestId('dope-adjustment-caption')).toBeNull();
+  });
+});

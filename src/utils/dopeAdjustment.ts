@@ -93,8 +93,16 @@ export type PredictForLog<T extends MatchableLog = DOPELogData> = (
   yards: number
 ) => number | undefined;
 
-/** A log's dialled elevation in `unit`, whatever it was recorded in (#125). */
-const elevationIn = (log: MatchableLog & Partial<DOPELogData>, unit: 'MIL' | 'MOA'): number => {
+/**
+ * A log's dialled elevation in `unit`, whatever it was recorded in (#125).
+ *
+ * Exported for the interpolated offset (#162), which reads the same logs the
+ * same way and must not grow a third copy of this conversion.
+ */
+export const elevationIn = (
+  log: MatchableLog & Partial<DOPELogData>,
+  unit: 'MIL' | 'MOA'
+): number => {
   const value = log.elevationCorrection ?? 0;
   if (log.correctionUnit === undefined || log.correctionUnit === unit) return value;
   return unit === 'MIL' ? moaToMil(value) : milToMoa(value);
