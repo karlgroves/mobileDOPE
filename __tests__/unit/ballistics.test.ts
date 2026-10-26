@@ -1,6 +1,7 @@
-import { calculateTrajectory, calculateBallisticSolution } from '../../src/utils/ballistics';
-import type { RifleConfig, AmmoConfig, ShotParameters } from '../../src/types/ballistic.types';
 import { standardAtmosphere } from '../../src/utils/atmospheric';
+import { calculateTrajectory, calculateBallisticSolution } from '../../src/utils/ballistics';
+
+import type { RifleConfig, AmmoConfig, ShotParameters } from '../../src/types/ballistic.types';
 
 describe('Ballistic Calculations', () => {
   // Common test configuration - .308 Winchester 168gr BTHP
@@ -177,6 +178,37 @@ describe('Ballistic Calculations', () => {
       // Should have windage drift
       expect(Math.abs(solution.windage)).toBeGreaterThan(10);
       expect(Math.abs(solution.windageMIL)).toBeGreaterThan(0.5);
+    });
+
+    it('drifts by the lag time, not the whole time of flight (#68)', () => {
+      // Wind deflects a bullet only by the time it LOSES to drag -- time of
+      // flight minus the time it would take at muzzle velocity (Didion). The
+      // solver used the whole time of flight, which treats the bullet as if it
+      // were blown along with the air, and overstated drift about six-fold.
+      //
+      // Federal publishes this load (Gold Medal Match 175 gr SMK, GM308M2, G1
+      // .505, 2600 fps) at 0.6 in at 100 yd and 20.3 in at 500 yd in a 10 mph
+      // full-value wind (federalpremium.com, read 2026-10-26). Before the fix
+      // this solver said 21.1 in and 122.5 in.
+      const federal: AmmoConfig = {
+        bulletWeight: 175,
+        ballisticCoefficient: 0.505,
+        dragModel: 'G1',
+        muzzleVelocity: 2600,
+      };
+      const drift = (distance: number) =>
+        Math.abs(
+          calculateBallisticSolution(
+            rifle,
+            federal,
+            { distance, angle: 0, windSpeed: 10, windDirection: 90 },
+            standardAtmosphere
+          ).windage
+        );
+
+      expect(drift(100)).toBeLessThan(1.5);
+      expect(drift(500)).toBeGreaterThan(17);
+      expect(drift(500)).toBeLessThan(24);
     });
 
     it('should calculate elevation correction in MIL', () => {

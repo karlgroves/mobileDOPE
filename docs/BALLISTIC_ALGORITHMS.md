@@ -214,15 +214,18 @@ const crosswindComponent = windSpeed * sin(windAngleRad);
 
 ### Drift Calculation
 
-Simplified linear drift model:
+Lag-time (Didion) model:
 
 ```typescript
-drift_inches = crosswind_fps * timeOfFlight * 12;
+lagTime = timeOfFlight - distance_feet / muzzleVelocity;
+drift_inches = crosswind_fps * lagTime * 12;
 ```
 
 Where `crosswind_fps = crosswind_mph * 1.467`
 
-**More accurate**: Integrate drift along the trajectory, but linear model is sufficient for typical ranges.
+A crosswind deflects the bullet only by the time it loses to drag. Multiplying by
+the whole time of flight, as this solver did until #68, overstates drift about
+six-fold -- 122 in at 500 yd for a load its maker publishes at 20.3 in.
 
 ## Corrections
 

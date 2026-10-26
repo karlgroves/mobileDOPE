@@ -37,7 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now reads the history through the main checkout and scans the
   worktree's own branch, so a key committed only on that branch still blocks.
-
+- Wind corrections are about six times smaller, and now right. The solver blew
+  the bullet along with the air for its whole time of flight, so a 10 mph
+  full-value wind at 500 yards on a .308 175 gr load read 122 inches (6.8 MIL)
+  where the maker publishes 20.3 inches. It now uses the time the bullet loses
+  to drag, and agrees with the published table to within an inch. Every
+  windage figure — the solution, the wind table and the DOPE card — changes with
+  it; moving-target lead, which is time of flight alone, does not. Found by the
+  end-to-end solver test added for #68.
 - The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
   used to read "Suggested from the 10 minutes since this rifle last fired"
   whatever the real gap was — so a rifle last fired three days ago was told it

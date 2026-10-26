@@ -2,6 +2,14 @@
  * Ballistic trajectory calculations using numerical integration
  */
 
+import { inchesToCorrection } from '../types/ballistic.types';
+
+import { calculateSpeedOfSound, calculateAirDensity } from './atmospheric';
+import { calculateCoriolisComplete } from './coriolis';
+import { getDragCoefficient } from './dragModels';
+import { getBulletDiameter, calculateSpinDriftComplete } from './spinDrift';
+
+import type { AtmosphericConditions } from './atmospheric';
 import type {
   RifleConfig,
   AmmoConfig,
@@ -9,12 +17,6 @@ import type {
   TrajectoryPoint,
   BallisticSolution,
 } from '../types/ballistic.types';
-import type { AtmosphericConditions } from './atmospheric';
-import { calculateSpeedOfSound, calculateAirDensity } from './atmospheric';
-import { getDragCoefficient } from './dragModels';
-import { inchesToCorrection } from '../types/ballistic.types';
-import { getBulletDiameter, calculateSpinDriftComplete } from './spinDrift';
-import { calculateCoriolisComplete } from './coriolis';
 
 const GRAVITY = 32.174; // ft/s²
 
@@ -142,9 +144,20 @@ function rk4Step(
 
 /**
  * Calculate wind drift
+ *
+ * Uses the lag-time (Didion) formula: a crosswind deflects the bullet only by
+ * the time it loses to drag, `timeOfFlight - distance / muzzleVelocity`, not by
+ * the whole time of flight. A bullet in a vacuum would not drift at all, however
+ * long it flew.
+ *
+ * This used the whole time of flight until #68's end-to-end test compared the
+ * solver with a published table: 122 in at 500 yd for a load Federal publishes
+ * at 20.3 in, about six times too much, at every distance.
  */
 function calculateWindDrift(
   timeOfFlight: number,
+  distanceFeet: number,
+  muzzleVelocity: number,
   windSpeed: number,
   windDirection: number
 ): number {
@@ -156,9 +169,10 @@ function calculateWindDrift(
   // Convert mph to fps
   const crosswindFps = crosswindComponent * 1.467;
 
-  // Simplified wind drift formula
-  // More accurate models would integrate along trajectory
-  const drift = crosswindFps * timeOfFlight;
+  // Time lost to drag. Never negative: integration rounding at a few yards
+  // must not blow the bullet upwind.
+  const lagTime = Math.max(0, timeOfFlight - distanceFeet / muzzleVelocity);
+  const drift = crosswindFps * lagTime;
 
   return drift * 12; // Convert to inches
 }
@@ -348,7 +362,13 @@ export function calculateBallisticSolution(
   const targetPoint = trajectory[trajectory.length - 1];
 
   // Calculate wind drift
-  const windage = calculateWindDrift(targetPoint.time, shot.windSpeed, shot.windDirection);
+  const windage = calculateWindDrift(
+    targetPoint.time,
+    targetPoint.distance * 3,
+    ammo.muzzleVelocity,
+    shot.windSpeed,
+    shot.windDirection
+  );
 
   // Calculate corrections
   const elevationMIL = inchesToCorrection(-targetPoint.drop, shot.distance, 'MIL');
