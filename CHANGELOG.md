@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Automatic backups on a daily or weekly schedule, chosen in Settings →
+  Automatic Backup (Manual, the default, keeps today's behaviour). With no
+  background task, a backup is written when the app opens or returns to the
+  foreground and one is due. It is the ordinary full backup without latitude,
+  saved in the app's private storage; the newest seven are kept. Settings shows
+  when the last one ran and can share the newest through the share sheet.
 - DOPE logs record barrel state: whether the shot was a cold bore, and its
   position in the day's string. New DOPE Log suggests cold bore when the rifle
   has not fired for ten minutes, and the suggestion can be overruled or left

@@ -1,6 +1,6 @@
 # Privacy Policy — Mobile DOPE
 
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-26
 **Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
@@ -75,6 +75,29 @@ reading. Before a full backup is created, the app tells you this and offers to l
 the coordinates out. A backup exported without coordinates still restores completely —
 only the latitude is missing.
 
+## Automatic backups
+
+Settings → Automatic Backup can save a full backup on a daily or weekly schedule.
+It is off (_Manual_) unless you turn it on.
+
+**When.** There is no background task. A backup is written when you open the app,
+or bring it back to the foreground, and the chosen interval has passed since the
+last one. Choosing _Daily_ or _Weekly_ writes the first one straight away.
+
+**What it contains.** The same JSON as a manual full backup — rifle and ammunition
+profiles, environmental readings and DOPE logs — **with the latitude always left
+out**. It never contains a location, so _Delete Stored Location Data_ leaves no copy
+of your coordinates behind in old backups. App settings are not included.
+
+**Where it lives.** In a `backups` folder inside the app's private documents
+storage — the same private area as the database, readable only by the app. The
+newest seven are kept; older ones are deleted as new ones are written. Nothing is
+sent anywhere. Like the database, the folder is covered by your phone's own device
+backup (iCloud or Google) if you have that turned on.
+
+**Leaving the device.** Only when you tap _Share Latest Backup_, which hands the
+newest file to the system share sheet, exactly as a manual export does.
+
 ## What the app does not do
 
 - No accounts, sign-in, or user identifiers.
@@ -92,6 +115,8 @@ Data is kept until you delete it. There is no automatic expiry.
 
 - **Location only** — Settings → Privacy → _Delete Stored Location Data_.
 - **Everything** — Settings → Data Management → _Clear All Data_.
+- **Automatic backups** — choosing _Manual_ stops new ones, but keeps the ones
+  already saved. Uninstalling the app deletes them.
 - **Everything, including settings** — uninstall the app. iOS and Android delete the
   app's private storage on uninstall.
 

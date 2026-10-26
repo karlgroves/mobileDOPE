@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import type { ThemeMode } from '../constants/colors';
+import type { BackupSchedule } from '../utils/backupSchedule';
 
 interface AppSettings {
   defaultDistanceUnit: 'yards' | 'meters';
@@ -23,6 +24,14 @@ interface AppSettings {
    * safe direction; the calculator shows the terms either way.
    */
   advancedBallisticsEnabled: boolean;
+  /**
+   * How often an automatic backup is written to the device (#66). `manual`, the
+   * default, writes none -- which is how the app behaved before scheduling
+   * existed, so an upgrade does not start creating files nobody asked for.
+   */
+  backupSchedule: BackupSchedule;
+  /** ISO time of the last automatic backup, if one has run. */
+  lastAutomaticBackupAt?: string;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -62,6 +71,7 @@ const defaultSettings: AppSettings = {
   hapticFeedbackEnabled: true,
   keepScreenAwakeDuringSession: true,
   advancedBallisticsEnabled: false,
+  backupSchedule: 'manual',
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
