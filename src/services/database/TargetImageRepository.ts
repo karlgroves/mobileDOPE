@@ -14,15 +14,19 @@ export class TargetImageRepository {
 
     const result = await db.runAsync(
       `INSERT INTO target_images (
-        dope_log_id, range_session_id, image_uri, target_type, poi_markers, group_size
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
+        dope_log_id, range_session_id, image_uri, target_type, poi_markers, group_size,
+        target_width_inches, aspect_ratio
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         row.dope_log_id || null,
         row.range_session_id || null,
         row.image_uri,
         row.target_type,
         row.poi_markers,
-        row.group_size || null,
+        // `??`, not `||`: a measured 0.00-inch group is a value, not an absence.
+        row.group_size ?? null,
+        row.target_width_inches ?? null,
+        row.aspect_ratio ?? null,
       ]
     );
 
@@ -100,7 +104,8 @@ export class TargetImageRepository {
     await db.runAsync(
       `UPDATE target_images SET
         dope_log_id = ?, range_session_id = ?, image_uri = ?,
-        target_type = ?, poi_markers = ?, group_size = ?
+        target_type = ?, poi_markers = ?, group_size = ?,
+        target_width_inches = ?, aspect_ratio = ?
       WHERE id = ?`,
       [
         row.dope_log_id || null,
@@ -108,7 +113,9 @@ export class TargetImageRepository {
         row.image_uri,
         row.target_type,
         row.poi_markers,
-        row.group_size || null,
+        row.group_size ?? null,
+        row.target_width_inches ?? null,
+        row.aspect_ratio ?? null,
         id,
       ]
     );
