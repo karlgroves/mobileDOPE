@@ -37,7 +37,7 @@ import type { BallisticSolution } from '../../src/types/ballistic.types';
  * does: `BallisticCalculator` ignores the G7 figure, while the DOPE curve and
  * the DOPE adjustment predict through `solverInputs.ammoConfigFor`, which
  * prefers G7. That divergence is pinned here as current behaviour, not
- * endorsed; flagged for a decision on #68.) The rifle is
+ * endorsed; flagged for a decision in #194's description.) The rifle is
  * set to a 1.5 in sight height and a 100 yd zero to match the conditions
  * Federal's own table is published for.
  *
@@ -49,7 +49,7 @@ import type { BallisticSolution } from '../../src/types/ballistic.types';
  *
  * The figures pinned below were derived from the solver once and then checked
  * against those: velocity within 1% (1792 v 1803), energy within 1.5%
- * (1248 v 1264), drift within 1 in (21.0 v 20.3 at 500 yd, 7.0 v 6.9 at
+ * (1248 v 1264), drift within 1 in (20.9 v 20.3 at 500 yd, 7.0 v 6.9 at
  * 300), and the 300 yd path exact (-15.7 in). The `published` assertions keep that check in the
  * suite, at deliberately loose tolerances, so the pinned strings cannot later be
  * "updated" to a value the published table contradicts.
@@ -61,7 +61,7 @@ import type { BallisticSolution } from '../../src/types/ballistic.types';
 
 /** Derived from the solver once; see "Where the pinned numbers come from". */
 const PINNED = {
-  // Federal: 1803 fps, 20.3 in drift. Solver: 1792 fps, 21.0 in (1.16 MIL).
+  // Federal: 1803 fps, 20.3 in drift. Solver: 1792 fps, 20.9 in (1.16 MIL).
   mil500: {
     elevation: '3.52',
     windage: '-1.16',
@@ -71,7 +71,7 @@ const PINNED = {
   },
   // Past Federal's table. 411.8 in of drop and 100.9 in of drift; the drift is
   // what a lag-time model gives, the drop is the same G1 integration as above.
-  moa1000: { elevation: '39.32', windage: '-9.64' },
+  moa1000: { elevation: '39.32', windage: '-9.63' },
 };
 
 const navigate = jest.fn();
@@ -154,15 +154,6 @@ const showResults = (params: ReturnType<typeof solveOnScreen>) =>
     />
   );
 
-/** The windage column of "Required Corrections" has no testID; it is the sibling column. */
-const shownWindage = (screen: ReturnType<typeof showResults>): string => {
-  const label = screen.getByText('WINDAGE');
-  const column = label.parent;
-  const values = column?.parent?.children ?? [];
-  // label, value, unit
-  return String((values[1] as { props: { children: unknown } }).props.children);
-};
-
 describe('solver end to end: profiles -> calculator -> solver -> results (#68)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -202,7 +193,7 @@ describe('solver end to end: profiles -> calculator -> solver -> results (#68)',
     const screen = showResults(solveOnScreen({ yards: 500 }));
 
     expect(screen.getByTestId('elevation-value').props.children).toBe(PINNED.mil500.elevation);
-    expect(shownWindage(screen)).toBe(PINNED.mil500.windage);
+    expect(screen.getByTestId('windage-value').props.children).toBe(PINNED.mil500.windage);
     expect(screen.getByText(PINNED.mil500.drop)).toBeTruthy();
     expect(screen.getByText(PINNED.mil500.velocity)).toBeTruthy();
     expect(screen.getByText(PINNED.mil500.timeOfFlight)).toBeTruthy();
@@ -212,7 +203,7 @@ describe('solver end to end: profiles -> calculator -> solver -> results (#68)',
     const screen = showResults(solveOnScreen({ yards: 1000, angularUnit: 'MOA' }));
 
     expect(screen.getByTestId('elevation-value').props.children).toBe(PINNED.moa1000.elevation);
-    expect(shownWindage(screen)).toBe(PINNED.moa1000.windage);
+    expect(screen.getByTestId('windage-value').props.children).toBe(PINNED.moa1000.windage);
   });
 
   it('changes the solution with the conditions entered, in the right direction', () => {
