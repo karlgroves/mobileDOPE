@@ -227,6 +227,12 @@ A crosswind deflects the bullet only by the time it loses to drag. Multiplying b
 the whole time of flight, as this solver did until #68, overstates drift about
 six-fold -- 122 in at 500 yd for a load its maker publishes at 20.3 in.
 
+Lag time is a small difference of two large numbers -- about 5 ms at 100 yd -- so
+`timeOfFlight` must be the time at the target itself. The integrator stops on the
+first step past it and backs the time off by the overshoot. Each trajectory point
+gets its own drift from its own time and distance; drift grows much faster than
+distance, so a linear share of the target's figure is wrong.
+
 ## Corrections
 
 ### Angular Corrections

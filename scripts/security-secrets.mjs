@@ -64,31 +64,54 @@ const revParse = (...args) =>
   execFileSync('git', ['rev-parse', ...args], { cwd: repoRoot, encoding: 'utf8' }).trim();
 
 /**
- * Where trufflehog's `git` source should read the history from.
- *
- * In an ordinary checkout that is the checkout itself, and the scan covers the
- * branch checked out in it.
- *
- * In a linked worktree it cannot be. There `.git` is a file pointing at the
- * main repository, and trufflehog's `file://` source opens the index directly:
- * it stopped with "failed to read index file ... not a directory", the scan
- * exited non-zero, and the pre-push hook refused every push from a worktree --
- * the way work in this repository is meant to be done. So the history is read
- * through the main checkout, which shares every object and ref with the
- * worktree, and `--branch` names the worktree's own branch. Without that, the
- * scan would cover whatever the *main* checkout has checked out, and a key
- * committed only on the branch being pushed would pass.
- *
- * A detached HEAD is named by its commit.
+ * Git variables that pin a repository location. A hook can run with some of
+ * them exported, and a `git clone` or trufflehog's own git calls must act on
+ * the paths they are given, not on the repository the hook was invoked from.
  */
-const historySource = () => {
-  const gitDir = revParse('--absolute-git-dir');
-  const commonDir = revParse('--path-format=absolute', '--git-common-dir');
-  if (gitDir === commonDir) return [`file://${repoRoot}`];
+const REPOSITORY_LOCATION_VARS = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+];
+const gitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !REPOSITORY_LOCATION_VARS.includes(name))
+);
 
-  const mainRepo = path.basename(commonDir) === '.git' ? path.dirname(commonDir) : commonDir;
-  const branch = revParse('--abbrev-ref', 'HEAD');
-  return [`file://${mainRepo}`, '--branch', branch === 'HEAD' ? revParse('HEAD') : branch];
+/** In a linked worktree `.git` is a file, and the git dir is not the common dir. */
+const isLinkedWorktree = () =>
+  revParse('--absolute-git-dir') !== revParse('--path-format=absolute', '--git-common-dir');
+
+/**
+ * The trufflehog `git` arguments that cover a linked worktree's history.
+ *
+ * Without `--branch`, trufflehog walks every ref and HEAD, so in an ordinary
+ * checkout one scan of the checkout covers every branch: the one checked out
+ * and any other the push names.
+ *
+ * A linked worktree cannot be scanned in place. There `.git` is a file pointing
+ * at the main repository, and trufflehog's `file://` source opens the index
+ * directly: it stopped with "failed to read index file ... not a directory",
+ * the scan exited non-zero, and the pre-push hook refused every push from a
+ * worktree -- the way work in this repository is meant to be done.
+ *
+ * Reading through the main checkout instead covers every branch, but not the
+ * worktree's HEAD when it is detached: no ref reaches that commit, and
+ * `--branch <commit>` fails to resolve it in trufflehog's clone and exits 0
+ * having scanned nothing. So the worktree is cloned, bare and `--shared` (refs
+ * only; objects are borrowed through alternates, nothing is copied), into
+ * `scratch`. The clone has every branch, and the worktree's own HEAD, detached
+ * or not, and trufflehog's `--bare` mode scans all of it in place.
+ */
+const worktreeHistory = (scratch) => {
+  const clone = path.join(scratch, 'history.git');
+  execFileSync('git', ['clone', '--quiet', '--bare', '--shared', repoRoot, clone], {
+    env: gitEnv,
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  return [`file://${clone}`, '--bare'];
 };
 
 /** trufflehog exits 183 when `--fail` is set and it found something. */
@@ -214,6 +237,7 @@ const scan = (args) => {
   requireTrufflehog();
   const result = spawnSync('trufflehog', [...args, '--fail', '--no-update'], {
     cwd: repoRoot,
+    env: gitEnv,
     stdio: 'inherit',
   });
   // `status` is null when the child was killed by a signal; report the signal
@@ -236,8 +260,11 @@ try {
       process.exit(0);
     }
     status = scan(['filesystem', scratch]);
+  } else if (isLinkedWorktree()) {
+    scratch = mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-history-'));
+    status = scan(['git', ...worktreeHistory(scratch)]);
   } else {
-    status = scan(['git', ...historySource()]);
+    status = scan(['git', `file://${repoRoot}`]);
   }
 } finally {
   if (scratch) rmSync(scratch, { recursive: true, force: true });

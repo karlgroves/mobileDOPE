@@ -35,8 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
-  from one. It now reads the history through the main checkout and scans the
-  worktree's own branch, so a key committed only on that branch still blocks.
+  from one. It now scans a temporary shared clone of the worktree instead, which
+  holds every branch and the worktree's own HEAD, so the scan covers what it
+  covers from the main checkout, and a key committed only in the worktree,
+  on its branch or at a detached HEAD, still blocks.
 - Wind corrections are about six times smaller, and now right. The solver blew
   the bullet along with the air for its whole time of flight, so a 10 mph
   full-value wind at 500 yards on a .308 175 gr load read 122 inches (6.8 MIL)
@@ -44,7 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to drag, and agrees with the published table to within an inch. Every
   windage figure — the solution, the wind table and the DOPE card — changes with
   it; moving-target lead, which is time of flight alone, does not. Found by the
-  end-to-end solver test added for #68.
+  end-to-end solver test added for #68. Time of flight is now taken at the
+  target rather than at the first integration step past it (up to a millisecond
+  less), because lag time is small enough at short range for that step to
+  matter, and trajectory points each carry their own drift instead of a linear
+  share of the target's.
 - The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
   used to read "Suggested from the 10 minutes since this rifle last fired"
   whatever the real gap was — so a rifle last fired three days ago was told it
