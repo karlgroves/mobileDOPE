@@ -42,6 +42,11 @@ export const useAutomaticBackup = (ready: boolean): void => {
         } else {
           console.error('Automatic backup failed:', result.error);
         }
+      } catch (error) {
+        // Saving the time failed (AsyncStorage re-throws). The file is written;
+        // the next foreground simply writes another. Called as `void`, so an
+        // escaped rejection here would be unhandled.
+        console.error('Failed to record automatic backup time:', error);
       } finally {
         running.current = false;
       }

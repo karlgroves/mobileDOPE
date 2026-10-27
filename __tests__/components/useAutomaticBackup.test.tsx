@@ -144,6 +144,29 @@ it('leaves the time unrecorded on failure, so the next foreground retries', asyn
   await waitFor(() => expect(run).toHaveBeenCalledTimes(2));
 });
 
+it('logs, rather than leaving unhandled, a failure to record the time', async () => {
+  const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+  settle('daily');
+  useAppStore.setState({
+    updateSettings: async () => {
+      throw new Error('storage full');
+    },
+  });
+
+  renderHook(() => useAutomaticBackup(true));
+
+  await waitFor(() =>
+    expect(errors).toHaveBeenCalledWith(
+      'Failed to record automatic backup time:',
+      expect.objectContaining({ message: 'storage full' })
+    )
+  );
+
+  // Not left marked as running: the next foreground tries again.
+  foreground();
+  await waitFor(() => expect(run).toHaveBeenCalledTimes(2));
+});
+
 it('stops listening when unmounted', () => {
   settle('manual');
   const { unmount } = renderHook(() => useAutomaticBackup(true));
