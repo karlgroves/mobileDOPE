@@ -62,6 +62,10 @@ const runScan = (env: Record<string, string> = {}) =>
     env: { ...process.env, ...env },
   });
 
+/** The pre-push mode: the whole history of whatever is checked out in `cwd`. */
+const runHistoryScan = (cwd: string) =>
+  spawnSync(process.execPath, [scriptPath], { cwd, encoding: 'utf8', env: process.env });
+
 beforeEach(() => {
   repo = fs.mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-test-'));
   git('init', '--quiet');
@@ -144,6 +148,92 @@ describe('security-secrets.mjs', () => {
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('secret scan clean');
+    });
+  });
+
+  /**
+   * The pre-push scan from a linked worktree.
+   *
+   * In a worktree `.git` is a file pointing at the main repository, not a
+   * directory, and trufflehog's `git file://` source cannot open it: it stopped
+   * with "failed to read index file ... not a directory", and the hook treated
+   * that as a failure. So no branch could be pushed from a worktree at all --
+   * which is how sessions are told to work in this repo.
+   */
+  maybe('history scan from a linked worktree', () => {
+    let worktreeParent: string;
+    let worktree: string;
+
+    beforeEach(() => {
+      fs.writeFileSync(path.join(repo, 'README.md'), '# fixture\n');
+      git('add', 'README.md');
+      git('commit', '--quiet', '-m', 'init');
+      // A fresh directory that stays reserved, with the worktree created inside it.
+      worktreeParent = fs.mkdtempSync(path.join(os.tmpdir(), 'mobiledope-secretscan-wt-'));
+      worktree = path.join(worktreeParent, 'wt');
+      git('worktree', 'add', '--quiet', '-b', 'feature/x', worktree);
+    });
+
+    afterEach(() => {
+      fs.rmSync(worktreeParent, { recursive: true, force: true });
+    });
+
+    const inWorktree = (...args: string[]): void => {
+      execFileSync('git', args, { cwd: worktree, stdio: 'ignore' });
+    };
+
+    const commitIn = (dir: string, file: string, content: string): void => {
+      fs.writeFileSync(path.join(dir, file), content);
+      execFileSync('git', ['add', file], { cwd: dir });
+      execFileSync('git', ['commit', '--quiet', '-m', `add ${file}`], { cwd: dir });
+    };
+
+    const LEAK = `export const KEY = \`${PRIVATE_KEY}\`;\n`;
+
+    it('scans a clean branch and passes', () => {
+      commitIn(worktree, 'clean.ts', 'export const GREETING = "hello";\n');
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.stderr).not.toContain('not a findings exit');
+      expect(result.status).toBe(0);
+    });
+
+    it('fails on a key committed only on the worktree’s branch', () => {
+      // The main checkout stays clean; only the branch being pushed carries the key.
+      commitIn(worktree, 'leak.ts', LEAK);
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Secret scan found credentials');
+    });
+
+    it('fails on a key on a branch that is not checked out, as the main checkout does', () => {
+      // `git push origin other` from a worktree on feature/x publishes `other`.
+      // A scan narrowed to the checked-out branch would wave it through; the
+      // ordinary checkout scans every ref, and so must a worktree.
+      inWorktree('checkout', '--quiet', '-b', 'other');
+      commitIn(worktree, 'leak.ts', LEAK);
+      inWorktree('checkout', '--quiet', 'feature/x');
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Secret scan found credentials');
+    });
+
+    it('fails on a key committed at a detached HEAD that no ref reaches', () => {
+      // No ref reaches this commit, so a walk of the main checkout's refs misses
+      // it, and `--branch <commit>` cannot resolve it in trufflehog's clone (it
+      // exits 0 having scanned nothing). Only the worktree's own HEAD finds it.
+      inWorktree('checkout', '--quiet', '--detach');
+      commitIn(worktree, 'leak.ts', LEAK);
+
+      const result = runHistoryScan(worktree);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Secret scan found credentials');
     });
   });
 });

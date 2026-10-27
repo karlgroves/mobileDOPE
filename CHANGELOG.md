@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The pre-push secret scan works from a git worktree. trufflehog could not open
+  a worktree's `.git` file, so the hook failed and no branch could be pushed
+  from one. It now scans a temporary shared clone of the worktree instead, which
+  holds every branch and the worktree's own HEAD, so the scan covers what it
+  covers from the main checkout, and a key committed only in the worktree,
+  on its branch or at a detached HEAD, still blocks.
+
 - The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
   used to read "Suggested from the 10 minutes since this rifle last fired"
   whatever the real gap was — so a rifle last fired three days ago was told it
