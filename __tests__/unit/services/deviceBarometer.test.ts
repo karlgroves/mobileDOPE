@@ -104,6 +104,19 @@ describe('readBarometerHpa', () => {
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
+  it('releases a sensor that delivered every sample from inside addListener', async () => {
+    // Some implementations replay buffered events synchronously on subscribe, so
+    // the read can finish before addListener has returned a subscription to remove.
+    mocked.addListener.mockImplementationOnce((listener: Listener) => {
+      for (let i = 0; i < BAROMETER_SAMPLE_COUNT; i++) listener({ pressure: 1000, timestamp: 0 });
+      return { remove };
+    });
+
+    await expect(readBarometerHpa()).resolves.toHaveLength(BAROMETER_SAMPLE_COUNT);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   it('rejects, without leaking, when subscribing throws', async () => {
     mocked.addListener.mockImplementationOnce(() => {
       throw new Error('sensor unavailable');
