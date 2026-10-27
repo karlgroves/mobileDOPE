@@ -230,6 +230,14 @@ because this section said the app collected nothing while it was storing precise
   for altitude (density-altitude term) and latitude (Coriolis term). Latitude is
   coarsened to one decimal place -- ~11 km -- by `src/utils/geoPrecision.ts` before it
   is persisted. **Longitude is never recorded**; nothing calculates with it.
+- **Barometric pressure is read on request, and only that.** On a device with a
+  barometer, "Read Barometer" on `EnvironmentInput` takes a few samples through
+  expo-sensors and releases the sensor (`src/services/deviceBarometer.ts`). On iOS
+  this is CMAltimeter, which sits behind the Motion & Fitness permission, so
+  `NSMotionUsageDescription` is declared (through the expo-sensors plugin) and is no
+  longer trimmed. Only the resulting station pressure is stored, as an ordinary
+  pressure value; no movement or activity data is read. Android needs no permission
+  for it, and `ACTIVITY_RECOGNITION` stays blocked. (#62)
 - **User-initiated exports are the only egress.** A full JSON backup includes the
   coarsened latitude, and the export flow warns and offers to omit it.
 

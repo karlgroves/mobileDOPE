@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- On a device with a barometer, the Environment screen offers Read Barometer,
+  which fills in station pressure from the phone's own sensor. The reading is
+  the pressure where you are standing — what the solver needs — so it is
+  converted from hPa and never corrected to sea level. A calibration offset in
+  Settings › Barometer corrects a phone that reads high or low; it applies to
+  sensor readings only, never to a pressure you type. On iPhone the first
+  reading asks for Motion & Fitness access, which is where iOS files the
+  barometer; the privacy policy says so. (#62)
 - DOPE logs record barrel state: whether the shot was a cold bore, and its
   position in the day's string. New DOPE Log suggests cold bore when the rifle
   has not fired for ten minutes, and the suggestion can be overruled or left
