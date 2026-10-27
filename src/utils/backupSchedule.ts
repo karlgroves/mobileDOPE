@@ -57,7 +57,9 @@ export function isBackupDue(
   lastBackupAt: string | undefined,
   now: Date
 ): boolean {
-  if (schedule === 'manual') return false;
+  // Anything but a known interval -- including a value a corrupted settings
+  // file left behind -- writes nothing, as `manual` does.
+  if (schedule !== 'daily' && schedule !== 'weekly') return false;
   const last = lastBackupAt === undefined ? NaN : Date.parse(lastBackupAt);
   if (Number.isNaN(last)) return true;
   const elapsed = now.getTime() - last;
@@ -68,9 +70,18 @@ export function isBackupDue(
   return elapsed >= INTERVAL_MS[schedule];
 }
 
-/** Filename for an automatic backup written at `now`. */
-export function automaticBackupFilename(now: Date): string {
-  return `${PREFIX}${now.getTime()}.json`;
+/**
+ * Filename for an automatic backup written at `now`.
+ *
+ * @param existing - Names already in the backup folder. The stamp is kept above
+ *   the newest of them, so the file just written always sorts newest even after
+ *   the clock has been set back -- otherwise pruning would delete it at once and
+ *   Share Latest Backup would send an older file.
+ */
+export function automaticBackupFilename(now: Date, existing: readonly string[] = []): string {
+  const newest = newestAutomaticBackup(existing);
+  const newestStamp = newest === undefined ? -Infinity : Number(PATTERN.exec(newest)?.[1]);
+  return `${PREFIX}${Math.max(now.getTime(), newestStamp + 1)}.json`;
 }
 
 /** Automatic backups among `names`, newest first. Anything else is left out. */

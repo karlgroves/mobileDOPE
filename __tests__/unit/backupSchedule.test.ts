@@ -25,6 +25,13 @@ describe('isBackupDue', () => {
     expect(isBackupDue('manual', hoursAgo(24 * 365), NOW)).toBe(false);
   });
 
+  it('treats a schedule it does not recognise as manual', () => {
+    // loadSettingsFromStorage does not validate the stored value.
+    const corrupted = 'hourly' as unknown as Parameters<typeof isBackupDue>[0];
+    expect(isBackupDue(corrupted, undefined, NOW)).toBe(false);
+    expect(isBackupDue(corrupted, hoursAgo(24 * 365), NOW)).toBe(false);
+  });
+
   it('is due straight away when no automatic backup has ever run', () => {
     expect(isBackupDue('daily', undefined, NOW)).toBe(true);
     expect(isBackupDue('weekly', undefined, NOW)).toBe(true);
@@ -102,5 +109,30 @@ describe('newestAutomaticBackup', () => {
   it('is undefined when there are none', () => {
     expect(newestAutomaticBackup(['notes.txt'])).toBeUndefined();
     expect(newestAutomaticBackup([])).toBeUndefined();
+  });
+});
+
+describe('automaticBackupFilename after the clock has been set back', () => {
+  const DAY = 86_400_000;
+  const later = Array.from({ length: AUTOMATIC_BACKUPS_KEPT }, (_, i) =>
+    automaticBackupFilename(new Date(NOW.getTime() + (i + 1) * DAY))
+  );
+
+  it('stamps the new file above every existing one, so it is the newest', () => {
+    const fresh = automaticBackupFilename(NOW, later);
+
+    expect(newestAutomaticBackup([...later, fresh])).toBe(fresh);
+  });
+
+  it('never selects the file just written for pruning', () => {
+    const fresh = automaticBackupFilename(NOW, later);
+
+    expect(selectBackupsToPrune([...later, fresh])).not.toContain(fresh);
+  });
+
+  it('uses the plain time when the clock has not gone backwards', () => {
+    const earlier = [automaticBackupFilename(new Date(NOW.getTime() - DAY))];
+
+    expect(automaticBackupFilename(NOW, earlier)).toBe(`mobiledope_auto_${NOW.getTime()}.json`);
   });
 });
