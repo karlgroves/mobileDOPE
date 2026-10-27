@@ -113,6 +113,12 @@ describe('Environment screen', () => {
     // The title text is replaced by a spinner; the accessible name must survive.
     expect(queryByText('Read Barometer')).toBeNull();
     expect(getByLabelText('Read Barometer')).toBeTruthy();
+
+    // Finish the read: left pending, its 5 s timeout would fire after teardown.
+    emit(AT_5000_FT_HPA);
+    emit(AT_5000_FT_HPA);
+    emit(AT_5000_FT_HPA);
+    expect(await findByText('Read Barometer')).toBeTruthy();
   });
 
   it('says the barometer could not be read when subscribing fails, and leaves the field', async () => {
