@@ -46,7 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to drag, and agrees with the published table to within an inch. Every
   windage figure — the solution, the wind table and the DOPE card — changes with
   it; moving-target lead, which is time of flight alone, does not. Found by the
-  end-to-end solver test added for #68.
+  end-to-end solver test added for #68. Time of flight is now taken at the
+  target rather than at the first integration step past it (up to a millisecond
+  less), because lag time is small enough at short range for that step to
+  matter, and trajectory points each carry their own drift instead of a linear
+  share of the target's.
 - The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
   used to read "Suggested from the 10 minutes since this rifle last fired"
   whatever the real gap was — so a rifle last fired three days ago was told it

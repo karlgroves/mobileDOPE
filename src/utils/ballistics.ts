@@ -334,9 +334,16 @@ export function calculateTrajectory(
   const velocity = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
   const energy = ((bulletWeight / 7000) * (velocity * velocity)) / (2 * GRAVITY);
 
+  // The loop stops on the first step PAST the target, up to one step (a few
+  // feet) beyond it. Back the time off to the target itself: wind drift
+  // subtracts distance / muzzle velocity from it, and at short range that
+  // difference is so small that a millisecond of overshoot is a tenth of it.
+  const overshootFeet = state.x - targetDistanceFeet;
+  const timeAtTarget = overshootFeet > 0 && state.vx > 0 ? time - overshootFeet / state.vx : time;
+
   trajectory.push({
     distance: targetDistance,
-    time,
+    time: timeAtTarget,
     velocity,
     energy,
     drop: state.y * 12,
@@ -404,13 +411,19 @@ export function calculateBallisticSolution(
   // Add corrections to trajectory points if requested
   if (includeTrajectory) {
     for (const point of trajectory) {
-      point.elevation = inchesToCorrection(-point.drop, point.distance, 'MIL');
-      point.windageCorrection = inchesToCorrection(
-        -windage * (point.distance / shot.distance),
-        point.distance,
-        'MIL'
+      // Each point's own lag time, not the target's drift scaled by distance:
+      // lag-time drift grows much faster than linearly, so scaling put five
+      // times too much drift on the 100 yd point of a 500 yd solve.
+      const pointWindage = calculateWindDrift(
+        point.time,
+        point.distance * 3,
+        ammo.muzzleVelocity,
+        shot.windSpeed,
+        shot.windDirection
       );
-      point.windage = windage * (point.distance / shot.distance);
+      point.elevation = inchesToCorrection(-point.drop, point.distance, 'MIL');
+      point.windageCorrection = inchesToCorrection(-pointWindage, point.distance, 'MIL');
+      point.windage = pointWindage;
     }
   }
 
