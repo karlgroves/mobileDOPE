@@ -84,7 +84,8 @@ const SECTIONS: Section[] = [
       'Settings › Privacy › Delete Stored Location Data removes the latitude from every ' +
         'stored reading and keeps the temperature, pressure and wind values.',
       'Settings › Data Management › Clear All Data removes everything.',
-      'Choosing Manual stops new automatic backups but keeps those already saved.',
+      'Choosing Manual stops new automatic backups but keeps those already saved; ' +
+        'Settings › Automatic Backup › Delete Automatic Backups removes them.',
       'Uninstalling the app deletes its private storage, settings and automatic backups ' +
         'included.',
     ],

@@ -6,6 +6,7 @@ import dopeLogRepository from '../../../src/services/database/DOPELogRepository'
 import environmentRepository from '../../../src/services/database/EnvironmentRepository';
 import rifleProfileRepository from '../../../src/services/database/RifleProfileRepository';
 import {
+  deleteAutomaticBackups,
   latestAutomaticBackupUri,
   saveAutomaticBackup,
   shareLatestAutomaticBackup,
@@ -128,15 +129,55 @@ describe('saveAutomaticBackup', () => {
   });
 });
 
+describe('saveAutomaticBackup after the clock has been set back', () => {
+  it('keeps the backup it just wrote, and shares that one as the latest', async () => {
+    const DAY = 86_400_000;
+    for (let day = 1; day <= AUTOMATIC_BACKUPS_KEPT; day++) {
+      await saveAutomaticBackup([], [], [], [], at(30 * DAY + day * DAY));
+    }
+    const rifle = await rifleProfileRepository.create(validRifle({ name: 'After set-back' }));
+
+    const result = await saveAutomaticBackup([rifle], [], [], [], at(0));
+
+    expect(result.success).toBe(true);
+    expect(writtenUris()).toContain(result.uri);
+    expect(latestAutomaticBackupUri()).toBe(result.uri);
+    expect(parse(result.uri as string).counts.rifles).toBe(1);
+  });
+});
+
+describe('deleteAutomaticBackups', () => {
+  it('deletes every automatic backup and nothing else', async () => {
+    const manual = new File(new Directory(Paths.document, 'backups'), 'mobiledope_backup_1.json');
+    await manual.write('{}');
+    await saveAutomaticBackup([], [], [], [], at(1_000));
+    await saveAutomaticBackup([], [], [], [], at(2_000));
+
+    expect(deleteAutomaticBackups()).toBe(2);
+
+    expect(writtenUris().filter((uri) => uri.includes('mobiledope_auto_'))).toEqual([]);
+    expect(latestAutomaticBackupUri()).toBeUndefined();
+    expect(readWritten(manual.uri)).toBe('{}');
+  });
+
+  it('reports none when no backup folder exists yet', () => {
+    expect(deleteAutomaticBackups()).toBe(0);
+  });
+});
+
 describe('latestAutomaticBackupUri', () => {
   it('is undefined before any automatic backup exists', () => {
     expect(latestAutomaticBackupUri()).toBeUndefined();
   });
 
-  it('finds the newest by its timestamp', async () => {
-    await saveAutomaticBackup([], [], [], [], at(5_000));
-    await saveAutomaticBackup([], [], [], [], at(10_000));
-    await saveAutomaticBackup([], [], [], [], at(1_000));
+  it('finds the newest by its timestamp, not by write order', async () => {
+    // Written straight to disk out of order: saveAutomaticBackup itself always
+    // stamps its file above the existing ones.
+    const backups = new Directory(Paths.document, 'backups');
+    backups.create({ idempotent: true });
+    for (const ms of [5_000, 10_000, 1_000]) {
+      await new File(backups, `mobiledope_auto_${at(ms).getTime()}.json`).write('{}');
+    }
 
     expect(latestAutomaticBackupUri()).toBe(
       `${BACKUPS}/mobiledope_auto_${at(10_000).getTime()}.json`

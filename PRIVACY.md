@@ -115,8 +115,10 @@ Data is kept until you delete it. There is no automatic expiry.
 
 - **Location only** — Settings → Privacy → _Delete Stored Location Data_.
 - **Everything** — Settings → Data Management → _Clear All Data_.
-- **Automatic backups** — choosing _Manual_ stops new ones, but keeps the ones
-  already saved. Uninstalling the app deletes them.
+- **Automatic backups** — Settings → Automatic Backup → _Delete Automatic
+  Backups_. Choosing _Manual_ stops new ones but keeps the ones already saved.
+  Uninstalling the app also deletes them. Backups you exported yourself are not
+  touched.
 - **Everything, including settings** — uninstall the app. iOS and Android delete the
   app's private storage on uninstall.
 

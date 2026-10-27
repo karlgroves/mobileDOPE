@@ -706,7 +706,8 @@ export async function saveAutomaticBackup(
     const directory = automaticBackupDirectory();
     directory.create({ intermediates: true, idempotent: true });
 
-    const file = new File(directory, automaticBackupFilename(now));
+    const existing = automaticBackupFiles(directory).map((entry) => entry.name);
+    const file = new File(directory, automaticBackupFilename(now, existing));
     await file.write(serialiseFullBackup(rifles, ammos, logs, environments, false));
 
     const files = automaticBackupFiles(directory);
@@ -719,6 +720,32 @@ export async function saveAutomaticBackup(
   } catch (error) {
     return failure('writing automatic backup', error);
   }
+}
+
+/**
+ * Delete every automatic backup on the device (#66), leaving any other file --
+ * a manual export included -- alone.
+ *
+ * @returns How many files were deleted.
+ */
+export function deleteAutomaticBackups(): number {
+  const directory = automaticBackupDirectory();
+  if (!directory.exists) return 0;
+  const files = automaticBackupFiles(directory);
+  const automatic = new Set(
+    selectBackupsToPrune(
+      files.map((entry) => entry.name),
+      0
+    )
+  );
+  let deleted = 0;
+  for (const entry of files) {
+    if (automatic.has(entry.name)) {
+      entry.delete();
+      deleted++;
+    }
+  }
+  return deleted;
 }
 
 /** Uri of the newest automatic backup on the device, or undefined if there is none. */

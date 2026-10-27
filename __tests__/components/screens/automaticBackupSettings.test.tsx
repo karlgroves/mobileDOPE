@@ -3,7 +3,10 @@ import React from 'react';
 import { Alert } from 'react-native';
 
 import { SettingsScreen } from '../../../src/screens/SettingsScreen';
-import { shareLatestAutomaticBackup } from '../../../src/services/ExportService';
+import {
+  deleteAutomaticBackups,
+  shareLatestAutomaticBackup,
+} from '../../../src/services/ExportService';
 import { useAppStore } from '../../../src/store/useAppStore';
 import { formatDateTime } from '../../../src/utils/formatting';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
@@ -18,9 +21,19 @@ import type { BackupSchedule } from '../../../src/utils/backupSchedule';
 jest.mock('../../../src/services/ExportService', () => ({
   ...jest.requireActual('../../../src/services/ExportService'),
   shareLatestAutomaticBackup: jest.fn(),
+  deleteAutomaticBackups: jest.fn(),
 }));
 
 const share = shareLatestAutomaticBackup as jest.Mock;
+const deleteAll = deleteAutomaticBackups as jest.Mock;
+
+type AlertButton = { text: string; onPress?: () => Promise<void> | void };
+/** Press the named button of the most recent Alert.alert call. */
+const pressAlertButton = async (text: string) => {
+  const calls = (Alert.alert as jest.Mock).mock.calls;
+  const buttons = calls[calls.length - 1][2] as AlertButton[];
+  await buttons.find((b) => b.text === text)?.onPress?.();
+};
 
 const settle = (backupSchedule: BackupSchedule, lastAutomaticBackupAt?: string) =>
   useAppStore.setState((s) => ({
@@ -85,4 +98,44 @@ it('says why when the newest backup cannot be shared', async () => {
   await waitFor(() =>
     expect(Alert.alert).toHaveBeenCalledWith('Error', 'No automatic backup has been saved yet.')
   );
+});
+
+it('mentions the return-to-foreground trigger, not only start-up', () => {
+  settle('manual');
+  const { getByText } = renderSettings();
+
+  expect(getByText(/when the app opens or comes back to the foreground/)).toBeTruthy();
+});
+
+it('deletes automatic backups only after confirmation, and clears the last-run time', async () => {
+  deleteAll.mockReturnValue(3);
+  settle('daily', new Date().toISOString());
+  const { getByText } = renderSettings();
+
+  fireEvent.press(getByText('Delete Automatic Backups'));
+  expect(deleteAll).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith(
+    'Delete Automatic Backups',
+    expect.stringContaining('cannot be undone'),
+    expect.any(Array)
+  );
+
+  await pressAlertButton('Delete');
+
+  expect(deleteAll).toHaveBeenCalledTimes(1);
+  expect(useAppStore.getState().settings.lastAutomaticBackupAt).toBeUndefined();
+  expect(Alert.alert).toHaveBeenLastCalledWith(
+    'Automatic Backups Deleted',
+    'Deleted 3 automatic backups.'
+  );
+});
+
+it('deletes nothing when the confirmation is cancelled', async () => {
+  settle('daily', new Date().toISOString());
+  const { getByText } = renderSettings();
+
+  fireEvent.press(getByText('Delete Automatic Backups'));
+  await pressAlertButton('Cancel');
+
+  expect(deleteAll).not.toHaveBeenCalled();
 });

@@ -24,6 +24,7 @@ import {
   exportDOPELogsCSV,
   exportDOPELogsJSON,
   exportDOPELogsPDF,
+  deleteAutomaticBackups,
   shareLatestAutomaticBackup,
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
@@ -403,6 +404,44 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  /**
+   * Delete the automatic backups saved on this device (#66). Choosing Manual
+   * stops new ones but keeps old ones, so without this the only way to remove
+   * them would be to uninstall the app. Manual exports are not touched.
+   */
+  const handleDeleteAutomaticBackups = () => {
+    Alert.alert(
+      'Delete Automatic Backups',
+      'This deletes every automatic backup saved on this device. Your profiles, ' +
+        'readings and DOPE logs are not affected, and backups you exported yourself ' +
+        'are kept.\n\nThis cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const deleted = deleteAutomaticBackups();
+              await updateSettings({ lastAutomaticBackupAt: undefined });
+              Alert.alert(
+                'Automatic Backups Deleted',
+                deleted === 0
+                  ? 'No automatic backups were found.'
+                  : `Deleted ${deleted} automatic backup${deleted === 1 ? '' : 's'}.`
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete automatic backups'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const themeOptions = [
     { label: 'Dark', value: 'dark' },
     { label: 'Light', value: 'light' },
@@ -629,9 +668,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             Automatic Backup
           </Text>
           <Text style={[styles.privacyBlurb, { color: colors.text.secondary }]}>
-            A full backup is saved on this device when the app opens, if one is due. The newest{' '}
-            {AUTOMATIC_BACKUPS_KEPT} are kept. Location is never included, and nothing leaves the
-            device unless you share it.
+            A full backup is saved on this device when the app opens or comes back to the
+            foreground, if one is due. The newest {AUTOMATIC_BACKUPS_KEPT} are kept. Location is
+            never included, and nothing leaves the device unless you share it.
           </Text>
           <View style={styles.settingRow}>
             <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Schedule</Text>
@@ -661,6 +700,16 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             disabled={!settings.lastAutomaticBackupAt}
             accessibilityLabel="Share latest automatic backup"
             accessibilityHint="Opens the share sheet with the newest backup saved on this device"
+          />
+          <Button
+            title="Delete Automatic Backups"
+            onPress={handleDeleteAutomaticBackups}
+            variant="danger"
+            size="medium"
+            style={styles.button}
+            // Not gated on lastAutomaticBackupAt: files can outlive that setting
+            // (a settings reset), and the confirmation reports when there are none.
+            accessibilityHint="Asks for confirmation, then deletes the backups saved on this device"
           />
         </Card>
 
