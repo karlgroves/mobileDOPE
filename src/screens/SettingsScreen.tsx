@@ -74,14 +74,17 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   /**
-   * Keep what the user is typing, but persist only a usable offset. A half-typed
-   * "-" or an offset past the limit stays in the field, where NumberInput shows
-   * the limit, and never reaches the readings.
+   * Keep what the user is typing, but persist only a usable offset. An offset
+   * past the limit stays in the field, where NumberInput shows the limit, and
+   * never reaches the readings. An emptied field -- or a half-typed "-", which
+   * parses as empty -- means no offset and saves 0, so a blank field never hides
+   * an old offset that is still being applied.
    */
   const handleBarometerOffsetChange = async (value: number | undefined) => {
     setBarometerOffset(value);
-    if (value !== undefined && isValidBarometerOffset(value)) {
-      await updateSettings({ barometerOffsetInHg: value });
+    const offset = value ?? 0;
+    if (isValidBarometerOffset(offset)) {
+      await updateSettings({ barometerOffsetInHg: offset });
     }
   };
 
