@@ -1,7 +1,7 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Barometer } from 'expo-sensors';
 import React from 'react';
-import { Alert } from 'react-native';
+import { AccessibilityInfo, Alert } from 'react-native';
 
 import { EnvironmentInput } from '../../../src/screens/EnvironmentInput';
 import { SettingsScreen } from '../../../src/screens/SettingsScreen';
@@ -46,6 +46,7 @@ const pressureField = (getByLabelText: (label: string) => { props: { value?: str
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
   listeners.length = 0;
   mocked.addListener.mockImplementation((listener: Listener) => {
     listeners.push(listener);
@@ -83,6 +84,55 @@ describe('Environment screen', () => {
     await waitFor(() => expect(pressureField(getByLabelText)).toBe('24.90'));
     expect(remove).toHaveBeenCalledTimes(1);
     expect(listeners).toHaveLength(0);
+  });
+
+  it('tells a screen-reader user what the reading filled in', async () => {
+    mocked.isAvailableAsync.mockResolvedValue(true);
+    const { findByText } = renderWithProviders(<EnvironmentInput />);
+
+    fireEvent.press(await findByText('Read Barometer'));
+    await waitFor(() => expect(listeners).toHaveLength(1));
+    emit(AT_5000_FT_HPA);
+    emit(AT_5000_FT_HPA);
+    emit(AT_5000_FT_HPA);
+
+    await waitFor(() =>
+      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+        'Station pressure set to 24.90 inHg'
+      )
+    );
+  });
+
+  it('keeps the button named while the read is in progress', async () => {
+    mocked.isAvailableAsync.mockResolvedValue(true);
+    const { findByText, getByLabelText, queryByText } = renderWithProviders(<EnvironmentInput />);
+
+    fireEvent.press(await findByText('Read Barometer'));
+    await waitFor(() => expect(listeners).toHaveLength(1));
+
+    // The title text is replaced by a spinner; the accessible name must survive.
+    expect(queryByText('Read Barometer')).toBeNull();
+    expect(getByLabelText('Read Barometer')).toBeTruthy();
+  });
+
+  it('says the barometer could not be read when subscribing fails, and leaves the field', async () => {
+    mocked.isAvailableAsync.mockResolvedValue(true);
+    mocked.addListener.mockImplementationOnce(() => {
+      throw new Error('sensor unavailable');
+    });
+    const { findByText, getByLabelText } = renderWithProviders(<EnvironmentInput />);
+    const before = pressureField(getByLabelText);
+
+    fireEvent.press(await findByText('Read Barometer'));
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'No Barometer Reading',
+        expect.stringContaining('could not be read')
+      )
+    );
+    expect(pressureField(getByLabelText)).toBe(before);
+    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
   });
 
   it('applies the calibration offset from Settings to the reading', async () => {
@@ -144,6 +194,17 @@ describe('Settings', () => {
     fireEvent.changeText(await findByLabelText(OFFSET), '-0.03');
 
     await waitFor(() => expect(useAppStore.getState().settings.barometerOffsetInHg).toBe(-0.03));
+  });
+
+  it('treats an emptied offset field as no offset, not the old one', async () => {
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, barometerOffsetInHg: 0.05 },
+    });
+    const { findByLabelText } = renderSettings();
+
+    fireEvent.changeText(await findByLabelText(OFFSET), '');
+
+    await waitFor(() => expect(useAppStore.getState().settings.barometerOffsetInHg).toBe(0));
   });
 
   it('does not save an offset past the limit', async () => {

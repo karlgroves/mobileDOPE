@@ -5,7 +5,15 @@
 
 import * as Location from 'expo-location';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import {
+  AccessibilityInfo,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+} from 'react-native';
 
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
@@ -221,6 +229,11 @@ export function EnvironmentInput() {
         return;
       }
       setPressure(station);
+      // The field changes without focus moving to it, so a screen-reader user
+      // would otherwise hear nothing after tapping Read Barometer.
+      AccessibilityInfo.announceForAccessibility(
+        `Station pressure set to ${station.toFixed(2)} inHg`
+      );
     } catch (_error) {
       Alert.alert(
         'No Barometer Reading',
@@ -415,6 +428,9 @@ export function EnvironmentInput() {
             <View style={styles.sensorButtonContainer}>
               <Button
                 title="Read Barometer"
+                // Button swaps its title for a spinner while loading; the label
+                // keeps the control named during the read.
+                accessibilityLabel="Read Barometer"
                 onPress={readBarometer}
                 variant="secondary"
                 loading={readingBarometer}
