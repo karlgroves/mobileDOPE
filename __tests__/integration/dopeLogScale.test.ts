@@ -71,13 +71,21 @@ describe('DOPE history at scale: the queries the app runs (#68)', () => {
     return rows.map((row) => row.detail).join('\n');
   };
 
-  /** Uses an index on `dope_logs`, rather than reading every row of it. */
-  const expectIndexed = (plan: string) => {
-    expect(plan).toMatch(/dope_logs USING (COVERING )?INDEX idx_dope_/);
-    expect(plan).not.toMatch(/SCAN dope_logs$/m);
+  /**
+   * Finds its rows through an index on `dope_logs`, rather than reading every
+   * row of it.
+   *
+   * A SEARCH, not merely an index: `SCAN dope_logs USING INDEX idx_dope_timestamp`
+   * also names an index, but it reads the whole table in timestamp order. That is
+   * the plan SQLite falls back to when the rifle index is dropped, so a check for
+   * "an index" alone stays green exactly when it should fail.
+   */
+  const expectSearched = (plan: string) => {
+    expect(plan).toMatch(/SEARCH dope_logs USING (COVERING )?INDEX idx_dope_/);
+    expect(plan).not.toMatch(/SCAN dope_logs/);
   };
 
-  it(`seeds over a thousand logs`, async () => {
+  it('seeds over a thousand logs', async () => {
     expect(LOG_COUNT).toBeGreaterThanOrEqual(1000);
     expect(await dopeLogRepository.count()).toBe(LOG_COUNT);
     expect(await environmentRepository.count()).toBe(LOG_COUNT / SHOTS_PER_SESSION);
@@ -137,11 +145,11 @@ describe('DOPE history at scale: the queries the app runs (#68)', () => {
 
   describe('query plans', () => {
     it("filters a rifle's logs through an index", async () => {
-      expectIndexed(await planOf(() => dopeLogRepository.getByRifleId(seeded.rifleIds[0])));
+      expectSearched(await planOf(() => dopeLogRepository.getByRifleId(seeded.rifleIds[0])));
     });
 
     it('filters a rifle and load through an index', async () => {
-      expectIndexed(
+      expectSearched(
         await planOf(() =>
           dopeLogRepository.getByRifleAndAmmo(seeded.rifleIds[0], seeded.ammoIds[0])
         )
@@ -149,14 +157,16 @@ describe('DOPE history at scale: the queries the app runs (#68)', () => {
     });
 
     it("finds a rifle's last shot through an index", async () => {
-      expectIndexed(await planOf(() => dopeLogRepository.getLastFiredAt(seeded.rifleIds[0])));
+      expectSearched(await planOf(() => dopeLogRepository.getLastFiredAt(seeded.rifleIds[0])));
     });
 
     it('reads the whole history in timestamp order without sorting it', async () => {
       // The full list is read in the index's order; a temp B-tree here would
       // mean sorting every log on every visit to DOPE Logs.
+      // Every row is read here by design, so the plan is a scan -- but one that
+      // walks the timestamp index rather than the table.
       const plan = await planOf(() => dopeLogRepository.getAll());
-      expectIndexed(plan);
+      expect(plan).toMatch(/SCAN dope_logs USING (COVERING )?INDEX idx_dope_timestamp/);
       expect(plan).not.toMatch(/TEMP B-TREE/);
     });
 
