@@ -7,7 +7,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import { setCustomCalibers, type CustomCaliber } from '../constants/calibers';
+import { DEFAULT_CONFIDENCE_THRESHOLD } from '../utils/adjustmentConfidence';
 import { isValidBarometerOffset } from '../utils/barometer';
+import { DEFAULT_DISTANCE_DELTA } from '../utils/dopeMatching';
+import { isValidConfidenceThreshold, isValidDistanceDelta } from '../utils/dopeSettings';
 
 import type { ThemeMode } from '../constants/colors';
 import type { BackupSchedule } from '../utils/backupSchedule';
@@ -51,6 +54,29 @@ interface AppSettings {
    * `src/utils/barometer.ts` for why it is inHg and when it is added.
    */
   barometerOffsetInHg: number;
+  /**
+   * Whether the calculator adjusts its elevation by the shooter's own DOPE
+   * (#167). This is the *default* for the screen's switch, not the switch -- a
+   * shooter who turned it off for one shot should not find it off tomorrow.
+   *
+   * On by default, which is how #168 shipped: a shooter with no logs sees the
+   * solver either way, and one with logs is better served by them.
+   */
+  dopeAdjustmentEnabled: boolean;
+  /**
+   * The distance window the matcher searches, in yards (#70 §10). 25-100,
+   * default 50 -- `DEFAULT_DISTANCE_DELTA`, which is where the figure comes
+   * from rather than being restated here.
+   *
+   * Wider finds more logs and trusts each one less, because distance similarity
+   * falls off inside the window as well as outside it.
+   */
+  dopeDistanceDeltaYards: number;
+  /**
+   * Confidence below which the solver's figure stands alone, as a fraction
+   * (#161). Default 0.4, which is `DEFAULT_CONFIDENCE_THRESHOLD`.
+   */
+  dopeConfidenceThreshold: number;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -93,10 +119,24 @@ const defaultSettings: AppSettings = {
   customCalibers: [],
   backupSchedule: 'manual',
   barometerOffsetInHg: 0,
+  // Taken from the modules that consume them, so there is one definition of each
+  // default and the settings screen's "reset" cannot drift from the code's own.
+  dopeAdjustmentEnabled: true,
+  dopeDistanceDeltaYards: DEFAULT_DISTANCE_DELTA,
+  dopeConfidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
 export { DEFAULT_DISTANCE_PRESETS };
+
+/**
+ * The shipped settings, for a screen that offers to put one section back.
+ *
+ * Exported so "reset to defaults" (#167) reads the same figures the app starts
+ * with, rather than restating them -- which is how a reset comes to set a value
+ * the code no longer uses.
+ */
+export const DEFAULT_SETTINGS: Readonly<AppSettings> = defaultSettings;
 
 const SETTINGS_STORAGE_KEY = '@mobileDOPE:settings';
 
@@ -127,6 +167,19 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
         !isValidBarometerOffset(merged.barometerOffsetInHg)
       ) {
         merged.barometerOffsetInHg = defaultSettings.barometerOffsetInHg;
+      }
+      // Same reasoning as the offset above, and the stakes are the same shape:
+      // a delta of 0 or a threshold above 1 switches DOPE-assisted aiming off
+      // without reporting anything, leaving a correct-looking solver figure and
+      // no explanation. See `src/utils/dopeSettings.ts`.
+      if (!isValidDistanceDelta(merged.dopeDistanceDeltaYards)) {
+        merged.dopeDistanceDeltaYards = defaultSettings.dopeDistanceDeltaYards;
+      }
+      if (!isValidConfidenceThreshold(merged.dopeConfidenceThreshold)) {
+        merged.dopeConfidenceThreshold = defaultSettings.dopeConfidenceThreshold;
+      }
+      if (typeof merged.dopeAdjustmentEnabled !== 'boolean') {
+        merged.dopeAdjustmentEnabled = defaultSettings.dopeAdjustmentEnabled;
       }
       return merged;
     }

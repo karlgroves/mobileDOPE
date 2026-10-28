@@ -66,7 +66,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
    * range session mode shares (#166). The solver's own figure is always on
    * screen, whatever the switch says.
    */
-  const [adjustByDope, setAdjustByDope] = useState(true);
+  const [adjustByDope, setAdjustByDope] = useState(settings.dopeAdjustmentEnabled);
 
   const {
     relevantDope,

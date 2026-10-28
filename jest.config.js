@@ -104,6 +104,10 @@ const components = {
   // It existed but was never referenced by any config before this change, so it had
   // never run.
   setupFiles: ['<rootDir>/jest.setup.js'],
+  // Per-test timeout, in `jest.timeout.js` with the reasoning on it. It cannot be
+  // a `testTimeout` key here: with `projects` configured Jest does not honour that
+  // per project, which was verified rather than assumed.
+  setupFilesAfterEnv: ['<rootDir>/jest.timeout.js'],
 };
 
 module.exports = {
