@@ -129,6 +129,42 @@ describe('useAppStore', () => {
     });
   });
 
+  describe('barometer calibration (#62)', () => {
+    it('starts uncalibrated', async () => {
+      await store().loadSettings();
+
+      expect(store().settings.barometerOffsetInHg).toBe(0);
+    });
+
+    it('persists an offset with the other settings', async () => {
+      await store().updateSettings({ barometerOffsetInHg: 0.04 });
+
+      const [, payload] = mockStorage.setItem.mock.calls[0] as [string, string];
+      expect(JSON.parse(payload)).toMatchObject({ barometerOffsetInHg: 0.04 });
+    });
+
+    it('restores a stored offset', async () => {
+      mockStorage.getItem.mockResolvedValueOnce(JSON.stringify({ barometerOffsetInHg: -0.03 }));
+
+      await store().loadSettings();
+
+      expect(store().settings.barometerOffsetInHg).toBe(-0.03);
+    });
+
+    it.each([['"0.5"'], ['null'], ['5'], ['-2']])(
+      'drops a stored offset of %s rather than skewing every reading with it',
+      async (stored) => {
+        // The offset is added to every barometer reading without the user seeing
+        // it again, so a corrupted or out-of-range value must not survive a load.
+        mockStorage.getItem.mockResolvedValueOnce(`{"barometerOffsetInHg": ${stored}}`);
+
+        await store().loadSettings();
+
+        expect(store().settings.barometerOffsetInHg).toBe(0);
+      }
+    );
+  });
+
   describe('resetSettings', () => {
     it('restores defaults and clears storage', async () => {
       await store().updateSettings({ themeMode: 'light' });

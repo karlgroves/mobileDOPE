@@ -75,6 +75,59 @@ describe('location permission declarations', () => {
   });
 });
 
+describe('barometer permission declarations (#62)', () => {
+  // The Environment screen reads the device barometer through expo-sensors. On
+  // iOS that is CMAltimeter, which Apple files under Motion & Fitness: reading it
+  // without NSMotionUsageDescription terminates the app, and expo-sensors'
+  // BarometerModule.swift triggers that very prompt. Android's
+  // Sensor.TYPE_PRESSURE needs no permission at all.
+  const config = resolve('production');
+  const sensorsPlugin = () =>
+    (config.plugins ?? []).find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-sensors'
+    ) as [string, { motionPermission?: unknown }] | undefined;
+
+  it('registers the expo-sensors plugin with a purpose string of its own', () => {
+    const description = sensorsPlugin()?.[1].motionPermission;
+    expect(typeof description).toBe('string');
+    expect(description).not.toContain('$(PRODUCT_NAME)');
+  });
+
+  it('says what is read, when, and what is not', () => {
+    const description = (sensorsPlugin()?.[1].motionPermission as string).toLowerCase();
+
+    expect(description).toContain('barometer');
+    expect(description).toContain('station pressure');
+    expect(description).toContain('read barometer');
+    expect(description).toMatch(/no movement or activity data/);
+  });
+
+  it("replaces the template's placeholder rather than sitting beside it", () => {
+    // How the expo-sensors plugin writes the key. A string wins over whatever the
+    // bare template seeded; this pins that Expo semantic so a change to it fails
+    // here instead of shipping "Allow $(PRODUCT_NAME) to access your device motion".
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { IOSConfig } = require('expo/config-plugins');
+    const description = sensorsPlugin()?.[1].motionPermission as string;
+
+    const plist = IOSConfig.Permissions.applyPermissions(
+      { NSMotionUsageDescription: 'Allow $(PRODUCT_NAME) to access your device motion' },
+      { NSMotionUsageDescription: description },
+      { NSMotionUsageDescription: 'Allow $(PRODUCT_NAME) to access your device motion' }
+    );
+
+    expect(plist.NSMotionUsageDescription).toBe(description);
+  });
+
+  it('runs before the plugin that trims unearned usage descriptions', () => {
+    const names = pluginNames(config);
+    expect(names.indexOf('expo-sensors')).toBeGreaterThan(-1);
+    expect(names.indexOf('expo-sensors')).toBeLessThan(
+      names.indexOf('./plugins/withTrimmedIosPermissions')
+    );
+  });
+});
+
 describe('permissions the app has no code to use', () => {
   const config = resolve('production');
 
@@ -92,8 +145,9 @@ describe('permissions the app has no code to use', () => {
 
   it('blocks every dangerous permission a native module brings, unless the app uses it', () => {
     // Autolinking merges each native module's own AndroidManifest into the app's.
-    // expo-sensors (a dependency nothing in src/ uses) declares
-    // ACTIVITY_RECOGNITION, and expo-file-system declares WRITE_EXTERNAL_STORAGE;
+    // expo-sensors declares ACTIVITY_RECOGNITION (for its pedometer and device
+    // motion, neither of which the app uses -- the barometer needs no
+    // permission), and expo-file-system declares WRITE_EXTERNAL_STORAGE;
     // neither was blocked, while PRIVACY.md said motion permissions were. The list
     // above names what was known; this reads what the installed modules declare.
     const DANGEROUS = new Set([
@@ -157,10 +211,10 @@ describe('permissions the app has no code to use', () => {
 
   it('actually deletes the placeholders, not just registers a plugin', () => {
     // The registration assertion below says the plugin is wired up; this says it
-    // does its job. Expo's bare template seeds these six, and a `false` in
+    // does its job. Expo's bare template seeds these, and a `false` in
     // `ios.infoPlist` does not remove them -- only a withInfoPlist mod does.
     // Exercising the mod directly means an Expo change to its semantics fails
-    // here rather than silently restoring six unearned permission strings to a
+    // here rather than silently restoring unearned permission strings to a
     // shipped build.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const withTrimmedIosPermissions = require('../../plugins/withTrimmedIosPermissions');
@@ -173,7 +227,8 @@ describe('permissions the app has no code to use', () => {
       NSPhotoLibraryUsageDescription: 'Allow $(PRODUCT_NAME) to access your photos',
       NSPhotoLibraryAddUsageDescription: 'Allow $(PRODUCT_NAME) …',
       NSMicrophoneUsageDescription: 'Allow $(PRODUCT_NAME) to access your microphone',
-      NSMotionUsageDescription: 'Allow $(PRODUCT_NAME) to access your device motion',
+      // Set by the expo-sensors plugin for the barometer (#62): earned, so kept.
+      NSMotionUsageDescription: 'Real, and must survive',
       CFBundleName: 'Mobile DOPE',
     };
 
@@ -198,14 +253,16 @@ describe('permissions the app has no code to use', () => {
 
     expect(Object.keys(modResults).filter((k) => k.endsWith('UsageDescription'))).toEqual([
       'NSLocationWhenInUseUsageDescription',
+      'NSMotionUsageDescription',
     ]);
+    expect(modResults.NSMotionUsageDescription).toBe('Real, and must survive');
     // Non-permission keys are untouched.
     expect(modResults.CFBundleName).toBe('Mobile DOPE');
     expect(withTrimmedIosPermissions).toBeDefined();
   });
 
   it('runs the plugin that strips the iOS template placeholders', () => {
-    // Expo's bare template seeds camera/photo/microphone/motion strings that a
+    // Expo's bare template seeds camera/photo/microphone strings that a
     // `false` in `ios.infoPlist` does not remove.
     expect(pluginNames(config)).toContain('./plugins/withTrimmedIosPermissions');
   });

@@ -62,6 +62,26 @@ withheld from you for saying no.
 latitude from every stored environmental reading while leaving the temperature,
 pressure and wind readings intact.
 
+## Barometer
+
+On a phone or tablet that has a barometer, the Environment screen offers **Read
+Barometer**. Tapping it takes a few pressure readings over a second or two, fills in
+station pressure, and stops reading. Nothing reads the barometer in the background
+or at any other time.
+
+**What is stored.** Only the station pressure that ends up in the pressure field,
+exactly as if you had typed it. The raw readings are not kept. An optional
+calibration offset you set in Settings is stored with your other settings.
+
+**The iOS permission.** iOS treats the barometer as part of _Motion & Fitness_, so
+the first reading on an iPhone shows a permission prompt under that name. Mobile
+DOPE reads only air pressure through it; it does not read steps, movement or
+activity. On iOS 17.4 and later the sensor library asks iOS to record a tenth of a
+second of accelerometer data to make that prompt appear, working around an iOS
+bug; the app never reads that data. Android needs no permission for the barometer.
+
+**You can decline.** Station pressure can always be entered by hand.
+
 ## Exports and sharing
 
 You can export your data as JSON, CSV, Markdown or PDF, and share it through the
@@ -106,8 +126,9 @@ newest file to the system share sheet, exactly as a manual export does.
 - No cloud sync or remote backup.
 - No sale or sharing of data with third parties — there is no mechanism by which
   data could reach a third party.
-- No collection of contacts, photos, microphone, camera, motion, or health data.
-  The app declares no permission for any of these.
+- No collection of contacts, photos, microphone, camera, movement, activity, or
+  health data. The app declares no permission for any of these. (The Motion &
+  Fitness permission on iOS is for the barometer only — see above.)
 
 ## Retention and deletion
 
@@ -132,9 +153,10 @@ anyone, of any age.
 | Permission             | Platform     | Why                                                   |
 | ---------------------- | ------------ | ----------------------------------------------------- |
 | Location, while in use | iOS, Android | Altitude and approximate latitude, as described above |
+| Motion & Fitness       | iOS only     | Reading the barometer, as described above             |
 
 No other runtime permission is requested. Camera, photo library and shared
-storage, microphone, and physical activity (motion) permissions are explicitly
+storage, microphone, and Android's physical activity permissions are explicitly
 blocked in the app's build configuration so that autolinked libraries cannot
 introduce them. Files you export are written to the app's own storage and handed
 to the system share sheet, which needs no storage permission.

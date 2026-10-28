@@ -16,9 +16,12 @@ const { withInfoPlist } = require('expo/config-plugins');
  * both a review question and a promise the app cannot keep. This deletes them
  * after the merge, which is the only point at which they exist.
  *
- * `NSLocationWhenInUseUsageDescription` is deliberately NOT in this list -- it is
- * the one permission the app genuinely uses, and its string is set in
- * `app.config.ts`. See issue #44.
+ * `NSLocationWhenInUseUsageDescription` is deliberately NOT in this list -- the
+ * app genuinely uses it, and its string is set in `app.config.ts`. See issue #44.
+ *
+ * Nor is `NSMotionUsageDescription`, since #62: the Environment screen reads the
+ * device barometer, which iOS gates behind Motion & Fitness. Its string is set by
+ * the expo-sensors plugin in `app.config.ts`, replacing the template placeholder.
  *
  * @param {import('expo/config').ExpoConfig} config
  * @returns {import('expo/config').ExpoConfig}
@@ -36,8 +39,6 @@ const withTrimmedIosPermissions = (config) =>
       'NSPhotoLibraryAddUsageDescription',
       // No audio capture anywhere in the app.
       'NSMicrophoneUsageDescription',
-      // expo-sensors is a dependency but no sensor is read.
-      'NSMotionUsageDescription',
     ];
 
     for (const key of unearned) {
