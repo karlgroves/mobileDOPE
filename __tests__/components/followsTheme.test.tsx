@@ -8,12 +8,14 @@ import { StyleSheet, Text } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ErrorBoundary } from '../../src/components/ErrorBoundary';
+import { GroupStatistics } from '../../src/components/GroupStatistics';
 import { IconButton } from '../../src/components/IconButton';
 import { ListItem } from '../../src/components/ListItem';
 import { LoadingSpinner } from '../../src/components/LoadingSpinner';
 import { Modal } from '../../src/components/Modal';
 import { Picker } from '../../src/components/Picker';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
+import { TargetView } from '../../src/components/TargetView';
 import { UnitToggle } from '../../src/components/UnitToggle';
 import { Colors, ThemeMode } from '../../src/constants/colors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -106,6 +108,27 @@ describe.each(['light', 'nightVision', 'dark'] as ThemeMode[])('%s theme', (mode
     );
     expect(getByTestId('sp').props.color).toBe(c.primary);
     expect(colorOf(getByText('Loading')).color).toBe(c.text.secondary);
+  });
+
+  it('TargetView: surface and the numbered shot drawn on it (#63)', () => {
+    const { getByTestId, getByText } = renderWithProviders(
+      <TargetView
+        background={{ kind: 'bullseye' }}
+        markers={[{ x: 0.5, y: 0.5, shotNumber: 1 }]}
+        testID="tv"
+      />
+    );
+    fireEvent(getByTestId('tv'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 200, height: 200 } },
+    });
+    expect(colorOf(getByTestId('tv')).backgroundColor).toBe(c.surface);
+    expect(colorOf(getByText('1')).color).toBe(c.onSecondary);
+  });
+
+  it('GroupStatistics: labels and figures (#63)', () => {
+    const { getByText } = renderWithProviders(<GroupStatistics group={{ shotCount: 0 }} />);
+    expect(colorOf(getByText('Shots')).color).toBe(c.text.secondary);
+    expect(colorOf(getByText('0')).color).toBe(c.text.primary);
   });
 
   it('EmptyState: title and message', () => {

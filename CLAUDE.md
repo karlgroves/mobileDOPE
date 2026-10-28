@@ -230,6 +230,13 @@ because this section said the app collected nothing while it was storing precise
   for altitude (density-altitude term) and latitude (Coriolis term). Latitude is
   coarsened to one decimal place -- ~11 km -- by `src/utils/geoPrecision.ts` before it
   is persisted. **Longitude is never recorded**; nothing calculates with it.
+- **A target photo the shooter picks is stored, stripped of metadata.** Mark Target
+  (#63) uses expo-image-picker's library picker (PHPicker / Android photo picker), which
+  needs no permission. `src/services/TargetPhotoService.ts` keeps a copy in
+  `Documents/targets/` only after `src/utils/imageMetadata.ts` has removed EXIF/XMP/IPTC
+  -- a photo's GPS would otherwise contradict the longitude claim above -- and refuses
+  formats it cannot clean. Keep `allowsEditing` and `exif` off, and never add the
+  expo-image-picker config plugin.
 - **Barometric pressure is read on request, and only that.** On a device with a
   barometer, "Read Barometer" on `EnvironmentInput` takes a few samples through
   expo-sensors and releases the sensor (`src/services/deviceBarometer.ts`). On iOS

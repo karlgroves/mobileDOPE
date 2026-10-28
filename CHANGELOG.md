@@ -44,6 +44,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one in plain words. Below 40% the solver's own figure stands and the screen
   says why, so logs that disagree with each other no longer average into a
   correction nobody measured.
+- Mark Target, from DOPE Log Details: tap where each shot landed on a plain
+  target or on a photo of your own, or enter its distance from the centre with
+  Add Shot by Measurement (the route for a screen reader, keyboard or switch).
+  Shots are numbered in order, with undo and clear. Enter the target's width
+  and the group is measured as you go — extreme spread, mean radius,
+  horizontal and vertical spread and CEP, in inches and in MOA at the log's
+  distance. The saved target and its figures appear on
+  the log, and a measurable group (two or more shots, with a width) replaces the
+  log's typed group size with the measured one. Choosing a photo needs no
+  permission, and the photo is kept with its location and other metadata
+  removed. Upgrading adds two columns to the target table (migration 008).
 - With no log near today's distance, the solution is adjusted by the offset
   interpolated between your logged distances either side, and says so ("Interpolated
   between your 430 and 560 yd logs"). Past the last logged distance the nearest
