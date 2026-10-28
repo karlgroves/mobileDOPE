@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Automatic backups on a daily or weekly schedule, chosen in Settings →
+  Automatic Backup (Manual, the default, keeps today's behaviour). With no
+  background task, a backup is written when the app opens or returns to the
+  foreground and one is due. It is the ordinary full backup without latitude,
+  saved in the app's private storage; the newest seven are kept. Settings shows
+  when the last one ran and can share the newest through the share sheet.
 - On a device with a barometer, the Environment screen offers Read Barometer,
   which fills in station pressure from the phone's own sensor. The reading is
   the pressure where you are standing — what the solver needs — so it is
@@ -41,13 +47,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mark Target, from DOPE Log Details: tap where each shot landed on a plain
   target or on a photo of your own, or enter its distance from the centre with
   Add Shot by Measurement (the route for a screen reader, keyboard or switch).
-  Shots are numbered in order, with undo and clear. Enter the target's width and the group is measured as you go —
-  extreme spread, mean radius, horizontal and vertical spread and CEP, in inches
-  and in MOA at the log's distance. The saved target and its figures appear on
+  Shots are numbered in order, with undo and clear. Enter the target's width
+  and the group is measured as you go — extreme spread, mean radius,
+  horizontal and vertical spread and CEP, in inches and in MOA at the log's
+  distance. The saved target and its figures appear on
   the log, and a measurable group (two or more shots, with a width) replaces the
   log's typed group size with the measured one. Choosing a photo needs no
   permission, and the photo is kept with its location and other metadata
   removed. Upgrading adds two columns to the target table (migration 008).
+- With no log near today's distance, the solution is adjusted by the offset
+  interpolated between your logged distances either side, and says so ("Interpolated
+  between your 430 and 560 yd logs"). Past the last logged distance the nearest
+  offset is held, marked as extrapolated, and the screen asks for a sighter. The
+  confidence figure drops the further today is from a log, and across a gap wide
+  enough to be worth practising the solver's own figure stands. Only the logs
+  either side of today's distance are solved, so a long history does not slow
+  the screen.
 
 ### Fixed
 

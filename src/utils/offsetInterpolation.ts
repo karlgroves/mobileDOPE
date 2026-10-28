@@ -161,6 +161,18 @@ export const interpolateOffset = (
   };
 };
 
+/**
+ * Gaps narrower than this are close enough to interpolate across; wider ones are
+ * worth a practice session.
+ *
+ * Lives here rather than in `DopeCoverage`, which used to own it, because the
+ * solution screen's interpolation now reads it too (#162): the distance the
+ * coverage summary calls "close enough to interpolate between" and the distance
+ * over which an interpolated offset keeps its confidence are the same claim, and
+ * two constants for one claim is how they come to disagree.
+ */
+export const COVERAGE_TOLERANCE_YARDS = 150;
+
 /** A stretch of distance with no logged DOPE in it. */
 export interface CoverageGap {
   /** The logged distance below the gap, in yards. */

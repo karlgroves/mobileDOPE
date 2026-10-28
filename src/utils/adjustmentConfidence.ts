@@ -56,10 +56,12 @@
 import { logDistanceInYards } from './distanceUnits';
 import { calculateConfidence } from './dopeAnalysis';
 import { DEFAULT_SIGMA_YARDS } from './dopeMatching';
+import { COVERAGE_TOLERANCE_YARDS } from './offsetInterpolation';
 import { moaToMil } from './unitConversions';
 
 import type { ElevationAdjustment } from './dopeAdjustment';
 import type { MatchableLog } from './dopeMatching';
+import type { InterpolatedOffset } from './offsetInterpolation';
 import type { DOPELogData } from '../models/DOPELog';
 
 /**
@@ -95,6 +97,25 @@ export const AGREEMENT_SCALE_MIL = 0.15;
  * the default query window it is 0.14.
  */
 export const PROXIMITY_SIGMA_YARDS = DEFAULT_SIGMA_YARDS;
+
+/**
+ * Gaussian width for `proximity` when the offset was interpolated between two
+ * logged distances (#162), in yards.
+ *
+ * Wider than {@link PROXIMITY_SIGMA_YARDS} because a bracketed value has a
+ * measurement on *both* sides of it: being 50 yards from the nearest log means
+ * something different when there is another one 50 yards the other way. Half
+ * of `COVERAGE_TOLERANCE_YARDS`, so the middle of the widest gap the coverage
+ * summary calls "close enough to interpolate between" keeps 0.61 of its
+ * proximity, and the middle of a gap twice that wide -- one it tells the
+ * shooter to go and practise -- keeps 0.14.
+ *
+ * An *extrapolated* offset gets the ordinary width. Past the last log there is
+ * nothing on the far side, which is exactly the situation a match on one side
+ * is in, and `offsetInterpolation` holds the end value on the understanding
+ * that this factor, not a decay of its own, is what damps it.
+ */
+export const INTERPOLATION_SIGMA_YARDS = COVERAGE_TOLERANCE_YARDS / 2;
 
 /** Below this the solver's own answer stands alone. The issue's default. */
 export const DEFAULT_CONFIDENCE_THRESHOLD = 0.4;
@@ -178,6 +199,19 @@ const weightedQuality = (contributions: { log: MatchableLog; weight: number }[])
     0
   );
   return Math.min(1, Math.max(0, weighted / totalWeight));
+};
+
+/** `exp(-x² / 2σ²)`: 1 at no distance, falling smoothly with it. */
+const gaussian = (x: number, sigma: number): number => Math.exp(-(x * x) / (2 * sigma * sigma));
+
+/**
+ * The four factors as one score. See "Why they combine the way they do" above;
+ * shared by matched and interpolated offsets so the two are judged alike.
+ */
+const combine = ({ evidence, quality, agreement, proximity }: ConfidenceFactors): number => {
+  const worth = EVIDENCE_SHARE * evidence + (1 - EVIDENCE_SHARE) * quality;
+  const raw = worth * agreement * proximity;
+  return Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
 };
 
 /** "6 logs agreeing within 0.03 MIL" and the like, weakest thing first. */
@@ -270,23 +304,85 @@ export const adjustmentConfidence = <T extends MatchableLog>(
     (nearest, c) => Math.min(nearest, Math.abs(logDistanceInYards(c.log) - distanceYards)),
     Number.POSITIVE_INFINITY
   );
-  const proximity = Math.exp(
-    -(nearestLogYards * nearestLogYards) / (2 * PROXIMITY_SIGMA_YARDS * PROXIMITY_SIGMA_YARDS)
-  );
-
-  const worth = EVIDENCE_SHARE * evidence + (1 - EVIDENCE_SHARE) * quality;
-  const raw = worth * agreement * proximity;
-  const score = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
+  const proximity = gaussian(nearestLogYards, PROXIMITY_SIGMA_YARDS);
 
   const factors = { evidence, quality, agreement, proximity };
 
   return {
-    score,
+    score: combine(factors),
     factors,
     contributingLogs: contributions.length,
     reasons: explain(factors, contributions.length, spread, nearestLogYards, unit),
     spread,
     nearestLogYards,
+  };
+};
+
+/** One log behind an interpolated offset, with what it said. */
+export interface InterpolationSample {
+  log: MatchableLog;
+  /** Dialled minus predicted, in the working unit. */
+  offset: number;
+}
+
+/**
+ * Confidence in an offset read off the curve between logged distances (#162),
+ * rather than drawn from logs near the shot.
+ *
+ * The same four factors and the same combination as
+ * {@link adjustmentConfidence}, so an interpolated figure clears the same
+ * threshold for the same reasons a matched one does. Two of them are measured
+ * differently, because the evidence is shaped differently:
+ *
+ * - **`agreement`** is the spread of offsets *within* each logged distance,
+ *   pooled. Across distances the offset is allowed to change -- that change is
+ *   the thing being interpolated -- so treating 0.2 at 450 yd and 0.4 at 550 yd
+ *   as a disagreement would mark down exactly the curve the value came from.
+ *   Three logs at one distance that cannot agree with each other are a
+ *   disagreement, and are scored as one.
+ * - **`proximity`** is on the gap to the nearest logged distance, with
+ *   {@link INTERPOLATION_SIGMA_YARDS} when the value is bracketed and the
+ *   ordinary {@link PROXIMITY_SIGMA_YARDS} when it was extrapolated. That is how
+ *   "lower confidence the further from a logged distance" is met, and why an
+ *   extrapolation is trusted less than an interpolation the same distance from
+ *   a log.
+ *
+ * Every log at the distances the value was drawn from counts once, at weight
+ * one: there is no relevance ranking here to weight them by. Logs elsewhere on
+ * the curve shaped nothing about this figure and are not counted.
+ */
+export const interpolationConfidence = (
+  interpolation: InterpolatedOffset,
+  samplesByDistance: InterpolationSample[][],
+  unit: 'MIL' | 'MOA'
+): AdjustmentConfidence => {
+  const samples = samplesByDistance.flat();
+  const count = samples.length;
+
+  const evidence = count / (count + EVIDENCE_SOFTENING);
+  const quality = weightedQuality(samples.map(({ log }) => ({ log, weight: 1 })));
+
+  const squares = samplesByDistance.reduce((sum, group) => {
+    if (group.length === 0) return sum;
+    const mean = group.reduce((total, s) => total + s.offset, 0) / group.length;
+    return sum + group.reduce((total, s) => total + (s.offset - mean) ** 2, 0);
+  }, 0);
+  const spread = count > 0 ? Math.sqrt(squares / count) : 0;
+  const agreement = Math.exp(-spreadInMil(spread, unit) / AGREEMENT_SCALE_MIL);
+
+  const sigma =
+    interpolation.source === 'interpolated' ? INTERPOLATION_SIGMA_YARDS : PROXIMITY_SIGMA_YARDS;
+  const proximity = gaussian(interpolation.nearestLoggedYards, sigma);
+
+  const factors = { evidence, quality, agreement, proximity };
+
+  return {
+    score: count > 0 ? combine(factors) : 0,
+    factors,
+    contributingLogs: count,
+    reasons: explain(factors, count, spread, interpolation.nearestLoggedYards, unit),
+    spread,
+    nearestLogYards: interpolation.nearestLoggedYards,
   };
 };
 

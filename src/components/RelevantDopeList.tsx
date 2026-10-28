@@ -55,17 +55,30 @@ export interface RelevantDopeListProps {
   matches: Match<DOPELogData>[];
   /** Injected so the rendered age is deterministic under test. */
   now?: Date;
+  /**
+   * What to say when no log matched. The default reads as "nothing informed
+   * this shot", which is wrong when an offset interpolated across other
+   * distances was applied (#162); the screen says so instead.
+   */
+  emptyMessage?: string;
   testID?: string;
 }
 
-export const RelevantDopeList: React.FC<RelevantDopeListProps> = ({ matches, now, testID }) => {
+const DEFAULT_EMPTY_MESSAGE = 'No logged DOPE close enough to this shot to be worth comparing.';
+
+export const RelevantDopeList: React.FC<RelevantDopeListProps> = ({
+  matches,
+  now,
+  emptyMessage = DEFAULT_EMPTY_MESSAGE,
+  testID,
+}) => {
   const { theme } = useTheme();
   const { colors } = theme;
 
   if (matches.length === 0) {
     return (
       <Text testID={testID} style={[styles.empty, { color: colors.text.secondary }]}>
-        No logged DOPE close enough to this shot to be worth comparing.
+        {emptyMessage}
       </Text>
     );
   }

@@ -1,5 +1,6 @@
 import { adjustElevation } from '../../src/utils/dopeAdjustment';
 import { rankMatches } from '../../src/utils/dopeMatching';
+import { adjustByInterpolation } from '../../src/utils/interpolatedAdjustment';
 
 import type { DOPELogData } from '../../src/models/DOPELog';
 
@@ -101,5 +102,23 @@ describe('DOPE adjustment performance (#168)', () => {
 
     expect(predictions).toBeLessThanOrEqual(matches.length);
     expect(predictions).toBeLessThan(20);
+  });
+});
+
+describe('interpolated offset performance (#162)', () => {
+  it(`interpolates across ${LOG_COUNT} logs in under ${BUDGET_MS} ms`, () => {
+    const logs = history();
+    const predict = (log: DOPELogData) => log.elevationCorrection - 0.3;
+
+    // Between two logged distances (the history is every 25 yd from 100), so
+    // the walk outward from today's distance has to step past the logs either
+    // side rather than finding one exactly.
+    adjustByInterpolation(logs, predict, 612, 4.2, 'MIL');
+
+    const ms = elapsed(() => {
+      adjustByInterpolation(logs, predict, 612, 4.2, 'MIL');
+    });
+
+    expect(ms).toBeLessThan(BUDGET_MS);
   });
 });
