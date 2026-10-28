@@ -605,6 +605,25 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </Card>
 
+        {/* Calibers (#67) */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Calibers</Text>
+          <Text style={[styles.settingHelp, { color: colors.text.secondary, marginBottom: 12 }]}>
+            {settings.customCalibers.length === 0
+              ? 'Add calibers that are not in the built-in list'
+              : `${settings.customCalibers.length} custom caliber${
+                  settings.customCalibers.length === 1 ? '' : 's'
+                } alongside the built-in list`}
+          </Text>
+          <Button
+            title="Manage Calibers"
+            onPress={() => navigation.navigate('Calibers')}
+            variant="secondary"
+            size="medium"
+            style={styles.button}
+          />
+        </Card>
+
         {/* Feedback */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Feedback</Text>

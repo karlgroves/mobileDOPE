@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
+import { setCustomCalibers, type CustomCaliber } from '../constants/calibers';
 import { isValidBarometerOffset } from '../utils/barometer';
 
 import type { ThemeMode } from '../constants/colors';
@@ -26,6 +27,13 @@ interface AppSettings {
    * safe direction; the calculator shows the terms either way.
    */
   advancedBallisticsEnabled: boolean;
+  /**
+   * Calibers the shooter added alongside the built-in list (#67). Kept with the
+   * settings rather than in SQLite: it is a short list of preferences with no
+   * relations of its own, and storing it here needs no migration. Profiles
+   * refer to a caliber by its name, as they do to the built-in ones.
+   */
+  customCalibers: CustomCaliber[];
   /**
    * How often an automatic backup is written to the device (#66). `manual`, the
    * default, writes none -- which is how the app behaved before scheduling
@@ -82,6 +90,7 @@ const defaultSettings: AppSettings = {
   hapticFeedbackEnabled: true,
   keepScreenAwakeDuringSession: true,
   advancedBallisticsEnabled: false,
+  customCalibers: [],
   backupSchedule: 'manual',
   barometerOffsetInHg: 0,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
@@ -146,14 +155,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: async (newSettings) => {
     const updatedSettings = { ...get().settings, ...newSettings };
     set({ settings: updatedSettings });
+    // The solver reads custom diameters from the caliber database, not from here.
+    if (newSettings.customCalibers) setCustomCalibers(newSettings.customCalibers);
     await saveSettingsToStorage(updatedSettings);
   },
   loadSettings: async () => {
     const settings = await loadSettingsFromStorage();
     set({ settings });
+    setCustomCalibers(settings.customCalibers);
   },
   resetSettings: async () => {
     set({ settings: defaultSettings });
+    setCustomCalibers(defaultSettings.customCalibers);
     await clearSettingsFromStorage();
   },
 

@@ -159,6 +159,7 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
       },
       Settings: 'settings',
       PrivacyPolicy: 'privacy',
+      Calibers: 'calibers',
     },
   },
 };

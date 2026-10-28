@@ -15,6 +15,8 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Settings: undefined;
   PrivacyPolicy: undefined;
+  // Settings > Manage Calibers (#67).
+  Calibers: undefined;
 };
 
 /**

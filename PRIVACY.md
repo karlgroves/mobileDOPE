@@ -27,7 +27,8 @@ storage area, readable only by the app:
 - **DOPE logs** — distance, elevation and windage corrections, hit/miss results,
   notes, and the time of the engagement.
 - **Range sessions and shot strings** — including chronograph readings.
-- **App settings** — units, distance presets, and display preferences.
+- **App settings** — units, distance presets, display preferences, and any custom
+  calibers you add.
 - **Marked targets** — where each shot of a group landed, the target's width, and,
   if you chose one, a photo of the target (see below).
 

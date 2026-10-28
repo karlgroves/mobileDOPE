@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 
 import { TextInput, NumberInput, Picker, Button } from '../components';
-import { CALIBER_OPTIONS } from '../constants/calibers';
 import { useTheme } from '../contexts/ThemeContext';
+import { useCaliberOptions } from '../hooks/useCaliberOptions';
 import { RifleProfileData } from '../models/RifleProfile';
 import { useRifleStore } from '../store/useRifleStore';
 
@@ -21,6 +21,8 @@ export const RifleProfileForm: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { theme } = useTheme();
+  // Built-in calibers and the shooter's own (#67).
+  const caliberOptions = useCaliberOptions();
   const { colors } = theme;
 
   const { rifles, createRifle, updateRifle } = useRifleStore();
@@ -158,7 +160,7 @@ export const RifleProfileForm: React.FC = () => {
         label="Caliber"
         value={caliber}
         onValueChange={setCaliber}
-        options={CALIBER_OPTIONS}
+        options={caliberOptions}
         placeholder="Select caliber"
         required
         error={errors.caliber}
