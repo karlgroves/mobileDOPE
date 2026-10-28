@@ -227,7 +227,10 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
               <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
-              <Text style={[styles.primaryValue, { color: colors.primaryText }]}>
+              <Text
+                style={[styles.primaryValue, { color: colors.primaryText }]}
+                testID="windage-value"
+              >
                 {windage.toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>

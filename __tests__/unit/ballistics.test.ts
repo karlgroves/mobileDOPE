@@ -1,6 +1,7 @@
-import { calculateTrajectory, calculateBallisticSolution } from '../../src/utils/ballistics';
-import type { RifleConfig, AmmoConfig, ShotParameters } from '../../src/types/ballistic.types';
 import { standardAtmosphere } from '../../src/utils/atmospheric';
+import { calculateTrajectory, calculateBallisticSolution } from '../../src/utils/ballistics';
+
+import type { RifleConfig, AmmoConfig, ShotParameters } from '../../src/types/ballistic.types';
 
 describe('Ballistic Calculations', () => {
   // Common test configuration - .308 Winchester 168gr BTHP
@@ -112,6 +113,24 @@ describe('Ballistic Calculations', () => {
   });
 
   describe('calculateBallisticSolution', () => {
+    /** Federal Gold Medal Match 175 gr SMK (GM308M2), as Federal publishes it. */
+    const federal: AmmoConfig = {
+      bulletWeight: 175,
+      ballisticCoefficient: 0.505,
+      dragModel: 'G1',
+      muzzleVelocity: 2600,
+    };
+
+    /** That load in a 10 mph full-value wind, standard atmosphere. */
+    const federalSolution = (distance: number, includeTrajectory = false) =>
+      calculateBallisticSolution(
+        rifle,
+        federal,
+        { distance, angle: 0, windSpeed: 10, windDirection: 90 },
+        standardAtmosphere,
+        includeTrajectory
+      );
+
     it('should calculate complete solution for target distance', () => {
       const shot: ShotParameters = {
         distance: 500,
@@ -177,6 +196,36 @@ describe('Ballistic Calculations', () => {
       // Should have windage drift
       expect(Math.abs(solution.windage)).toBeGreaterThan(10);
       expect(Math.abs(solution.windageMIL)).toBeGreaterThan(0.5);
+    });
+
+    it('drifts by the lag time, not the whole time of flight (#68)', () => {
+      // Wind deflects a bullet only by the time it LOSES to drag -- time of
+      // flight minus the time it would take at muzzle velocity (Didion). The
+      // solver used the whole time of flight, which treats the bullet as if it
+      // were blown along with the air, and overstated drift about six-fold.
+      //
+      // Federal publishes this load (Gold Medal Match 175 gr SMK, GM308M2, G1
+      // .505, 2600 fps) at 0.6 in at 100 yd and 20.3 in at 500 yd in a 10 mph
+      // full-value wind (federalpremium.com, read 2026-10-26), and 6.9 in at
+      // 300 yd. Before the fix this solver said 21.1 in and 122.5 in.
+      const drift = (distance: number) => Math.abs(federalSolution(distance).windage);
+
+      expect(Math.abs(drift(100) - 0.6)).toBeLessThan(0.5);
+      expect(Math.abs(drift(300) - 6.9)).toBeLessThan(1);
+      expect(Math.abs(drift(500) - 20.3)).toBeLessThan(1);
+    });
+
+    it("gives each trajectory point its own lag-time drift, not the target's scaled", () => {
+      // Lag-time drift grows much faster than distance, so scaling the target's
+      // drift linearly put 4.2 in on the 100 yd point of a 500 yd solve, where
+      // solving at 100 yd gives 0.8 in.
+      const trajectory = federalSolution(500, true).trajectory ?? [];
+
+      for (const yards of [100, 300]) {
+        const point = trajectory.find((p) => p.distance >= yards && p.distance < yards + 1);
+        expect(point).toBeDefined();
+        expect(point!.windage).toBeCloseTo(federalSolution(yards).windage, 1);
+      }
     });
 
     it('should calculate elevation correction in MIL', () => {

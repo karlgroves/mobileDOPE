@@ -15,7 +15,6 @@
   "ignoreDependencies": [
     "date-fns",
     "expo-image-picker",
-    "expo-sensors",
     "react-hook-form",
     "expo-updates",
     "expo-system-ui",
