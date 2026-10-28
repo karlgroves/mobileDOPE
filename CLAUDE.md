@@ -240,6 +240,10 @@ because this section said the app collected nothing while it was storing precise
   for it, and `ACTIVITY_RECOGNITION` stays blocked. (#62)
 - **User-initiated exports are the only egress.** A full JSON backup includes the
   coarsened latitude, and the export flow warns and offers to omit it.
+- **Automatic backups (#66) stay on the device** in `backups/` under the app's
+  documents directory, newest seven kept, and never contain latitude (so deleting
+  stored location data leaves no copy behind). They leave only via the user's own
+  _Share Latest Backup_.
 
 ### Constraints for new code
 

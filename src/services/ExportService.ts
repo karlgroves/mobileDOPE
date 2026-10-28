@@ -3,9 +3,15 @@
  * Handles data export in various formats (JSON, CSV, PDF)
  */
 
-import { Paths, File } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+
+import {
+  automaticBackupFilename,
+  newestAutomaticBackup,
+  selectBackupsToPrune,
+} from '../utils/backupSchedule';
 
 import type { AmmoProfile } from '../models/AmmoProfile';
 import type { DOPELog } from '../models/DOPELog';
@@ -578,6 +584,71 @@ export interface FullBackupOptions {
 }
 
 /**
+ * The full backup document, as written to disk.
+ *
+ * Shared by the manual export and the automatic backup (#66) so the two can
+ * never drift apart: a file the scheduler wrote restores through exactly the
+ * same Import > Full Backup path as one the shooter exported.
+ */
+function serialiseFullBackup(
+  rifles: RifleProfile[],
+  ammos: AmmoProfile[],
+  logs: DOPELog[],
+  environments: EnvironmentSnapshot[],
+  includeCoordinates: boolean
+): string {
+  const data = {
+    exportDate: new Date().toISOString(),
+    // 1.1 added `environments`. Without them a restored DOPE log has no environment row to
+    // reference, and since environment_id is NOT NULL with a foreign key, every log failed
+    // to import -- see issue #39. Importers must keep reading 1.0 files, but cannot
+    // recover logs from them.
+    exportVersion: '1.1',
+    type: 'full_backup',
+    data: {
+      rifles: rifles.map((r) => r.toJSON()),
+      ammos: ammos.map((a) => a.toJSON()),
+      environments: environments.map((e) => {
+        const json = e.toJSON();
+        if (includeCoordinates) return json;
+        // `id` must survive: DOPE logs reference it on restore (issue #39).
+        const { latitude: _latitude, ...withoutCoordinates } = json;
+        return withoutCoordinates;
+      }),
+      logs: logs.map((l) => l.toJSON()),
+    },
+    counts: {
+      rifles: rifles.length,
+      ammos: ammos.length,
+      environments: environments.length,
+      logs: logs.length,
+    },
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+/** Hand a full backup file to the system share sheet, where one is available. */
+async function shareBackupFile(uri: string): Promise<void> {
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Export Full Backup',
+      UTI: 'public.json',
+    });
+  }
+}
+
+/** Failure result for a caught error, in the shape every exporter returns. */
+function failure(context: string, error: unknown): ExportResult {
+  console.error(`Error ${context}:`, error);
+  return {
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error',
+  };
+}
+
+/**
  * Export full database backup (all data)
  */
 export async function exportFullBackup(
@@ -592,52 +663,112 @@ export async function exportFullBackup(
     const filename = `mobiledope_backup_${Date.now()}.json`;
     const file = new File(Paths.document, filename);
 
-    const data = {
-      exportDate: new Date().toISOString(),
-      // 1.1 added `environments`. Without them a restored DOPE log has no environment row to
-      // reference, and since environment_id is NOT NULL with a foreign key, every log failed
-      // to import -- see issue #39. Importers must keep reading 1.0 files, but cannot
-      // recover logs from them.
-      exportVersion: '1.1',
-      type: 'full_backup',
-      data: {
-        rifles: rifles.map((r) => r.toJSON()),
-        ammos: ammos.map((a) => a.toJSON()),
-        environments: environments.map((e) => {
-          const json = e.toJSON();
-          if (includeCoordinates) return json;
-          // `id` must survive: DOPE logs reference it on restore (issue #39).
-          const { latitude: _latitude, ...withoutCoordinates } = json;
-          return withoutCoordinates;
-        }),
-        logs: logs.map((l) => l.toJSON()),
-      },
-      counts: {
-        rifles: rifles.length,
-        ammos: ammos.length,
-        environments: environments.length,
-        logs: logs.length,
-      },
-    };
+    await file.write(serialiseFullBackup(rifles, ammos, logs, environments, includeCoordinates));
+    await shareBackupFile(file.uri);
 
-    await file.write(JSON.stringify(data, null, 2));
+    return { success: true, uri: file.uri };
+  } catch (error) {
+    return failure('exporting full backup', error);
+  }
+}
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (canShare) {
-      await Sharing.shareAsync(file.uri, {
-        mimeType: 'application/json',
-        dialogTitle: 'Export Full Backup',
-        UTI: 'public.json',
-      });
+/**
+ * Folder in the app's documents that holds automatic backups (#66). The same
+ * private storage area as the database itself, so it adds no new place the
+ * data can be read from.
+ */
+const automaticBackupDirectory = () => new Directory(Paths.document, 'backups');
+
+/** The files directly inside the automatic backup folder. */
+const automaticBackupFiles = (directory: Directory): File[] =>
+  directory.list().filter((entry): entry is File => entry instanceof File);
+
+/**
+ * Write an automatic full backup, then delete all but the newest
+ * `AUTOMATIC_BACKUPS_KEPT`. Nothing is shared.
+ *
+ * Latitude is always left out. The file outlives the database rows it was
+ * taken from -- Settings > Privacy > Delete Stored Location Data clears the
+ * rows, and a backup holding the latitude would quietly keep it for up to
+ * seven more runs. It would also let a later "Share Latest Backup" send the
+ * coordinates without the warning the manual export gives (#44). A restore
+ * from it is complete apart from the latitude, as with a manual backup
+ * exported without location.
+ */
+export async function saveAutomaticBackup(
+  rifles: RifleProfile[],
+  ammos: AmmoProfile[],
+  logs: DOPELog[],
+  environments: EnvironmentSnapshot[],
+  now: Date
+): Promise<ExportResult> {
+  try {
+    const directory = automaticBackupDirectory();
+    directory.create({ intermediates: true, idempotent: true });
+
+    const existing = automaticBackupFiles(directory).map((entry) => entry.name);
+    const file = new File(directory, automaticBackupFilename(now, existing));
+    await file.write(serialiseFullBackup(rifles, ammos, logs, environments, false));
+
+    const files = automaticBackupFiles(directory);
+    const stale = new Set(selectBackupsToPrune(files.map((entry) => entry.name)));
+    for (const entry of files) {
+      if (stale.has(entry.name)) entry.delete();
     }
 
     return { success: true, uri: file.uri };
   } catch (error) {
-    console.error('Error exporting full backup:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return failure('writing automatic backup', error);
+  }
+}
+
+/**
+ * Delete every automatic backup on the device (#66), leaving any other file --
+ * a manual export included -- alone.
+ *
+ * @returns How many files were deleted.
+ */
+export function deleteAutomaticBackups(): number {
+  const directory = automaticBackupDirectory();
+  if (!directory.exists) return 0;
+  const files = automaticBackupFiles(directory);
+  const automatic = new Set(
+    selectBackupsToPrune(
+      files.map((entry) => entry.name),
+      0
+    )
+  );
+  let deleted = 0;
+  for (const entry of files) {
+    if (automatic.has(entry.name)) {
+      entry.delete();
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
+/** Uri of the newest automatic backup on the device, or undefined if there is none. */
+export function latestAutomaticBackupUri(): string | undefined {
+  const directory = automaticBackupDirectory();
+  if (!directory.exists) return undefined;
+  const files = automaticBackupFiles(directory);
+  const newest = newestAutomaticBackup(files.map((entry) => entry.name));
+  return files.find((entry) => entry.name === newest)?.uri;
+}
+
+/**
+ * Share the newest automatic backup through the same share sheet as a manual
+ * export. It holds no latitude, so there is no location warning to give.
+ */
+export async function shareLatestAutomaticBackup(): Promise<ExportResult> {
+  try {
+    const uri = latestAutomaticBackupUri();
+    if (!uri) return { success: false, error: 'No automatic backup has been saved yet.' };
+    await shareBackupFile(uri);
+    return { success: true, uri };
+  } catch (error) {
+    return failure('sharing automatic backup', error);
   }
 }
 

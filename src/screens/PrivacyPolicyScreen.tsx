@@ -80,12 +80,26 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    heading: 'Automatic backups stay on this device',
+    paragraphs: [
+      'If you turn on a daily or weekly schedule in Settings › Automatic Backup, a full ' +
+        'backup is saved when you open the app and one is due. It is off unless you turn ' +
+        'it on.',
+      'It holds your profiles, readings and DOPE logs but never a latitude, and it is ' +
+        "kept in the app's private storage beside the database. The newest seven are " +
+        'kept. It leaves the device only if you tap Share Latest Backup.',
+    ],
+  },
+  {
     heading: 'Deleting your data',
     paragraphs: [
       'Settings › Privacy › Delete Stored Location Data removes the latitude from every ' +
         'stored reading and keeps the temperature, pressure and wind values.',
       'Settings › Data Management › Clear All Data removes everything.',
-      'Uninstalling the app deletes its private storage, settings included.',
+      'Choosing Manual stops new automatic backups but keeps those already saved; ' +
+        'Settings › Automatic Backup › Delete Automatic Backups removes them.',
+      'Uninstalling the app deletes its private storage, settings and automatic backups ' +
+        'included.',
     ],
   },
   {
