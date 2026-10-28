@@ -24,9 +24,9 @@ import {
   type CaliberUsage,
 } from '../services/CaliberService';
 import { useAppStore } from '../store/useAppStore';
+import { validateCustomCaliber, type CustomCaliberValidation } from '../utils/customCalibers';
 
 import type { RootStackScreenProps } from '../navigation/types';
-import type { CustomCaliberValidation } from '../utils/customCalibers';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -79,7 +79,19 @@ export const CaliberManagerScreen: React.FC<RootStackScreenProps<'Calibers'>> = 
   };
 
   const handleSave = async () => {
-    const renaming = editing !== undefined && name.trim() !== editing;
+    // Validate before asking anything: confirming a rename that is then
+    // refused would ask the shooter to agree to a change that never happens.
+    const { caliber, errors: invalid } = validateCustomCaliber(
+      { name, diameter },
+      customCalibers,
+      editing
+    );
+    if (!caliber) {
+      setErrors(invalid);
+      return;
+    }
+
+    const renaming = editing !== undefined && caliber.name !== editing;
     if (!renaming) {
       await save();
       return;
@@ -91,7 +103,7 @@ export const CaliberManagerScreen: React.FC<RootStackScreenProps<'Calibers'>> = 
     }
     Alert.alert(
       'Rename Caliber',
-      `${describeUsage(usage)} use ${editing}. They will be changed to ${name.trim()}.`,
+      `${describeUsage(usage)} use ${editing}. They will be changed to ${caliber.name}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Rename', onPress: () => save() },
@@ -99,14 +111,17 @@ export const CaliberManagerScreen: React.FC<RootStackScreenProps<'Calibers'>> = 
     );
   };
 
+  const refuseInUse = (caliber: CustomCaliber, usage: CaliberUsage) =>
+    Alert.alert(
+      'Caliber In Use',
+      `${describeUsage(usage)} ${usage.rifles + usage.ammos === 1 ? 'uses' : 'use'} ` +
+        `${caliber.name}. Change their caliber first, then delete it.`
+    );
+
   const handleDelete = async (caliber: CustomCaliber) => {
     const usage = await getCaliberUsage(caliber.name);
     if (inUse(usage)) {
-      Alert.alert(
-        'Caliber In Use',
-        `${describeUsage(usage)} ${usage.rifles + usage.ammos === 1 ? 'uses' : 'use'} ` +
-          `${caliber.name}. Change their caliber first, then delete it.`
-      );
+      refuseInUse(caliber, usage);
       return;
     }
     Alert.alert('Delete Caliber', `Delete ${caliber.name}? No profile uses it.`, [
@@ -115,8 +130,21 @@ export const CaliberManagerScreen: React.FC<RootStackScreenProps<'Calibers'>> = 
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteCustomCaliber(caliber.name);
-          if (editing === caliber.name) resetForm();
+          try {
+            // The service checks again: a profile may have taken the caliber
+            // while the confirmation was open.
+            const result = await deleteCustomCaliber(caliber.name);
+            if (!result.deleted) {
+              refuseInUse(caliber, result.usage);
+              return;
+            }
+            if (editing === caliber.name) resetForm();
+          } catch (error) {
+            Alert.alert(
+              'Error',
+              error instanceof Error ? error.message : 'Could not delete the caliber'
+            );
+          }
         },
       },
     ]);

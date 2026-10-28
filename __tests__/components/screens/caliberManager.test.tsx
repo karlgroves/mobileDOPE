@@ -159,3 +159,44 @@ it('deletes an unused caliber after confirmation', async () => {
   await choose('Delete');
   expect(remove).toHaveBeenCalledWith('6.5 Wildcat');
 });
+
+it('shows why a rename is refused without first asking to rename the profiles', async () => {
+  setCustom([wildcat]);
+  usage.mockResolvedValue({ rifles: 2, ammos: 1 });
+  const { getByLabelText, getByText, findByText } = renderScreen();
+
+  fireEvent.press(getByLabelText('Edit 6.5 Wildcat'));
+  fireEvent.changeText(getByLabelText('Caliber name'), '6.5 Creedmoor');
+  fireEvent.press(getByText('Save Changes'));
+
+  expect(await findByText('That caliber is already built in')).toBeTruthy();
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(save).not.toHaveBeenCalled();
+});
+
+it('says so when a profile took the caliber while the confirmation was open', async () => {
+  setCustom([wildcat]);
+  remove.mockResolvedValue({ deleted: false, usage: { rifles: 0, ammos: 1 } });
+  const { getByLabelText } = renderScreen();
+
+  fireEvent.press(getByLabelText('Delete 6.5 Wildcat'));
+  await waitFor(() => expect(Alert.alert).toHaveBeenCalledTimes(1));
+  await choose('Delete');
+
+  expect(Alert.alert).toHaveBeenLastCalledWith(
+    'Caliber In Use',
+    expect.stringMatching(/1 ammo profile uses 6\.5 Wildcat/)
+  );
+});
+
+it('reports a delete that could not be saved', async () => {
+  setCustom([wildcat]);
+  remove.mockRejectedValue(new Error('disk full'));
+  const { getByLabelText } = renderScreen();
+
+  fireEvent.press(getByLabelText('Delete 6.5 Wildcat'));
+  await waitFor(() => expect(Alert.alert).toHaveBeenCalledTimes(1));
+  await choose('Delete');
+
+  expect(Alert.alert).toHaveBeenLastCalledWith('Error', 'disk full');
+});
