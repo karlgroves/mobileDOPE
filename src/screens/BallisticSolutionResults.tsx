@@ -3,35 +3,29 @@
  * Displays calculated ballistic solution for a target
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Switch } from 'react-native';
 
 import { Card, Button } from '../components';
 import { AdjustmentConfidenceBadge } from '../components/AdjustmentConfidenceBadge';
 import { RelevantDopeList } from '../components/RelevantDopeList';
 import { useTheme } from '../contexts/ThemeContext';
-import { useSnapshotsFor } from '../hooks/useSnapshotsFor';
+import { useDopeAdjustment } from '../hooks/useDopeAdjustment';
 import { exportBallisticSolutionPDF } from '../services/ExportService';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
-import { adjustmentConfidence, applyConfidence } from '../utils/adjustmentConfidence';
 import {
   applyAdvancedCorrections,
   describeAdvancedCorrections,
 } from '../utils/advancedCorrections';
 import { toSolverYards } from '../utils/distanceUnits';
-import { adjustElevation, SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
-import { rankMatches } from '../utils/dopeMatching';
-import { conditionsToMatch, matchesCaption } from '../utils/matchConditions';
-import { perLogElevation } from '../utils/perLogElevation';
+import { SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
 
 import type { DOPELogData } from '../models/DOPELog';
-import type { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import type { CalculatorStackScreenProps } from '../navigation/types';
-import type { MatchableEnvironment } from '../utils/dopeMatching';
 
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
@@ -59,148 +53,39 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
 
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
-  const { current: currentEnv, saveCurrent, snapshots } = useEnvironmentStore();
-  const { createDopeLog, dopeLogs } = useDOPEStore();
-
-  /**
-   * The shooter's own logged DOPE that resembles this shot (#70).
-   *
-   * Logs carry an `environmentId` rather than the conditions themselves, so the
-   * snapshot is joined on here -- without it every log scores neutral on the
-   * environment factor and the ranking collapses to distance and recency.
-   *
-   * The store holds only recent snapshots -- the Dashboard loads one -- so each
-   * candidate log's own snapshot is loaded by id and joined over the store's
-   * (#122). Reading the store alone left nearly every log neutral.
-   */
-  const candidateLogs = useMemo(
-    () => dopeLogs.filter((log) => log.rifleId === rifleId && log.ammoId === ammoId),
-    [dopeLogs, rifleId, ammoId]
-  );
-  const loadedSnapshots = useSnapshotsFor(candidateLogs);
-
-  /**
-   * The air to rank against: what the shooter set, else the latest snapshot
-   * while it is under a day old (#187). `current` is null on a cold launch until
-   * the Environment screen is opened, and without an environment every log
-   * scores neutral on a quarter of the ranking weight. An older snapshot is not
-   * used -- it would be a wrong opinion about today's air where neutral is no
-   * opinion -- and `matchConditions.source` lets the caption say which case
-   * applied. See `conditionsToMatch`.
-   */
-  const matchConditions = useMemo(
-    () => conditionsToMatch(currentEnv, snapshots),
-    [currentEnv, snapshots]
-  );
-  const matchEnvironment = matchConditions.environment;
-
-  const relevantDope = useMemo(() => {
-    if (dopeLogs.length === 0) return [];
-
-    const environmentById = new Map<number | undefined, MatchableEnvironment>([
-      ...snapshots.map((snapshot) => [snapshot.id, snapshot] as const),
-      ...(loadedSnapshots ?? []),
-    ]);
-
-    const matchable: (DOPELogData & { environment?: MatchableEnvironment })[] = dopeLogs.map(
-      (log) => ({
-        ...log,
-        environment: environmentById.get(log.environmentId),
-      })
-    );
-
-    return rankMatches(matchable, {
-      rifleId,
-      ammoId,
-      // The solver's unit, because that is what the matcher compares against.
-      distance: toSolverYards(distance, distanceUnit),
-      environment: matchEnvironment,
-    });
-  }, [
-    dopeLogs,
-    snapshots,
-    loadedSnapshots,
-    rifleId,
-    ammoId,
-    distance,
-    distanceUnit,
-    matchEnvironment,
-  ]);
+  const { current: currentEnv, saveCurrent } = useEnvironmentStore();
+  const { createDopeLog } = useDOPEStore();
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
 
   /**
-   * Today's elevation, adjusted by what the relevant logs say the solver gets
-   * wrong for this shooter (#168).
-   *
-   * Each log's offset is measured against the solver *in that log's own air*,
-   * so the difference in density altitude between then and now is already
-   * accounted for and needs no separate term -- which is why #70 §4 is not
-   * implemented as a step of its own.
-   *
-   * `perLogElevation` builds one trajectory per snapshot rather than a full
-   * solve per log; with at most `DEFAULT_MATCH_LIMIT` matches that is a handful
-   * of solves, not the 60 that cost 660 ms on the DOPE curve (#124).
+   * Today's elevation, adjusted by what the shooter's own relevant DOPE says the
+   * solver gets wrong (#168), gated on confidence (#161). The ranking, the
+   * per-snapshot predictions and the gate live in `useDopeAdjustment`, which
+   * range session mode shares (#166). The solver's own figure is always on
+   * screen, whatever the switch says.
    */
-  const [useDopeAdjustment, setUseDopeAdjustment] = useState(true);
+  const [adjustByDope, setAdjustByDope] = useState(true);
 
-  const dopeAdjusted = useMemo(() => {
-    if (!rifle || !ammo || relevantDope.length === 0) return undefined;
-
-    // The full snapshots, not the reduced shape the matcher scores on: the
-    // solver reads humidity too, and `MatchableEnvironment` does not carry it.
-    // Same two sources `relevantDope` ranks against -- the store's recent
-    // snapshots, with each log's own loaded over the top (#122).
-    const environmentById = new Map<number, EnvironmentSnapshotData>([
-      ...snapshots.flatMap((snapshot) =>
-        snapshot.id === undefined ? [] : [[snapshot.id, snapshot] as const]
-      ),
-      ...(loadedSnapshots ?? []),
-    ]);
-
-    const predict = perLogElevation(
-      relevantDope.map(({ log }) => log),
-      rifle,
-      ammo,
-      environmentById,
-      angularUnit
-    );
-
-    return adjustElevation(relevantDope, predict, elevation, angularUnit);
-  }, [relevantDope, snapshots, loadedSnapshots, rifle, ammo, elevation, angularUnit]);
-
-  /**
-   * How much of that offset is worth applying (#161).
-   *
-   * Scales the adjustment, and below the threshold drops it entirely. It reads
-   * `rawOffset` rather than #168's already-damped `offset`: `trust` and this
-   * module's `evidence` factor both measure how much relevance-weight is
-   * behind the offset, so applying both would charge thin evidence twice. The
-   * reasoning is written out at the top of `adjustmentConfidence.ts`.
-   */
-  const confidence = useMemo(
-    () =>
-      dopeAdjusted === undefined
-        ? undefined
-        : adjustmentConfidence(dopeAdjusted, toSolverYards(distance, distanceUnit), angularUnit),
-    [dopeAdjusted, distance, distanceUnit, angularUnit]
-  );
-
-  const confident = useMemo(
-    () =>
-      dopeAdjusted === undefined || confidence === undefined
-        ? undefined
-        : applyConfidence(dopeAdjusted, confidence),
-    [dopeAdjusted, confidence]
-  );
-
-  const adjustmentApplies =
-    useDopeAdjustment &&
-    dopeAdjusted !== undefined &&
-    confident !== undefined &&
-    !confident.solverOnly;
-  const shownElevation = adjustmentApplies ? confident.adjustedElevation : elevation;
+  const {
+    relevantDope,
+    dopeAdjusted,
+    confident,
+    interpolated,
+    applied,
+    shownConfidence,
+    adjustmentApplies,
+    shownElevation,
+  } = useDopeAdjustment({
+    rifleId,
+    ammoId,
+    // The solver's unit, because that is what the matcher compares against.
+    distanceYards: toSolverYards(distance, distanceUnit),
+    solverElevation: elevation,
+    unit: angularUnit,
+    enabled: adjustByDope,
+  });
 
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -405,17 +290,17 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
               Adjust by my DOPE
             </Text>
             <Switch
-              value={useDopeAdjustment}
-              onValueChange={setUseDopeAdjustment}
+              value={adjustByDope}
+              onValueChange={setAdjustByDope}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={useDopeAdjustment ? '#ffffff' : '#f4f3f4'}
+              thumbColor={adjustByDope ? '#ffffff' : '#f4f3f4'}
               accessibilityLabel="Adjust by my DOPE"
               accessibilityHint="Off shows the solver's own elevation with no correction from your logs"
               testID="dope-adjust-switch"
             />
           </View>
 
-          {adjustmentApplies ? (
+          {applied ? (
             <View testID="dope-adjustment-summary">
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
@@ -430,19 +315,31 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                   Offset applied:
                 </Text>
                 <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                  {confident.offset >= 0 ? '+' : ''}
-                  {confident.offset.toFixed(2)} {angularUnit}
+                  {applied.offset >= 0 ? '+' : ''}
+                  {applied.offset.toFixed(2)} {angularUnit}
                 </Text>
               </View>
-              <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-                {/* Says what the logs were compared with, and claims a
-                    similarity only when one was actually judged (#187). */}
-                {matchesCaption(dopeAdjusted.contributions.length, matchConditions.source)}
+              <Text
+                style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                testID="dope-adjustment-caption"
+              >
+                {applied.caption}
               </Text>
+              {/* Past the last log there is no measurement on the far side, and
+                  the shooter should know the figure leans on one that is not
+                  here (#162). Said in words, not only a tint (WCAG 1.4.1). */}
+              {applied.extrapolated && (
+                <Text
+                  style={[styles.extrapolatedWarning, { color: colors.text.primary }]}
+                  testID="dope-extrapolated-warning"
+                >
+                  Beyond your logged distances — confirm with a sighter.
+                </Text>
+              )}
             </View>
           ) : (
             <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-              {useDopeAdjustment
+              {adjustByDope
                 ? (confident?.reason ?? dopeAdjusted?.reason ?? SOLVER_ONLY_REASON)
                 : 'Adjustment off. Showing the solver alone.'}
             </Text>
@@ -453,21 +350,34 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
               Rendered whenever there are logs to judge -- including when the
               figure was too low to apply, which is the case the shooter most
               needs the reasons for. Hidden while the switch is off, where it
-              would be describing a number that is not on screen. */}
-          {useDopeAdjustment && confidence !== undefined && confidence.contributingLogs > 0 && (
-            <View style={styles.confidenceBlock}>
-              <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
-                Confidence in this adjustment
-              </Text>
-              <AdjustmentConfidenceBadge
-                confidence={confidence}
-                solverOnly={confident?.solverOnly ?? false}
-                testID="adjustment-confidence"
-              />
-            </View>
-          )}
+              would be describing a number that is not on screen. When the
+              figure was interpolated (#162) it is that figure's confidence. */}
+          {adjustByDope &&
+            shownConfidence !== undefined &&
+            shownConfidence.contributingLogs > 0 && (
+              <View style={styles.confidenceBlock}>
+                <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                  Confidence in this adjustment
+                </Text>
+                <AdjustmentConfidenceBadge
+                  confidence={shownConfidence}
+                  solverOnly={interpolated === undefined && (confident?.solverOnly ?? false)}
+                  testID="adjustment-confidence"
+                />
+              </View>
+            )}
 
-          <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
+          <RelevantDopeList
+            matches={relevantDope}
+            emptyMessage={
+              // Set only when the interpolated offset is what the headline applied.
+              interpolated !== undefined
+                ? 'No log is close enough to this shot to compare one by one. The adjustment ' +
+                  'above was read across the distances you have logged.'
+                : undefined
+            }
+            testID="relevant-dope"
+          />
         </Card>
 
         {/* Detailed Results */}
@@ -613,6 +523,11 @@ const styles = StyleSheet.create({
   },
   matchesCaption: {
     fontSize: 12,
+    marginBottom: 8,
+  },
+  extrapolatedWarning: {
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 8,
   },
   sectionTitle: {

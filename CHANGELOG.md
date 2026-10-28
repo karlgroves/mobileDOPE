@@ -38,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one in plain words. Below 40% the solver's own figure stands and the screen
   says why, so logs that disagree with each other no longer average into a
   correction nobody measured.
+- With no log near today's distance, the solution is adjusted by the offset
+  interpolated between your logged distances either side, and says so ("Interpolated
+  between your 430 and 560 yd logs"). Past the last logged distance the nearest
+  offset is held, marked as extrapolated, and the screen asks for a sighter. The
+  confidence figure drops the further today is from a log, and across a gap wide
+  enough to be worth practising the solver's own figure stands. Only the logs
+  either side of today's distance are solved, so a long history does not slow
+  the screen.
 
 ### Fixed
 

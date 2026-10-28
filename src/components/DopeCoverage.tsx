@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { useTheme } from '../contexts/ThemeContext';
-import { coverageGaps } from '../utils/offsetInterpolation';
+import { COVERAGE_TOLERANCE_YARDS, coverageGaps } from '../utils/offsetInterpolation';
 
 import { Card } from './Card';
 
@@ -14,8 +14,9 @@ import { Card } from './Card';
  * "this recommendation was interpolated", but they can act on "you have nothing
  * between 300 and 700 yards".
  *
- * The gaps come from `coverageGaps`, so the list here and the interpolation the
- * solution screen performs are reading the same logged distances — a coverage
+ * The gaps come from `coverageGaps` at `COVERAGE_TOLERANCE_YARDS`, so the list
+ * here and the interpolation the solution screen performs are reading the same
+ * logged distances against the same tolerance — a coverage
  * display that disagreed with where the app will actually interpolate would be
  * worse than none.
  *
@@ -27,9 +28,6 @@ import { Card } from './Card';
  * the call site would duplicate the emptiness check this component already makes
  * and add a branch to a screen that is already over its complexity budget.
  */
-
-/** Gaps narrower than this are not worth a practice session. */
-export const COVERAGE_TOLERANCE_YARDS = 150;
 
 /** What the coverage summary needs: the distances that have logs. */
 export interface DopeCoverageProps {

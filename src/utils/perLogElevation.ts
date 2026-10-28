@@ -43,12 +43,21 @@ export const perLogElevation = <
     furthest.set(log.environmentId, Math.max(furthest.get(log.environmentId) ?? 0, yards));
   }
 
-  const tables = new Map(
-    [...furthest].map(([id, maxYards]) => [
-      id,
-      elevationTable(rifle, ammo, environmentById.get(id), maxYards, unit),
-    ])
-  );
+  // Built on first use, not up front. The DOPE curve asks about every log, so
+  // for it this is the same work; the interpolated offset (#162) asks only
+  // about the logs either side of one distance, and building a table for every
+  // snapshot in the history to answer that would be #124 again by another road.
+  const tables = new Map<number, ReturnType<typeof elevationTable>>();
 
-  return (log, yards) => tables.get(log.environmentId)?.(yards);
+  return (log, yards) => {
+    const maxYards = furthest.get(log.environmentId);
+    if (maxYards === undefined) return undefined;
+
+    let table = tables.get(log.environmentId);
+    if (table === undefined) {
+      table = elevationTable(rifle, ammo, environmentById.get(log.environmentId), maxYards, unit);
+      tables.set(log.environmentId, table);
+    }
+    return table(yards);
+  };
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { COVERAGE_TOLERANCE_YARDS, DopeCoverage } from '../../src/components/DopeCoverage';
+import { DopeCoverage } from '../../src/components/DopeCoverage';
+import { COVERAGE_TOLERANCE_YARDS } from '../../src/utils/offsetInterpolation';
 import { renderWithProviders } from '../helpers/renderWithProviders';
 
 /**
