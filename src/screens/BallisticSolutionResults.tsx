@@ -23,6 +23,7 @@ import {
 } from '../utils/advancedCorrections';
 import { toSolverYards } from '../utils/distanceUnits';
 import { SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
+import { calculateCrosswindComponent } from '../utils/windTable';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { CalculatorStackScreenProps } from '../navigation/types';
@@ -77,6 +78,10 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     shownConfidence,
     adjustmentApplies,
     shownElevation,
+    windage: windageAdjustment,
+    windageCaption: windageBasis,
+    windageApplies,
+    shownWindage,
   } = useDopeAdjustment({
     rifleId,
     ammoId,
@@ -85,6 +90,15 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     solverElevation: elevation,
     unit: angularUnit,
     enabled: adjustByDope,
+    // #163: the windage half, normalised by the crosswind each log was shot in.
+    // Today's crosswind comes from the same `calculateCrosswindComponent` the
+    // wind table and the solver use, from whichever air the solution was
+    // computed in.
+    solverWindage: windage,
+    crosswindMph:
+      currentEnv === null
+        ? 0
+        : calculateCrosswindComponent(currentEnv.windSpeed, currentEnv.windDirection),
   });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -226,12 +240,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
-              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
+              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>
+                {windageApplies ? 'WINDAGE (ADJUSTED)' : 'WINDAGE'}
+              </Text>
               <Text
                 style={[styles.primaryValue, { color: colors.primaryText }]}
                 testID="windage-value"
               >
-                {windage.toFixed(2)}
+                {(windageApplies ? (shownWindage ?? windage) : windage).toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -343,6 +359,52 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                 ? (confident?.reason ?? dopeAdjusted?.reason ?? SOLVER_ONLY_REASON)
                 : 'Adjustment off. Showing the solver alone.'}
             </Text>
+          )}
+
+          {/* The windage half (#163). Separate from the elevation summary above
+              because it can succeed or fail for its own reasons -- there may be
+              plenty of logs to rank and not one of them shot in a crosswind --
+              and a shooter dialling wind needs to know which. */}
+          {adjustByDope && windageAdjustment !== undefined && (
+            <View style={styles.windageBlock} testID="dope-windage">
+              {windageApplies ? (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                      Solver windage:
+                    </Text>
+                    <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                      {windageAdjustment.solverWindage.toFixed(2)} {angularUnit}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                      Windage offset:
+                    </Text>
+                    <Text
+                      style={[styles.infoValue, { color: colors.text.primary }]}
+                      testID="dope-windage-offset"
+                    >
+                      {windageAdjustment.offset >= 0 ? '+' : ''}
+                      {windageAdjustment.offset.toFixed(2)} {angularUnit}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                    testID="dope-windage-caption"
+                  >
+                    {windageBasis}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                  testID="dope-windage-caption"
+                >
+                  {windageAdjustment.reason}
+                </Text>
+              )}
+            </View>
           )}
 
           {/* Confidence in the adjustment itself (#161), as distinct from the
@@ -524,6 +586,12 @@ const styles = StyleSheet.create({
   matchesCaption: {
     fontSize: 12,
     marginBottom: 8,
+  },
+  windageBlock: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   extrapolatedWarning: {
     fontSize: 13,
