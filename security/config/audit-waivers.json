@@ -12,16 +12,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-86w9-cpqp-85rv",
-      "package": "node-forge",
-      "severity": "high",
-      "reason": "Reached only at build time through the Expo CLI (expo -> @expo/cli -> node-forge, and again via @expo/code-signing-certificates), which uses it to sign expo-updates manifests. This app declares no updates or codeSigning block in app.config.ts and never imports expo-updates, so it neither produces nor verifies a signature, and the shipped bundle contains no RSA verifier. No patched release exists at any version -- npm's only offered fix is a semver-major expo bump, which would change the SDK. Advisory: node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/169"
-    },
-    {
       "id": "GHSA-w3rx-r6r6-pgpr",
       "package": "image-size",
       "severity": "high",

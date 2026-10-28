@@ -88,26 +88,21 @@ because it also destroys the record of what was and was not examined.
 
 ## Current register
 
-### npm audit — 4 advisories, expire 2026-11-24
+### npm audit — 3 advisories, expire 2026-11-24
 
-All 4 are transitive through the React Native / Expo build toolchain, in code paths
-the shipped app does not reach. Three are DoS-class (quadratic parsing, unbounded
-recursion, unbounded memory). The fourth is not: `node-forge` (GHSA-86w9-cpqp-85rv)
-is a signature verification flaw, waived because the Expo CLI reaches it only to sign
-`expo-updates` manifests and this app configures no `updates` or `codeSigning` block
-at all — it neither produces nor verifies a signature. The compensating control for
-the rest is structural rather than procedural: **this app has no network layer**,
-issues no requests, runs no server, and parses no untrusted input except a
-user-selected import file, which has its own allowlist and adversarial test suite
+All 3 are transitive through the React Native / Expo build toolchain, in code paths
+the shipped app does not reach, and all three are DoS-class (quadratic parsing,
+unbounded recursion, unbounded memory). The compensating control is structural rather
+than procedural: **this app has no network layer**, issues no requests, runs no
+server, and parses no untrusted input except a user-selected import file, which has
+its own allowlist and adversarial test suite
 (`security/tests/import.security.spec.ts`).
 
 Full detail, per advisory, is in `security/config/audit-waivers.json`. They are listed
 there and not duplicated here so there is exactly one place to update.
 
-Disposition for 4 of the 4 is `blocked-on-upstream`: they clear when the toolchain
-ships a dependency set that resolves them. For `node-forge` (#169) that is the only route —
-it has no patched release at any version, and npm's only offered fix is a
-semver-major bump of the parent. `zod` (GHSA-mrhx-c7xc-m3w5) is the same shape for
+Disposition for 3 of the 3 is `blocked-on-upstream`: they clear when the toolchain
+ships a dependency set that resolves them. `zod` (GHSA-mrhx-c7xc-m3w5) is the shape for
 the copy that matters: the dev copy would clear on a bump to 4.6.6, but Expo's nested
 3.x copy keeps the advisory reported and npm's only offered fix is `expo` 54.0.38, a
 semver-major **downgrade** from the SDK 55 this project is on.
@@ -141,6 +136,15 @@ fixes GHSA-xjj6-f33q-929c, which was waived `fixable-now`, and the two advisorie
 published against `undici` on 2026-10-27 (GHSA-2m5v-pch6-74hx, GHSA-qrxm-fqhp-jwvm),
 which had started failing `npm run security:audit`, and so the pre-push hook, on every
 branch. The waiver was deleted rather than re-dated.
+
+It fell to 3 when `node-forge` reached 1.4.2 in the lockfile, which patches
+GHSA-86w9-cpqp-85rv. That waiver said in terms that _"no patched release exists at any
+version"_ and that a semver-major bump of the parent was npm's only offered fix. Both
+had stopped being true: a plain `npm audit fix` moved the transitive copy forward
+without touching `expo`. So the waiver was deleted rather than re-dated, and #169 is
+left open for the maintainer to close. Worth noting for the next renewal — the reason
+a `blocked-on-upstream` waiver gives is a claim about the ecosystem on the day it was
+written, and the ecosystem moves without telling you.
 
 ### Semgrep — 0 suppressions
 
