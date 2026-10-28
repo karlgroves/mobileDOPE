@@ -117,7 +117,10 @@ export const adjustByInterpolation = <T extends DOPELogData>(
     const cached = sampled.get(yards);
     if (cached !== undefined) return cached;
     const samples = (logsByYards.get(yards) ?? []).flatMap((log) => {
-      const predicted = predict(log, yards);
+      // At the log's own distance, not the rounded one it is grouped under:
+      // the same reduction the matched adjustment makes, so one log yields one
+      // offset whichever path reads it. A metric log is rarely a whole yard.
+      const predicted = predict(log, logDistanceInYards(log));
       return predicted === undefined || !Number.isFinite(predicted)
         ? []
         : [{ log, offset: elevationIn(log, unit) - predicted }];

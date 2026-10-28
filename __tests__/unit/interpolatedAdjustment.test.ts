@@ -227,6 +227,28 @@ describe('what it asks the solver (#162, #124)', () => {
     expect([...asked].sort((a, b) => a - b)).toEqual([500, 525]);
   });
 
+  it('predicts each log at its own distance, not the yard it is grouped under', () => {
+    // 400 m is 437.445 yd. The matched adjustment predicts it there; so must this.
+    const metric = Array.from({ length: 3 }, (_, i) =>
+      log(400, SOLVER + 0.2, { id: 700 + i, distanceUnit: 'meters' })
+    );
+    const asked: number[] = [];
+
+    adjustByInterpolation(
+      [...metric, ...logsAt(600, 0.2)],
+      (_log, yards) => {
+        asked.push(yards);
+        return predict();
+      },
+      500,
+      SOLVER,
+      'MIL'
+    );
+
+    expect(asked.some((yards) => Math.abs(yards - 400 / 0.9144) < 1e-9)).toBe(true);
+    expect(asked).not.toContain(437);
+  });
+
   it('steps over a distance the solver cannot predict to the next one out', () => {
     const logs = [...logsAt(400, 0.2), ...logsAt(450, 9.9), ...logsAt(600, 0.4)];
     const result = adjustByInterpolation(
