@@ -52,6 +52,14 @@ const solution = calculateBallisticSolution(
   false
 );
 
+/**
+ * One time for every log a test builds. With `new Date()` per call, two logs
+ * built a millisecond apart differ in recency, so the later one outranks the
+ * earlier and a test that relies on a tie breaking on id fails whenever the
+ * clock ticks between them -- which, on a loaded machine, it often does.
+ */
+const LOGGED_AT = new Date().toISOString();
+
 const log = (over: Partial<DOPELogData> = {}): DOPELog =>
   new DOPELog({
     id: 1,
@@ -64,7 +72,7 @@ const log = (over: Partial<DOPELogData> = {}): DOPELog =>
     windageCorrection: 0.4,
     correctionUnit: 'MIL',
     targetType: 'steel',
-    timestamp: new Date().toISOString(),
+    timestamp: LOGGED_AT,
     ...over,
   } as DOPELogData);
 
