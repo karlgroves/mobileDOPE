@@ -14,7 +14,6 @@
   "project": ["src/**/*.{ts,tsx}", "__tests__/**/*.{ts,tsx}", "security/**/*.ts"],
   "ignoreDependencies": [
     "date-fns",
-    "expo-sensors",
     "react-hook-form",
     "expo-updates",
     "expo-system-ui",

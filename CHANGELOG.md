@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- On a device with a barometer, the Environment screen offers Read Barometer,
+  which fills in station pressure from the phone's own sensor. The reading is
+  the pressure where you are standing — what the solver needs — so it is
+  converted from hPa and never corrected to sea level. A calibration offset in
+  Settings › Barometer corrects a phone that reads high or low; it applies to
+  sensor readings only, never to a pressure you type. On iPhone the first
+  reading asks for Motion & Fitness access, which is where iOS files the
+  barometer; the privacy policy says so. (#62)
 - DOPE logs record barrel state: whether the shot was a cold bore, and its
   position in the day's string. New DOPE Log suggests cold bore when the rifle
   has not fired for ten minutes, and the suggestion can be overruled or left
@@ -31,8 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   says why, so logs that disagree with each other no longer average into a
   correction nobody measured.
 - Mark Target, from DOPE Log Details: tap where each shot landed on a plain
-  target or on a photo of your own, and the shots are numbered in order, with
-  undo and clear. Enter the target's width and the group is measured as you go —
+  target or on a photo of your own, or enter its distance from the centre with
+  Add Shot by Measurement (the route for a screen reader, keyboard or switch).
+  Shots are numbered in order, with undo and clear. Enter the target's width and the group is measured as you go —
   extreme spread, mean radius, horizontal and vertical spread and CEP, in inches
   and in MOA at the log's distance. The saved target and its figures appear on
   the log, and a measurable group (two or more shots, with a width) replaces the
@@ -44,9 +53,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
-  from one. It now reads the history through the main checkout and scans the
-  worktree's own branch, so a key committed only on that branch still blocks.
-
+  from one. It now scans a temporary shared clone of the worktree instead, which
+  holds every branch and the worktree's own HEAD, so the scan covers what it
+  covers from the main checkout, and a key committed only in the worktree,
+  on its branch or at a detached HEAD, still blocks.
+- Wind corrections are about six times smaller, and now right. The solver blew
+  the bullet along with the air for its whole time of flight, so a 10 mph
+  full-value wind at 500 yards on a .308 175 gr load read 122 inches (6.8 MIL)
+  where the maker publishes 20.3 inches. It now uses the time the bullet loses
+  to drag, and agrees with the published table to within an inch. Every
+  windage figure — the solution, the wind table and the DOPE card — changes with
+  it; moving-target lead, which is time of flight alone, does not. Found by the
+  end-to-end solver test added for #68. Time of flight is now taken at the
+  target rather than at the first integration step past it (up to a millisecond
+  less), because lag time is small enough at short range for that step to
+  matter, and trajectory points each carry their own drift instead of a linear
+  share of the target's.
 - The cold-bore suggestion on New DOPE Log says why it was made, truthfully. It
   used to read "Suggested from the 10 minutes since this rifle last fired"
   whatever the real gap was — so a rifle last fired three days ago was told it

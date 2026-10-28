@@ -70,6 +70,18 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    heading: 'Barometer',
+    paragraphs: [
+      'On a device with a barometer, Read Barometer on the Environment screen takes a ' +
+        'few pressure readings, fills in station pressure and stops. Nothing reads it ' +
+        'in the background.',
+      'Only the station pressure in the field is stored, as if you had typed it. A ' +
+        'calibration offset you set in Settings is kept with your other settings.',
+      'On iPhone the first reading asks for Motion & Fitness access, because iOS files ' +
+        'the barometer there. You can decline and enter station pressure by hand.',
+    ],
+  },
+  {
     heading: 'Exports include your approximate latitude',
     paragraphs: [
       'A full JSON backup carries the rounded latitude stored with each environmental ' +
@@ -91,10 +103,15 @@ const SECTIONS: Section[] = [
   {
     heading: 'Permissions',
     paragraphs: [
-      'Location while in use is the only runtime permission this app requests. Camera, ' +
-        'photo library, microphone and motion permissions are explicitly blocked in the ' +
-        'build configuration so that bundled libraries cannot introduce them. Choosing ' +
-        'a target photo uses the system picker, which needs none of them.',
+      'Location while in use is one of two runtime permissions this app requests. The ' +
+        'other, on iPhone only, is Motion & Fitness: iOS files the barometer under it, ' +
+        'and Mobile DOPE reads only air pressure through it, when you tap Read ' +
+        'Barometer. Steps, movement and activity are never read. Android needs no ' +
+        'permission for the barometer.',
+      'Camera, photo library, microphone and Android physical-activity permissions are ' +
+        'explicitly blocked in the build configuration so that bundled libraries cannot ' +
+        'introduce them. Choosing a target photo uses the system picker, which needs ' +
+        'none of them.',
     ],
   },
 ];

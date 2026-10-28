@@ -56,6 +56,10 @@ const unit = {
   // makes it a gate rather than an opt-in script. See issue #45 item 8.
   testMatch: [
     '**/__tests__/unit/**/*.(test|spec).(ts|tsx|js)',
+    // Cross-layer suites that render nothing -- e.g. a snapshot saved through the
+    // store to real SQLite and read back into the solver (#68). The `.tsx` ones
+    // render screens and run in `components`, below; the extension is the split.
+    '**/__tests__/integration/**/*.(test|spec).ts',
     '**/security/tests/**/*.(test|spec).(ts|tsx)',
   ],
   testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
@@ -88,7 +92,11 @@ const components = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: ['**/__tests__/components/**/*.(test|spec).(ts|tsx)'],
+  testMatch: [
+    '**/__tests__/components/**/*.(test|spec).(ts|tsx)',
+    // Integration suites that drive real screens (#68). See `unit` for the `.ts` half.
+    '**/__tests__/integration/**/*.(test|spec).tsx',
+  ],
   testPathIgnorePatterns: [NODE_MODULES, '/android/', '/ios/'],
   // See the unit project above.
   globalSetup: '<rootDir>/jest.globalSetup.js',

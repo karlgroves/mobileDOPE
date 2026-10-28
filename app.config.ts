@@ -78,8 +78,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         // expo-file-system declares both up to API 32. The app writes only to its
         // own documents directory and shares through the share sheet.
         'android.permission.WRITE_EXTERNAL_STORAGE',
-        // expo-sensors declares ACTIVITY_RECOGNITION (physical activity), and
-        // nothing in src/ uses expo-sensors.
+        // expo-sensors declares ACTIVITY_RECOGNITION (physical activity) for its
+        // pedometer and device-motion modules, neither of which the app uses. The
+        // one sensor it does read, the barometer (#62), is Sensor.TYPE_PRESSURE,
+        // which Android grants without any permission -- so this stays blocked.
         'android.permission.ACTIVITY_RECOGNITION',
         // No audio capture anywhere in the app.
         'android.permission.RECORD_AUDIO',
@@ -130,9 +132,26 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           isAndroidBackgroundLocationEnabled: false,
         },
       ],
+      // The Environment screen reads the device barometer (#62). On iOS that is
+      // CMAltimeter, which Apple puts behind the Motion & Fitness permission:
+      // without NSMotionUsageDescription the app is terminated at the first read,
+      // and expo-sensors' BarometerModule.swift raises that prompt itself. The
+      // plugin form writes our string over the template's placeholder. On iOS 17.4+
+      // expo-sensors works around an OS bug by asking iOS to record 0.1 s of
+      // accelerometer data to make the prompt appear; the app never reads it.
+      // Android needs nothing: see ACTIVITY_RECOGNITION above.
+      [
+        'expo-sensors',
+        {
+          motionPermission:
+            'Mobile DOPE reads the barometer only when you tap Read Barometer, to fill ' +
+            'in station pressure for the ballistic solution. iOS lists the barometer ' +
+            'under Motion & Fitness; no movement or activity data is read or stored.',
+        },
+      ],
       // Deletes the placeholder usage descriptions Expo's iOS template seeds for
-      // camera, photo library, microphone, motion and background location -- none of
-      // which this app has code to use. Must run last so it applies after the merge.
+      // camera, photo library, microphone and background location -- none of which
+      // this app has code to use. Must run last so it applies after the merge.
       './plugins/withTrimmedIosPermissions',
     ],
   };
