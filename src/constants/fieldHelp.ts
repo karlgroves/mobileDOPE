@@ -9,8 +9,11 @@
 /**
  * Which pressure the solver wants (#89).
  *
- * Weather apps, METARs and most phone barometers report *altimeter setting* —
- * pressure corrected to sea level so pilots can compare readings. The solver
+ * Weather apps, METARs and most barometer *apps* report *altimeter setting* —
+ * pressure corrected to sea level so pilots can compare readings. (The phone's
+ * barometer sensor itself reports station pressure, which is why the
+ * Environment screen's Read Barometer fills this field without correcting it;
+ * see `src/utils/barometer.ts` and #62.) The solver
  * derives air density from temperature and pressure and needs the real pressure
  * where the shooter is standing. At 5,000 feet the two differ by roughly 5 inHg,
  * which is not a rounding error.

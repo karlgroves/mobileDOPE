@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import { setCustomCalibers, type CustomCaliber } from '../constants/calibers';
+import { isValidBarometerOffset } from '../utils/barometer';
 
 import type { ThemeMode } from '../constants/colors';
 
@@ -32,6 +33,15 @@ interface AppSettings {
    * refer to a caliber by its name, as they do to the built-in ones.
    */
   customCalibers: CustomCaliber[];
+  /**
+   * Calibration for the device barometer, in inHg, added to every reading the
+   * Environment screen takes from it (#62).
+   *
+   * Applied to the sensor reading only, never to a pressure typed by hand: it
+   * describes this handset's sensor. Zero -- uncalibrated -- by default. See
+   * `src/utils/barometer.ts` for why it is inHg and when it is added.
+   */
+  barometerOffsetInHg: number;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -72,6 +82,7 @@ const defaultSettings: AppSettings = {
   keepScreenAwakeDuringSession: true,
   advancedBallisticsEnabled: false,
   customCalibers: [],
+  barometerOffsetInHg: 0,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
@@ -98,7 +109,16 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
   try {
     const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
     if (stored) {
-      return { ...defaultSettings, ...(JSON.parse(stored) as Partial<AppSettings>) };
+      const merged = { ...defaultSettings, ...(JSON.parse(stored) as Partial<AppSettings>) };
+      // The offset is added to every barometer reading without the user seeing it
+      // again, so a corrupted or out-of-range stored value is dropped, not trusted.
+      if (
+        typeof merged.barometerOffsetInHg !== 'number' ||
+        !isValidBarometerOffset(merged.barometerOffsetInHg)
+      ) {
+        merged.barometerOffsetInHg = defaultSettings.barometerOffsetInHg;
+      }
+      return merged;
     }
     return defaultSettings;
   } catch (error) {
