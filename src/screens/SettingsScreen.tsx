@@ -26,6 +26,8 @@ import {
   exportDOPELogsCSV,
   exportDOPELogsJSON,
   exportDOPELogsPDF,
+  deleteAutomaticBackups,
+  shareLatestAutomaticBackup,
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -33,7 +35,9 @@ import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { AUTOMATIC_BACKUPS_KEPT, type BackupSchedule } from '../utils/backupSchedule';
 import { MAX_BAROMETER_OFFSET_INHG, isValidBarometerOffset } from '../utils/barometer';
+import { formatDateTime } from '../utils/formatting';
 import { MergeStrategy } from '../utils/importMerge';
 
 import type { RootStackScreenProps } from '../navigation/types';
@@ -423,6 +427,63 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  /**
+   * Share the newest automatic backup (#66). It goes through the same share
+   * sheet as a manual export; it holds no latitude, so there is no location
+   * question to ask first.
+   */
+  const handleShareAutomaticBackup = async () => {
+    const result = await shareLatestAutomaticBackup();
+    if (!result.success) {
+      Alert.alert('Error', result.error || EXPORT_FAILED);
+    }
+  };
+
+  /**
+   * Delete the automatic backups saved on this device (#66). Choosing Manual
+   * stops new ones but keeps old ones, so without this the only way to remove
+   * them would be to uninstall the app. Manual exports are not touched.
+   */
+  const handleDeleteAutomaticBackups = () => {
+    Alert.alert(
+      'Delete Automatic Backups',
+      'This deletes every automatic backup saved on this device. Your profiles, ' +
+        'readings and DOPE logs are not affected, and backups you exported yourself ' +
+        'are kept.' +
+        // The schedule is left as it is, and with no last-run time a backup is
+        // due at once: say so rather than let a new file appear unexplained.
+        (settings.backupSchedule === 'manual'
+          ? ''
+          : '\n\nYour schedule stays on, so a new backup is saved the next time the app ' +
+            'opens. Choose Manual first to stop them.') +
+        '\n\nThis cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const deleted = deleteAutomaticBackups();
+              await updateSettings({ lastAutomaticBackupAt: undefined });
+              Alert.alert(
+                'Automatic Backups Deleted',
+                deleted === 0
+                  ? 'No automatic backups were found.'
+                  : `Deleted ${deleted} automatic backup${deleted === 1 ? '' : 's'}.`
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete automatic backups'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const themeOptions = [
     { label: 'Dark', value: 'dark' },
     { label: 'Light', value: 'light' },
@@ -689,6 +750,57 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           />
         </Card>
 
+        {/* Automatic Backup (#66) */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Automatic Backup
+          </Text>
+          <Text style={[styles.privacyBlurb, { color: colors.text.secondary }]}>
+            A full backup is saved on this device when the app opens or comes back to the
+            foreground, if one is due. The newest {AUTOMATIC_BACKUPS_KEPT} are kept. Location is
+            never included, and nothing leaves the device unless you share it.
+          </Text>
+          <View style={styles.settingRow}>
+            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Schedule</Text>
+            <SegmentedControl
+              options={[
+                { label: 'Manual', value: 'manual' },
+                { label: 'Daily', value: 'daily' },
+                { label: 'Weekly', value: 'weekly' },
+              ]}
+              selectedValue={settings.backupSchedule}
+              onValueChange={async (value) => {
+                await updateSettings({ backupSchedule: value as BackupSchedule });
+              }}
+            />
+          </View>
+          <Text style={[styles.settingHelp, styles.lastBackup, { color: colors.text.secondary }]}>
+            {settings.lastAutomaticBackupAt
+              ? `Last automatic backup: ${formatDateTime(new Date(settings.lastAutomaticBackupAt))}`
+              : 'No automatic backup yet'}
+          </Text>
+          <Button
+            title="Share Latest Backup"
+            onPress={() => void handleShareAutomaticBackup()}
+            variant="secondary"
+            size="medium"
+            style={styles.button}
+            disabled={!settings.lastAutomaticBackupAt}
+            accessibilityLabel="Share latest automatic backup"
+            accessibilityHint="Opens the share sheet with the newest backup saved on this device"
+          />
+          <Button
+            title="Delete Automatic Backups"
+            onPress={handleDeleteAutomaticBackups}
+            variant="danger"
+            size="medium"
+            style={styles.button}
+            // Not gated on lastAutomaticBackupAt: files can outlive that setting
+            // (a settings reset), and the confirmation reports when there are none.
+            accessibilityHint="Asks for confirmation, then deletes the backups saved on this device"
+          />
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Data Management</Text>
@@ -743,6 +855,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  lastBackup: {
+    fontSize: 14,
+    marginBottom: 12,
   },
   privacyBlurb: {
     fontSize: 14,

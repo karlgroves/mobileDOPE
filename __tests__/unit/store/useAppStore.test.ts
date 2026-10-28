@@ -56,6 +56,15 @@ describe('useAppStore', () => {
       expect(store().settings).toMatchObject(defaults);
     });
 
+    it('backs up only on request until the shooter picks a schedule (#66)', async () => {
+      // Settings saved by a release before scheduling existed have neither field;
+      // they must load as today's behaviour, not start writing files unasked.
+      mockStorage.getItem.mockResolvedValue(JSON.stringify({ themeMode: 'light' }));
+      await store().loadSettings();
+      expect(store().settings.backupSchedule).toBe('manual');
+      expect(store().settings.lastAutomaticBackupAt).toBeUndefined();
+    });
+
     it('exposes ten distance presets from 100 to 1000', () => {
       expect(DEFAULT_DISTANCE_PRESETS).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]);
     });

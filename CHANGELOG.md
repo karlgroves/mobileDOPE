@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   profile that uses it to the new name, after saying how many; deleting one is
   refused while any profile still uses it. The built-in calibers cannot be
   changed or deleted.
+- Automatic backups on a daily or weekly schedule, chosen in Settings →
+  Automatic Backup (Manual, the default, keeps today's behaviour). With no
+  background task, a backup is written when the app opens or returns to the
+  foreground and one is due. It is the ordinary full backup without latitude,
+  saved in the app's private storage; the newest seven are kept. Settings shows
+  when the last one ran and can share the newest through the share sheet.
 - On a device with a barometer, the Environment screen offers Read Barometer,
   which fills in station pressure from the phone's own sensor. The reading is
   the pressure where you are standing — what the solver needs — so it is
@@ -45,6 +51,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one in plain words. Below 40% the solver's own figure stands and the screen
   says why, so logs that disagree with each other no longer average into a
   correction nobody measured.
+- With no log near today's distance, the solution is adjusted by the offset
+  interpolated between your logged distances either side, and says so ("Interpolated
+  between your 430 and 560 yd logs"). Past the last logged distance the nearest
+  offset is held, marked as extrapolated, and the screen asks for a sighter. The
+  confidence figure drops the further today is from a log, and across a gap wide
+  enough to be worth practising the solver's own figure stands. Only the logs
+  either side of today's distance are solved, so a long history does not slow
+  the screen.
 
 ### Fixed
 

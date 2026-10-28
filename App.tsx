@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { useAutomaticBackup } from './src/hooks/useAutomaticBackup';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { databaseService, migrationRunner } from './src/services/database';
 import { useAppStore } from './src/store';
@@ -21,6 +22,8 @@ function AppContent() {
   // AppContent sits inside ThemeProvider, so the startup screens follow the
   // saved theme like everything after them (#116).
   const { colors } = useTheme().theme;
+  // Scheduled backups (#66) start once the database is open.
+  useAutomaticBackup(isInitialized);
 
   useEffect(() => {
     const initializeApp = async () => {

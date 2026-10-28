@@ -10,6 +10,7 @@ import { setCustomCalibers, type CustomCaliber } from '../constants/calibers';
 import { isValidBarometerOffset } from '../utils/barometer';
 
 import type { ThemeMode } from '../constants/colors';
+import type { BackupSchedule } from '../utils/backupSchedule';
 
 interface AppSettings {
   defaultDistanceUnit: 'yards' | 'meters';
@@ -33,6 +34,14 @@ interface AppSettings {
    * refer to a caliber by its name, as they do to the built-in ones.
    */
   customCalibers: CustomCaliber[];
+  /**
+   * How often an automatic backup is written to the device (#66). `manual`, the
+   * default, writes none -- which is how the app behaved before scheduling
+   * existed, so an upgrade does not start creating files nobody asked for.
+   */
+  backupSchedule: BackupSchedule;
+  /** ISO time of the last automatic backup, if one has run. */
+  lastAutomaticBackupAt?: string;
   /**
    * Calibration for the device barometer, in inHg, added to every reading the
    * Environment screen takes from it (#62).
@@ -82,6 +91,7 @@ const defaultSettings: AppSettings = {
   keepScreenAwakeDuringSession: true,
   advancedBallisticsEnabled: false,
   customCalibers: [],
+  backupSchedule: 'manual',
   barometerOffsetInHg: 0,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
