@@ -449,7 +449,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       'Delete Automatic Backups',
       'This deletes every automatic backup saved on this device. Your profiles, ' +
         'readings and DOPE logs are not affected, and backups you exported yourself ' +
-        'are kept.\n\nThis cannot be undone.',
+        'are kept.' +
+        // The schedule is left as it is, and with no last-run time a backup is
+        // due at once: say so rather than let a new file appear unexplained.
+        (settings.backupSchedule === 'manual'
+          ? ''
+          : '\n\nYour schedule stays on, so a new backup is saved the next time the app ' +
+            'opens. Choose Manual first to stop them.') +
+        '\n\nThis cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

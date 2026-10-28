@@ -130,6 +130,19 @@ it('deletes automatic backups only after confirmation, and clears the last-run t
   );
 });
 
+it('says a schedule that is still on will save a new backup, and is silent on Manual', () => {
+  settle('weekly', new Date().toISOString());
+  const { getByText, unmount } = renderSettings();
+  fireEvent.press(getByText('Delete Automatic Backups'));
+  expect((Alert.alert as jest.Mock).mock.calls.at(-1)?.[1]).toMatch(/Your schedule stays on/);
+  unmount();
+
+  settle('manual', new Date().toISOString());
+  const manual = renderSettings();
+  fireEvent.press(manual.getByText('Delete Automatic Backups'));
+  expect((Alert.alert as jest.Mock).mock.calls.at(-1)?.[1]).not.toMatch(/schedule stays on/);
+});
+
 it('deletes nothing when the confirmation is cancelled', async () => {
   settle('daily', new Date().toISOString());
   const { getByText } = renderSettings();
