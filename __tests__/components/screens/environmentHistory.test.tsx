@@ -1,6 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, FlatList } from 'react-native';
 
 import { EnvironmentHistory } from '../../../src/screens/EnvironmentHistory';
 import { EnvironmentInput } from '../../../src/screens/EnvironmentInput';
@@ -120,6 +120,18 @@ describe('the saved-conditions list (#62)', () => {
     const view = renderHistory();
 
     await waitFor(() => expect(view.getByText(/Density altitude \d/)).toBeTruthy());
+  });
+
+  it('virtualises the list, because snapshots grow without limit', async () => {
+    // A reading every time the shooter goes out, for years. A ScrollView with a
+    // `.map` would mount every row before the first frame. #68's
+    // `listVirtualisation` sweep gates this across the app; this pins it here,
+    // where the screen can be seen to render only what is on screen.
+    seed([snapshot(3), snapshot(2), snapshot(1)]);
+    const view = renderHistory();
+
+    await waitFor(() => expect(view.getByTestId('snapshot-1')).toBeTruthy());
+    expect(view.UNSAFE_getByType(FlatList)).toBeTruthy();
   });
 
   it('loads the list on mount, for a deep link or a cold launch', async () => {

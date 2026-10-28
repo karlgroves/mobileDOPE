@@ -17,7 +17,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
 
 import { Card, Button, EmptyState, LoadingSpinner } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
@@ -154,161 +154,170 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
     );
   }
 
+  /**
+   * One saved reading: the row that selects it, and its actions.
+   *
+   * A `renderItem` rather than a `.map` inside a `ScrollView`, because snapshots
+   * grow without limit -- a reading every time the shooter goes out, for years.
+   * A ScrollView would mount every row before the first frame; `FlatList`
+   * mounts what is on screen. `__tests__/unit/listVirtualisation.test.ts` gates
+   * exactly this.
+   */
+  const renderSnapshot = ({ item: snapshot }: { item: (typeof snapshots)[number] }) => {
+    const id = snapshot.id;
+    if (id === undefined) return null;
+    const isSelected = selected.includes(id);
+    const summary = summariseConditions(snapshot);
+
+    return (
+      <Card key={id} style={styles.card}>
+        <Pressable
+          onPress={() => toggle(id)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isSelected }}
+          accessibilityLabel={`Conditions recorded ${recordedAt(snapshot.timestamp)}`}
+          accessibilityHint="Choose two readings to compare the air between them"
+          testID={`snapshot-${id}`}
+          style={[
+            styles.row,
+            isSelected && { borderColor: colors.primary, borderWidth: 2, borderRadius: 8 },
+          ]}
+        >
+          <View style={styles.rowHeader}>
+            <Text style={[styles.rowDate, { color: colors.text.primary }]}>
+              {recordedAt(snapshot.timestamp)}
+            </Text>
+            {/* The selection is named in words, not only drawn as a border
+                    (WCAG 1.4.1), and the accessible state carries it too. */}
+            <Text style={[styles.rowSelected, { color: colors.primaryText }]}>
+              {isSelected ? 'Selected' : ''}
+            </Text>
+          </View>
+          <Text style={[styles.rowConditions, { color: colors.text.secondary }]}>
+            {`${snapshot.temperature}°F • ${snapshot.pressure} inHg • ${snapshot.humidity}% • ${snapshot.windSpeed} mph @ ${snapshot.windDirection}°`}
+          </Text>
+          <Text style={[styles.rowDensity, { color: colors.text.secondary }]}>
+            {summary.densityAltitude === undefined
+              ? 'Density altitude unknown'
+              : `Density altitude ${Math.round(summary.densityAltitude)} ft`}
+          </Text>
+        </Pressable>
+        <View style={styles.rowActions}>
+          <Button
+            title="Edit"
+            onPress={() => navigation.navigate('EnvironmentInput', { snapshotId: id })}
+            variant="secondary"
+            size="small"
+          />
+          <Button title="Delete" onPress={() => confirmDelete(id)} variant="danger" size="small" />
+        </View>
+      </Card>
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* The comparison, once two are chosen. A headline in words rather than
-            four deltas to interpret -- see `environmentComparison`'s own
-            reasoning for why density altitude is the one figure that answers
-            "why did today not match my DOPE?". */}
-        <Card style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Compare</Text>
-          {comparison === undefined ? (
-            <Text
-              style={[styles.helpText, { color: colors.text.secondary }]}
-              testID="compare-prompt"
-            >
-              {selected.length === 0
-                ? 'Choose two readings below to see how the air changed between them.'
-                : 'Choose one more reading to compare.'}
-            </Text>
-          ) : (
-            <View testID="comparison">
-              <Text
-                style={[styles.comparisonHeadline, { color: colors.text.primary }]}
-                testID="comparison-summary"
-              >
-                {describeEnvironmentDelta(comparison.change)}
-              </Text>
-              <Text style={[styles.helpText, { color: colors.text.secondary }]}>
-                {`${recordedAt(comparison.earlier.timestamp)} → ${recordedAt(
-                  comparison.later.timestamp
-                )}`}
-              </Text>
-              {comparison.change.significant && (
+      <FlatList
+        data={snapshots}
+        keyExtractor={(snapshot) => String(snapshot.id)}
+        renderItem={renderSnapshot}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <>
+            {/* The comparison, once two are chosen. A headline in words rather than
+          four deltas to interpret -- see `environmentComparison`'s own
+          reasoning for why density altitude is the one figure that answers
+          "why did today not match my DOPE?". */}
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Compare</Text>
+              {comparison === undefined ? (
                 <Text
-                  style={[styles.significantNote, { color: colors.warningText }]}
-                  testID="comparison-significant"
+                  style={[styles.helpText, { color: colors.text.secondary }]}
+                  testID="compare-prompt"
                 >
-                  Enough to matter to a solution — expect your DOPE from the earlier day to need
-                  adjusting.
+                  {selected.length === 0
+                    ? 'Choose two readings below to see how the air changed between them.'
+                    : 'Choose one more reading to compare.'}
                 </Text>
-              )}
-              <View style={styles.deltaGrid}>
-                {[
-                  {
-                    label: 'Density altitude',
-                    value: comparison.change.densityAltitudeDelta,
-                    unit: 'ft',
-                    places: 0,
-                  },
-                  {
-                    label: 'Temperature',
-                    value: comparison.change.temperatureDelta,
-                    unit: '°F',
-                    places: 1,
-                  },
-                  {
-                    label: 'Pressure',
-                    value: comparison.change.pressureDelta,
-                    unit: 'inHg',
-                    places: 2,
-                  },
-                  {
-                    label: 'Wind',
-                    value: comparison.change.windSpeedDelta,
-                    unit: 'mph',
-                    places: 1,
-                  },
-                ].map((row) => (
-                  <View key={row.label} style={styles.deltaRow}>
-                    <Text style={[styles.deltaLabel, { color: colors.text.secondary }]}>
-                      {row.label}
+              ) : (
+                <View testID="comparison">
+                  <Text
+                    style={[styles.comparisonHeadline, { color: colors.text.primary }]}
+                    testID="comparison-summary"
+                  >
+                    {describeEnvironmentDelta(comparison.change)}
+                  </Text>
+                  <Text style={[styles.helpText, { color: colors.text.secondary }]}>
+                    {`${recordedAt(comparison.earlier.timestamp)} → ${recordedAt(
+                      comparison.later.timestamp
+                    )}`}
+                  </Text>
+                  {comparison.change.significant && (
+                    <Text
+                      style={[styles.significantNote, { color: colors.warningText }]}
+                      testID="comparison-significant"
+                    >
+                      Enough to matter to a solution — expect your DOPE from the earlier day to need
+                      adjusting.
                     </Text>
-                    <Text style={[styles.deltaValue, { color: colors.text.primary }]}>
-                      {row.value === undefined
-                        ? '—'
-                        : `${row.value >= 0 ? '+' : ''}${row.value.toFixed(row.places)} ${row.unit}`}
-                    </Text>
+                  )}
+                  <View style={styles.deltaGrid}>
+                    {[
+                      {
+                        label: 'Density altitude',
+                        value: comparison.change.densityAltitudeDelta,
+                        unit: 'ft',
+                        places: 0,
+                      },
+                      {
+                        label: 'Temperature',
+                        value: comparison.change.temperatureDelta,
+                        unit: '°F',
+                        places: 1,
+                      },
+                      {
+                        label: 'Pressure',
+                        value: comparison.change.pressureDelta,
+                        unit: 'inHg',
+                        places: 2,
+                      },
+                      {
+                        label: 'Wind',
+                        value: comparison.change.windSpeedDelta,
+                        unit: 'mph',
+                        places: 1,
+                      },
+                    ].map((row) => (
+                      <View key={row.label} style={styles.deltaRow}>
+                        <Text style={[styles.deltaLabel, { color: colors.text.secondary }]}>
+                          {row.label}
+                        </Text>
+                        <Text style={[styles.deltaValue, { color: colors.text.primary }]}>
+                          {row.value === undefined
+                            ? '—'
+                            : `${row.value >= 0 ? '+' : ''}${row.value.toFixed(row.places)} ${row.unit}`}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-              <Button
-                title="Clear Selection"
-                onPress={() => setSelected([])}
-                variant="secondary"
-                size="small"
-              />
-            </View>
-          )}
-        </Card>
-
-        {snapshots.map((snapshot) => {
-          const id = snapshot.id;
-          if (id === undefined) return null;
-          const isSelected = selected.includes(id);
-          const summary = summariseConditions(snapshot);
-
-          return (
-            <Card key={id} style={styles.card}>
-              <Pressable
-                onPress={() => toggle(id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected }}
-                accessibilityLabel={`Conditions recorded ${recordedAt(snapshot.timestamp)}`}
-                accessibilityHint="Choose two readings to compare the air between them"
-                testID={`snapshot-${id}`}
-                style={[
-                  styles.row,
-                  isSelected && { borderColor: colors.primary, borderWidth: 2, borderRadius: 8 },
-                ]}
-              >
-                <View style={styles.rowHeader}>
-                  <Text style={[styles.rowDate, { color: colors.text.primary }]}>
-                    {recordedAt(snapshot.timestamp)}
-                  </Text>
-                  {/* The selection is named in words, not only drawn as a border
-                      (WCAG 1.4.1), and the accessible state carries it too. */}
-                  <Text style={[styles.rowSelected, { color: colors.primaryText }]}>
-                    {isSelected ? 'Selected' : ''}
-                  </Text>
+                  <Button
+                    title="Clear Selection"
+                    onPress={() => setSelected([])}
+                    variant="secondary"
+                    size="small"
+                  />
                 </View>
-                <Text style={[styles.rowConditions, { color: colors.text.secondary }]}>
-                  {`${snapshot.temperature}°F • ${snapshot.pressure} inHg • ${snapshot.humidity}% • ${snapshot.windSpeed} mph @ ${snapshot.windDirection}°`}
-                </Text>
-                <Text style={[styles.rowDensity, { color: colors.text.secondary }]}>
-                  {summary.densityAltitude === undefined
-                    ? 'Density altitude unknown'
-                    : `Density altitude ${Math.round(summary.densityAltitude)} ft`}
-                </Text>
-              </Pressable>
-              <View style={styles.rowActions}>
-                <Button
-                  title="Edit"
-                  onPress={() => navigation.navigate('EnvironmentInput', { snapshotId: id })}
-                  variant="secondary"
-                  size="small"
-                />
-                <Button
-                  title="Delete"
-                  onPress={() => confirmDelete(id)}
-                  variant="danger"
-                  size="small"
-                />
-              </View>
+              )}
             </Card>
-          );
-        })}
-      </ScrollView>
+          </>
+        }
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  scrollView: {
     flex: 1,
   },
   content: {
