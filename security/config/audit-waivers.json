@@ -32,16 +32,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-xjj6-f33q-929c",
-      "package": "undici",
-      "severity": "high",
-      "reason": "Install-time only, and not in the shipped bundle. undici 6.29.0 is marked dev in package-lock.json and its sole dependent in the tree is node-gyp, which fetches prebuilt binaries while native modules are compiled on a developer machine. The app itself has no network layer at all -- PRIVACY.md and __tests__/unit/offlineFirst.test.ts both assert that there is no HTTP client anywhere under src/, and nothing under src/ references undici. A patched release above 6.29.0 exists, so this is a lockfile bump rather than a blocked upgrade; it is deferred only because dependency resolution is unavailable in the environment this waiver was written in, and it should be taken as soon as a tree can be re-resolved. Advisory: undici vulnerable to Denial of Service via unhandled error on excessive content-encodings",
-      "disposition": "fixable-now",
-      "owner": "karlgroves",
-      "expires": "2026-11-07",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
-    },
-    {
       "id": "GHSA-mrhx-c7xc-m3w5",
       "package": "zod",
       "severity": "high",
