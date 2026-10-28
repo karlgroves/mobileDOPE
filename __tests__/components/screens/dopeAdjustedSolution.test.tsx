@@ -609,6 +609,10 @@ describe('interpolating between logged distances (#162)', () => {
     expect(shown(screen)).toBeLessThanOrEqual(Number((solverElevation + 0.3).toFixed(2)));
     expect(screen.getByTestId('adjustment-confidence')).toBeTruthy();
     expect(screen.queryByTestId('dope-extrapolated-warning')).toBeNull();
+    // The list must not read as though nothing informed the headline.
+    expect(screen.getByTestId('relevant-dope').props.children).toMatch(
+      /read across the distances you have logged/
+    );
   });
 
   it('warns when the figure was held past the last logged distance', async () => {
@@ -664,5 +668,6 @@ describe('interpolating between logged distances (#162)', () => {
 
     expect(shown(screen)).toBe(SOLVER_SHOWN);
     expect(screen.queryByTestId('dope-adjustment-caption')).toBeNull();
+    expect(screen.getByTestId('relevant-dope').props.children).toMatch(/No logged DOPE close/);
   });
 });

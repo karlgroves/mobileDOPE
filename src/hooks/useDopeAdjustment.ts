@@ -212,7 +212,10 @@ export const useDopeAdjustment = ({
    * second, weaker reason for showing the solver.
    */
   const interpolated = useMemo(() => {
-    if (matchedApplies || !rifle || !ammo || candidateLogs.length === 0) return undefined;
+    // Nothing shows it while the switch is off, so nothing is solved for it.
+    if (!enabled || matchedApplies || !rifle || !ammo || candidateLogs.length === 0) {
+      return undefined;
+    }
     // Not until every candidate's own snapshot has loaded. Before then only the
     // logs whose snapshot happens to be in the store can be predicted, so the
     // bracket could be drawn from different logs and the headline would jump
@@ -237,6 +240,7 @@ export const useDopeAdjustment = ({
     );
     return result === undefined || result.solverOnly ? undefined : result;
   }, [
+    enabled,
     matchedApplies,
     rifle,
     ammo,

@@ -364,7 +364,17 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
               </View>
             )}
 
-          <RelevantDopeList matches={relevantDope} testID="relevant-dope" />
+          <RelevantDopeList
+            matches={relevantDope}
+            emptyMessage={
+              // Set only when the interpolated offset is what the headline applied.
+              interpolated !== undefined
+                ? 'No log is close enough to this shot to compare one by one. The adjustment ' +
+                  'above was read across the distances you have logged.'
+                : undefined
+            }
+            testID="relevant-dope"
+          />
         </Card>
 
         {/* Detailed Results */}
