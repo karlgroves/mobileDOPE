@@ -113,9 +113,32 @@ interface Segment {
   end: number;
 }
 
+const EOI = 0xd9;
+
 /**
- * The segment starting at `start`. Start-of-scan "ends" at the end of the file:
- * everything after it is compressed image data.
+ * Where the primary image ends: just past the first EOI after `from`, or the
+ * end of the file if it has none.
+ *
+ * Anything after that EOI is not this image. It is where an MPF/MPO file keeps
+ * its secondary images -- an iPhone HDR gain map, a depth map, a preview --
+ * each a complete JPEG with EXIF of its own, and where some cameras append
+ * trailer data. Keeping it would keep their metadata, GPS included.
+ *
+ * The first `FF D9` is the EOI: inside entropy-coded data a `0xFF` is always
+ * followed by `0x00` (byte stuffing) or a restart marker, and the markers
+ * between a progressive JPEG's scans are never D9.
+ */
+const primaryImageEnd = (bytes: Uint8Array, from: number): number => {
+  for (let i = from; i < bytes.length - 1; i++) {
+    if (bytes[i] === 0xff && bytes[i + 1] === EOI) return i + 2;
+  }
+  return bytes.length;
+};
+
+/**
+ * The segment starting at `start`. Start-of-scan "ends" at the primary image's
+ * EOI: everything up to it is compressed image data, and everything after it
+ * is dropped (see `primaryImageEnd`).
  */
 const segmentAt = (bytes: Uint8Array, start: number): Segment => {
   if (start + 1 >= bytes.length || bytes[start] !== 0xff) {
@@ -125,7 +148,9 @@ const segmentAt = (bytes: Uint8Array, start: number): Segment => {
   while (bytes[markerAt] === 0xff && markerAt < bytes.length - 1) markerAt++; // fill bytes
   const marker = bytes[markerAt];
 
-  if (marker === SOS) return { marker, start, payload: markerAt + 1, end: bytes.length };
+  if (marker === SOS) {
+    return { marker, start, payload: markerAt + 1, end: primaryImageEnd(bytes, markerAt + 1) };
+  }
   if (isStandalone(marker)) return { marker, start, payload: markerAt + 1, end: markerAt + 1 };
 
   const length = markerAt + 2 < bytes.length ? (bytes[markerAt + 1] << 8) | bytes[markerAt + 2] : 0;

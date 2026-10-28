@@ -173,6 +173,23 @@ describe('stripImageMetadata, JPEG', () => {
     expect(markers(out)).toEqual([0xdb, 0xda]);
   });
 
+  it('drops everything after the image, such as an MPF secondary image with its own EXIF', () => {
+    // An iPhone HDR photo carries a gain map as a second, complete JPEG after
+    // the first one's EOI; the secondary image has EXIF of its own.
+    const secondary = jpeg(SOI, segment(0xe1, exifPayload(6)), XMP, DQT, SOS_AND_DATA);
+    const out = stripImageMetadata(jpeg([...photo()], [...secondary]));
+
+    expect(contains(out, 'Exif')).toBe(false);
+    expect(contains(out, 'GPSLatitude')).toBe(false);
+    // The primary image itself is untouched, and ends at its own EOI.
+    expect([...out.slice(out.length - SOS_AND_DATA.length)]).toEqual(SOS_AND_DATA);
+  });
+
+  it('keeps a file with no EOI to its end, as before', () => {
+    const noEoi = jpeg(SOI, DQT, SOS_AND_DATA.slice(0, -2));
+    expect([...stripImageMetadata(noEoi)]).toEqual([...noEoi]);
+  });
+
   it('refuses a truncated file rather than writing half of one', () => {
     const whole = photo();
     expect(() => stripImageMetadata(whole.slice(0, 30))).toThrow(UnsupportedImageError);
