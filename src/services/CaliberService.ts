@@ -75,12 +75,26 @@ export type SaveCaliberResult =
   | { ok: true; caliber: CustomCaliber; renamed: CaliberUsage }
   | { ok: false; errors: CustomCaliberValidation['errors'] };
 
-/** Put the saved list back after a failed write, in the store and the solver. */
-const restoreList = (previous: CustomCaliber[]) => {
+/**
+ * Put the saved list back after a failed rename, in the store, the solver and
+ * storage.
+ *
+ * Storage too: the settings write sits inside the transaction, so if it
+ * succeeded and the COMMIT then failed, the new list is already persisted while
+ * every profile keeps the old name -- and the next launch would load a list
+ * the profiles no longer match. Best effort: if storage was what failed, it
+ * still holds the previous list and this write changes nothing.
+ */
+const restoreList = async (previous: CustomCaliber[]) => {
   useAppStore.setState((state) => ({
     settings: { ...state.settings, customCalibers: previous },
   }));
   setCustomCalibers(previous);
+  try {
+    await useAppStore.getState().updateSettings({ customCalibers: previous });
+  } catch (error) {
+    console.error('Failed to restore the saved caliber list:', error);
+  }
 };
 
 /**
@@ -118,7 +132,7 @@ export async function saveCustomCaliber(
       return changed;
     });
   } catch (error) {
-    restoreList(previous);
+    await restoreList(previous);
     throw error;
   }
 

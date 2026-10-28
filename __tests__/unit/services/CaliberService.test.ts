@@ -5,6 +5,7 @@ import {
   saveCustomCaliber,
 } from '../../../src/services/CaliberService';
 import ammoProfileRepository from '../../../src/services/database/AmmoProfileRepository';
+import databaseService from '../../../src/services/database/DatabaseService';
 import rifleProfileRepository from '../../../src/services/database/RifleProfileRepository';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
 import { useAppStore } from '../../../src/store/useAppStore';
@@ -149,6 +150,32 @@ describe('saveCustomCaliber', () => {
     expect(await caliberOf('rifle', rifleId)).toBe('6.5 Wildcat');
     expect(settings().customCalibers).toEqual([wildcat]);
     expect(caliberDiameter('6.5 Wildcat')).toBe(0.264);
+  });
+
+  it('re-saves the previous list if the transaction fails after the settings were written', async () => {
+    // The settings write succeeds inside the transaction and the COMMIT then
+    // fails: the profiles roll back, so storage must go back to the old list
+    // too, or the next launch loads a caliber no profile is on.
+    await saveCustomCaliber(wildcat);
+    const { rifleId } = await seedUsing('6.5 Wildcat');
+    const AsyncStorage = jest.requireMock('@react-native-async-storage/async-storage');
+    const db = databaseService.getDatabase();
+    const exec = db.execAsync.bind(db);
+    jest.spyOn(db, 'execAsync').mockImplementation(async (sql: string) => {
+      if (sql === 'COMMIT;') throw new Error('database is locked');
+      return exec(sql);
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(
+      saveCustomCaliber({ name: '6.5 Kestrel', diameter: 0.264 }, '6.5 Wildcat')
+    ).rejects.toThrow('database is locked');
+
+    expect(await caliberOf('rifle', rifleId)).toBe('6.5 Wildcat');
+    const stored = JSON.parse(
+      (AsyncStorage.setItem as jest.Mock).mock.calls.at(-1)?.[1] as string
+    ) as { customCalibers: unknown };
+    expect(stored.customCalibers).toEqual([wildcat]);
   });
 });
 
