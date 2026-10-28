@@ -300,6 +300,47 @@ describe('Target marking', () => {
     expect(mockDeleteTargetPhoto).toHaveBeenCalledWith('file:///documents/targets/old.jpg');
   });
 
+  it('adds a shot by measurement from the centre, without tapping', async () => {
+    // The route for a screen reader, keyboard or switch: a double-tap on the
+    // surface lands at its centre, so position has to be typed instead.
+    const screen = await render();
+    // Without a width there is nothing to turn inches into a position.
+    fireEvent.press(screen.getByText('Add Shot'));
+    expect(screen.getByTestId('target-surface').props.accessibilityLabel).toMatch(/0 shots marked/);
+
+    fireEvent.changeText(screen.getByLabelText('Target width'), '10');
+    fireEvent.press(screen.getByText('Add Shot'));
+    fireEvent.changeText(screen.getByLabelText('Right of centre'), '3');
+    fireEvent.changeText(screen.getByLabelText('Above centre'), '4');
+    fireEvent.press(screen.getByText('Add Shot'));
+
+    expect(screen.getByTestId('target-surface').props.accessibilityLabel).toMatch(/2 shots marked/);
+    const stats = within(screen.getByTestId('group-statistics'));
+    expect(stats.getByLabelText('Extreme spread, 5.00 inches, 4.77 MOA')).toBeTruthy();
+  });
+
+  it('updates the target it created when a retried save follows a failed log update', async () => {
+    updateDopeLog.mockRejectedValueOnce(new Error('database is locked'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const alert = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+    const screen = await render();
+    fireEvent.changeText(screen.getByLabelText('Target width'), '10');
+    tap(screen, 150, 150);
+    tap(screen, 180, 150);
+
+    await act(async () => {
+      fireEvent.press(screen.getByText('Save Target'));
+    });
+    expect(alert).toHaveBeenCalledWith('Error', 'Failed to save the target');
+
+    await act(async () => {
+      fireEvent.press(screen.getByText('Save Target'));
+    });
+
+    expect(targetImageRepository.create).toHaveBeenCalledTimes(1);
+    expect(targetImageRepository.update).toHaveBeenCalledWith(99, expect.anything());
+  });
+
   it('removes a saved target whose shots have all been cleared', async () => {
     const existing = new TargetImage({
       id: 42,

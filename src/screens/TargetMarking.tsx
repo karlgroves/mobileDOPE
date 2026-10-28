@@ -48,6 +48,7 @@ import {
   BUILT_IN_TARGET_URI,
   measureGroup,
   measuredGroupSize,
+  shotFromOffset,
   TARGET_TYPE,
 } from '../utils/targetMarking';
 
@@ -68,6 +69,9 @@ export function TargetMarking({ route, navigation }: Props) {
   const [markers, setMarkers] = useState<POIMarker[]>([]);
   const [widthInches, setWidthInches] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
+  // A shot entered as a measurement from the centre, for anyone not tapping.
+  const [rightInches, setRightInches] = useState<number | undefined>();
+  const [upInches, setUpInches] = useState<number | undefined>();
 
   // A photo chosen here and not yet saved. It is already a file in the app's
   // storage, so it is deleted if it is replaced or the screen is left unsaved.
@@ -96,11 +100,19 @@ export function TargetMarking({ route, navigation }: Props) {
     };
   }, [logId]);
 
-  const group = measureGroup(
-    markers,
-    { widthInches, aspectRatio: aspectRatioOf(background) },
-    log ? logDistanceInYards(log) : undefined
-  );
+  const scale = { widthInches, aspectRatio: aspectRatioOf(background) };
+  const group = measureGroup(markers, scale, log ? logDistanceInYards(log) : undefined);
+
+  const canAddByMeasurement = shotFromOffset(0, 0, scale) !== undefined;
+
+  /** Adds the shot described by the two offsets; an empty one counts as zero. */
+  const handleAddByMeasurement = () => {
+    const point = shotFromOffset(rightInches ?? 0, upInches ?? 0, scale);
+    if (!point) return;
+    setMarkers((current) => addShot(current, point));
+    setRightInches(undefined);
+    setUpInches(undefined);
+  };
 
   const discardUnsavedPhoto = () => {
     if (unsavedPhoto.current) deleteTargetPhoto(unsavedPhoto.current);
@@ -159,8 +171,13 @@ export function TargetMarking({ route, navigation }: Props) {
       aspectRatio: aspectRatioOf(background),
     };
 
-    if (existing?.id) await targetImageRepository.update(existing.id, data);
-    else await targetImageRepository.create(data);
+    if (existing?.id) {
+      await targetImageRepository.update(existing.id, data);
+    } else {
+      // Held at once: if the log update below fails, a second Save must
+      // update this row rather than create another target for the log.
+      setExisting(await targetImageRepository.create(data));
+    }
 
     releaseSavedPhoto(data.imageUri);
     unsavedPhoto.current = undefined; // saved: it is the target's photo now
@@ -239,6 +256,38 @@ export function TargetMarking({ route, navigation }: Props) {
           <GroupStatistics group={group} testID="group-statistics" />
         </Card>
 
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Add Shot by Measurement
+          </Text>
+          <Text style={[styles.instructions, { color: colors.text.secondary }]}>
+            {canAddByMeasurement
+              ? 'Measure from the centre of the target. Use negative numbers for left and below.'
+              : 'Fill in the target width above first: it is what places a measured shot.'}
+          </Text>
+          <NumberInput
+            label="Right of centre"
+            value={rightInches}
+            onChangeValue={setRightInches}
+            precision={2}
+            unit="inches"
+          />
+          <NumberInput
+            label="Above centre"
+            value={upInches}
+            onChangeValue={setUpInches}
+            precision={2}
+            unit="inches"
+          />
+          <Button
+            title="Add Shot"
+            onPress={handleAddByMeasurement}
+            variant="secondary"
+            disabled={!canAddByMeasurement}
+            accessibilityHint="Marks a shot at the measured distance from the centre"
+          />
+        </Card>
+
         <View style={styles.actions}>
           {background.kind === 'photo' ? (
             <Button
@@ -283,6 +332,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   row: {
     flexDirection: 'row',

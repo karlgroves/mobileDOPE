@@ -5,6 +5,7 @@ import {
   BUILT_IN_TARGET_URI,
   measureGroup,
   measuredGroupSize,
+  shotFromOffset,
   toTargetCoordinates,
 } from '../../src/utils/targetMarking';
 
@@ -195,5 +196,39 @@ describe('backgroundOf', () => {
     const background = backgroundOf({ targetType: 'bullseye', imageUri: BUILT_IN_TARGET_URI });
     expect(background).toEqual({ kind: 'bullseye' });
     expect(aspectRatioOf(background)).toBe(1);
+  });
+});
+
+describe('shotFromOffset', () => {
+  it('places a shot by inches right of and above the centre', () => {
+    // 10-inch square target: 1 in right is a tenth of the width, 2 in up a fifth of the height.
+    expect(shotFromOffset(1, 2, { widthInches: 10, aspectRatio: 1 })).toEqual({ x: 0.6, y: 0.3 });
+    expect(shotFromOffset(-1, -2, { widthInches: 10, aspectRatio: 1 })).toEqual({ x: 0.4, y: 0.7 });
+  });
+
+  it('measures height in the same inches on a portrait photo', () => {
+    // 8.5 x 11 portrait: 1.1 in up is a tenth of the 11-inch height.
+    const point = shotFromOffset(0, 1.1, { widthInches: 8.5, aspectRatio: 11 / 8.5 });
+    expect(point?.x).toBe(0.5);
+    expect(point?.y).toBeCloseTo(0.4, 10);
+  });
+
+  it('gives the same group a tap would, measured back through measureGroup', () => {
+    const scale = { widthInches: 10, aspectRatio: 1 };
+    const markers = [shotFromOffset(0, 0, scale), shotFromOffset(3, 4, scale)].map((p, i) => ({
+      ...(p as { x: number; y: number }),
+      shotNumber: i + 1,
+    }));
+    expect(measureGroup(markers, scale).inches?.extremeSpread).toBeCloseTo(5, 10);
+  });
+
+  it('clamps a shot measured off the target onto its edge', () => {
+    expect(shotFromOffset(20, -20, { widthInches: 10 })).toEqual({ x: 1, y: 1 });
+  });
+
+  it('places nothing without a usable width or with a non-number', () => {
+    expect(shotFromOffset(1, 1, {})).toBeUndefined();
+    expect(shotFromOffset(1, 1, { widthInches: 0 })).toBeUndefined();
+    expect(shotFromOffset(Number.NaN, 1, { widthInches: 10 })).toBeUndefined();
   });
 });

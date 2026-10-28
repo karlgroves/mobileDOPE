@@ -117,6 +117,33 @@ export const addShot = (markers: POIMarker[], point: { x: number; y: number }): 
 const usable = (value: number | undefined): value is number =>
   value !== undefined && Number.isFinite(value) && value > 0;
 
+/**
+ * A shot given as a measurement instead of a tap: inches right of and above the
+ * target's centre, negative for left and below.
+ *
+ * The way to mark without pointing. A tap's position is the whole input, and a
+ * screen reader activates the surface at its centre, so without this a
+ * VoiceOver or TalkBack user could only ever mark dead centre -- a group the
+ * statistics would then call 0.00 inches -- and a keyboard or switch user
+ * could not place a shot at all. Undefined without a usable width, which is
+ * what turns inches into a position; clamped onto the target like a tap on its
+ * edge.
+ */
+export const shotFromOffset = (
+  rightInches: number,
+  upInches: number,
+  scale: TargetScale
+): { x: number; y: number } | undefined => {
+  if (!usable(scale.widthInches) || ![rightInches, upInches].every(Number.isFinite)) {
+    return undefined;
+  }
+  const aspect = usable(scale.aspectRatio) ? scale.aspectRatio : 1;
+  return {
+    x: clamp01(0.5 + rightInches / scale.widthInches),
+    y: clamp01(0.5 - upInches / (scale.widthInches * aspect)),
+  };
+};
+
 const mapFigures = (
   figures: GroupFigures,
   convert: (value: number) => number | undefined

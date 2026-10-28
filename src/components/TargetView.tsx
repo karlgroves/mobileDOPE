@@ -121,7 +121,7 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
         onPress={handlePress}
         accessibilityRole="button"
         accessibilityLabel={`Target, ${shotsLabel(markers.length)}`}
-        accessibilityHint="Marks a shot where you tap"
+        accessibilityHint="Marks a shot where you tap. Add Shot by Measurement, below, places one without tapping."
         testID={testID}
       >
         {content}
