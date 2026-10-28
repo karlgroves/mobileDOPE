@@ -77,6 +77,24 @@ export const MIN_HEAT_SHIFT_SPREAD = 3;
 /** Below this the shift is not stated as a direction (see `describeColdBoreShift`). */
 const SHIFT_PRINT_PRECISION = 2;
 
+/**
+ * Shots into a string by which a slope must show, to be called a heat shift.
+ *
+ * #70 §6 asks for "significant heat shift (slope over threshold)" without
+ * naming the threshold. A fixed per-shot floor would need a different number
+ * in MIL and in MOA -- 0.01 MOA is roughly a third of 0.01 MIL -- and two
+ * magic numbers is how the two units come to disagree about whether a barrel
+ * is walking.
+ *
+ * So the floor is expressed as the thing the shooter actually sees: a slope
+ * counts when the shift it predicts by shot ten is large enough to *print* at
+ * {@link SHIFT_PRINT_PRECISION}. That is unit-agnostic in form, scales with
+ * whatever unit is being worked in, and cannot report a warning whose own
+ * figure rounds to zero -- which is the failure
+ * {@link describeColdBoreShift} already guards against for its half.
+ */
+export const HEAT_SHIFT_HORIZON_SHOTS = 10;
+
 /** How much the first shot from a cold barrel departs from the warm ones. */
 export interface ColdBoreBias {
   /** Cold mean minus warm mean, in the working unit. Positive = dialled more. */
@@ -209,4 +227,66 @@ export const describeColdBoreShift = (bias: ColdBoreBias, unit: 'MIL' | 'MOA'): 
   }
 
   return `Expected cold-bore shift: ${printed} ${unit} ${bias.bias > 0 ? 'low' : 'high'}`;
+};
+
+/**
+ * How far the offset has walked by `shotNumber`, on the fitted slope.
+ *
+ * Measured from shot 1, so the first shot of a string is predicted no drift —
+ * the slope describes how the string *moves*, and anchoring it anywhere else
+ * would hand the first shot a correction for heat it has not yet produced.
+ *
+ * @param heat - The fitted slope.
+ * @param shotNumber - 1-based position in the string.
+ * @returns The predicted change in offset, in the working unit. Signed.
+ */
+export const predictHeatShift = (heat: HeatShift, shotNumber: number): number =>
+  heat.perShot * (Math.max(1, shotNumber) - 1);
+
+/**
+ * Whether the fitted slope is large enough to tell the shooter about.
+ *
+ * @param heat - The fitted slope.
+ * @returns True when the shift predicted by {@link HEAT_SHIFT_HORIZON_SHOTS}
+ *   prints non-zero at the precision the warning is shown in.
+ */
+export const isSignificantHeatShift = (heat: HeatShift): boolean =>
+  Number.parseFloat(
+    Math.abs(predictHeatShift(heat, HEAT_SHIFT_HORIZON_SHOTS)).toFixed(SHIFT_PRINT_PRECISION)
+  ) !== 0;
+
+/**
+ * "Barrel heating, 0.20 MIL low expected by shot 12", in #70 §6's spirit.
+ *
+ * `undefined` when the slope is not significant, so the caller shows nothing
+ * rather than a warning about a barrel that is not measurably walking.
+ *
+ * Phrased as where the bullet goes, not which way the turret turns, for the
+ * same reason {@link describeColdBoreShift} is: a positive offset means more
+ * elevation was dialled, which is to say the shot landed low.
+ *
+ * @param heat - The fitted slope.
+ * @param shotNumber - The shot about to be taken, 1-based.
+ * @param unit - The working unit.
+ * @returns The warning, or undefined when there is nothing worth saying.
+ */
+export const describeHeatShift = (
+  heat: HeatShift,
+  shotNumber: number,
+  unit: 'MIL' | 'MOA'
+): string | undefined => {
+  if (!isSignificantHeatShift(heat)) return undefined;
+
+  const shift = predictHeatShift(heat, shotNumber);
+  const printed = Math.abs(shift).toFixed(SHIFT_PRINT_PRECISION);
+
+  // The slope is significant over ten shots but this string may be two shots
+  // in, where the figure it predicts rounds away. Saying "0.00 MIL low" would
+  // claim a direction the figure does not support, so the warning says the
+  // barrel is walking and leaves the magnitude for later shots.
+  if (Number.parseFloat(printed) === 0) {
+    return `Barrel heating: your offset walks ${Math.abs(heat.perShot).toFixed(3)} ${unit} per shot`;
+  }
+
+  return `Barrel heating: ${printed} ${unit} ${shift > 0 ? 'low' : 'high'} expected by shot ${Math.max(1, shotNumber)}`;
 };

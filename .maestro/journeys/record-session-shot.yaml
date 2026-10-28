@@ -55,9 +55,14 @@ tags:
 - assertVisible: 'Tikka T3x'
 
 # --- Record -----------------------------------------------------------------
-- tapOn: 'Increase elevation correction, mils'
-- tapOn: 'Increase elevation correction, mils'
-- tapOn: 'Adjust windage correction right, mils'
+# The unit is deliberately left off these selectors. The labels now end in the
+# shooter's chosen correction unit rather than a fixed "mils" (#166) -- the
+# screen used to say MIL whatever Settings said -- so naming a unit here would
+# make the flow depend on a setting it does not set. Maestro matches text
+# selectors as unanchored patterns, so the prefix finds the same control.
+- tapOn: 'Increase elevation correction'
+- tapOn: 'Increase elevation correction'
+- tapOn: 'Adjust windage correction right'
 
 # One tap from "corrections dialled" to "shot logged". If a confirmation step is
 # ever inserted here, this flow fails -- which is the intent.
