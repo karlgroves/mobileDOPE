@@ -67,7 +67,10 @@ export type SessionStackParamList = {
   RangeSessionStart: undefined;
   RangeSessionActive: { sessionId: number };
   RangeSessionSummary: { sessionId: number };
-  EnvironmentInput: undefined;
+  /** With a `snapshotId`, edits that saved snapshot rather than capturing a new one (#62). */
+  EnvironmentInput: { snapshotId?: number } | undefined;
+  /** Saved conditions: edit one, or compare two (#62). */
+  EnvironmentHistory: undefined;
 };
 
 /**

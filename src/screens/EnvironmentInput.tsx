@@ -27,6 +27,8 @@ import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { stationPressureFromSensor } from '../utils/barometer';
 import { coarsenLatitude } from '../utils/geoPrecision';
 
+import type { SessionStackScreenProps } from '../navigation/types';
+
 // Wind direction options in degrees
 const WIND_DIRECTION_OPTIONS = [
   { label: '0° (Headwind)', value: '0' },
@@ -71,11 +73,25 @@ const PRESETS = {
   },
 };
 
-export function EnvironmentInput() {
+type Props = Partial<SessionStackScreenProps<'EnvironmentInput'>>;
+
+export function EnvironmentInput({ route, navigation }: Props = {}) {
   const { theme } = useTheme();
   const { colors } = theme;
-  const { current, setCurrent, saveCurrent, loading } = useEnvironmentStore();
+  const { current, setCurrent, saveCurrent, updateSnapshot, snapshots, loadSnapshots, loading } =
+    useEnvironmentStore();
   const barometerOffset = useAppStore((state) => state.settings.barometerOffsetInHg);
+
+  /**
+   * The saved snapshot being edited, if any (#62).
+   *
+   * The screen captures conditions and the screen that edits them is the same
+   * one, because every field, every sensor read and every validation rule is
+   * already here -- a second form would be a second place for the station-
+   * pressure help text and the latitude-coarsening rule to be got wrong.
+   */
+  const editingId = route?.params?.snapshotId;
+  const editing = editingId !== undefined;
 
   // Environmental parameters
   const [temperature, setTemperature] = useState<number | undefined>(current?.temperature || 59);
@@ -268,6 +284,37 @@ export function EnvironmentInput() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * Fills the form from the snapshot being edited (#62).
+   *
+   * Reads it out of the store rather than the database: the history screen that
+   * navigates here has already loaded the list, and a second read would let the
+   * form show one set of figures while the list behind it showed another.
+   * Loads the list when it is empty, for a deep link or a reload.
+   */
+  useEffect(() => {
+    if (editingId === undefined) return;
+
+    const snapshot = snapshots.find((candidate) => candidate.id === editingId);
+    if (snapshot === undefined) {
+      if (snapshots.length === 0) {
+        loadSnapshots().catch((error) => {
+          console.error('Failed to load snapshots for editing:', error);
+        });
+      }
+      return;
+    }
+
+    setTemperature(snapshot.temperature);
+    setHumidity(snapshot.humidity);
+    setPressure(snapshot.pressure);
+    setAltitude(snapshot.altitude);
+    setWindSpeed(snapshot.windSpeed);
+    setWindDirection(snapshot.windDirection);
+    setLatitude(snapshot.latitude);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId, snapshots]);
+
   useEffect(() => {
     let mounted = true;
     void isBarometerAvailable().then((available) => {
@@ -320,6 +367,17 @@ export function EnvironmentInput() {
         windDirection,
         latitude,
       };
+
+      if (editing) {
+        // Deliberately does NOT touch the timestamp. It records when the
+        // conditions were measured, and #192 made the DOPE ranking depend on
+        // that: re-stamping an edited snapshot would make air measured weeks
+        // ago look minutes old, which is the defect #192 fixed in session start.
+        await updateSnapshot(editingId, data);
+        Alert.alert('Saved', 'These conditions have been updated.');
+        navigation?.goBack();
+        return;
+      }
 
       setCurrent(data);
       await saveCurrent();
@@ -519,13 +577,32 @@ export function EnvironmentInput() {
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <Button
-            title="Update Current"
-            onPress={handleUpdateCurrent}
-            variant="secondary"
-            loading={loading}
-          />
-          <Button title="Save to History" onPress={handleSave} loading={loading} />
+          {editing ? (
+            <>
+              <Text style={[styles.sectionNote, { color: colors.text.secondary }]}>
+                Editing a saved reading. Its recorded time does not change, because that is when the
+                conditions were measured.
+              </Text>
+              <Button title="Save Changes" onPress={handleSave} loading={loading} />
+            </>
+          ) : (
+            <>
+              <Button
+                title="Update Current"
+                onPress={handleUpdateCurrent}
+                variant="secondary"
+                loading={loading}
+              />
+              <Button title="Save to History" onPress={handleSave} loading={loading} />
+              {navigation !== undefined && (
+                <Button
+                  title="Saved Conditions"
+                  onPress={() => navigation.navigate('EnvironmentHistory')}
+                  variant="secondary"
+                />
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
     </View>
