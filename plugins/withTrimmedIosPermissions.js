@@ -32,8 +32,12 @@ const withTrimmedIosPermissions = (config) =>
       // Foreground location only: there is no background location code path.
       'NSLocationAlwaysUsageDescription',
       'NSLocationAlwaysAndWhenInUseUsageDescription',
-      // expo-image-picker is an unused dependency; nothing in src/ opens a camera
-      // or the photo library.
+      // No camera is opened anywhere. A target photo is chosen with
+      // expo-image-picker's library picker with editing off, which is
+      // PHPickerViewController: it runs outside the app and needs no photo-library
+      // access, so these strings would only advertise access the app never asks
+      // for (#63). Keep `allowsEditing` and `exif` off there -- see
+      // src/services/TargetPhotoService.ts.
       'NSCameraUsageDescription',
       'NSPhotoLibraryUsageDescription',
       'NSPhotoLibraryAddUsageDescription',

@@ -34,7 +34,12 @@ const saved = () =>
   });
 
 const navigation = () =>
-  ({ navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn() }) as unknown as {
+  ({
+    navigate: jest.fn(),
+    goBack: jest.fn(),
+    setOptions: jest.fn(),
+    addListener: jest.fn(() => jest.fn()),
+  }) as unknown as {
     navigate: jest.Mock;
     goBack: jest.Mock;
   };

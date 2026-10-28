@@ -3,19 +3,25 @@
  * Displays detailed information about a single DOPE log entry
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfidenceBadge } from '../components/ConfidenceBadge';
+import { GroupStatistics } from '../components/GroupStatistics';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { TargetView } from '../components/TargetView';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDopeLog } from '../hooks/useDopeLog';
+import { useTargetImages } from '../hooks/useTargetImages';
+import { deleteTargetPhoto } from '../services/TargetPhotoService';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { logDistanceInYards } from '../utils/distanceUnits';
 import { calculateConfidence } from '../utils/dopeAnalysis';
+import { backgroundOf, measureGroup } from '../utils/targetMarking';
 
 import type { LogsStackScreenProps } from '../navigation/types';
 
@@ -40,6 +46,15 @@ export function DOPELogDetail({ route, navigation }: Props) {
   // the solver -- a log that disagrees may be the most useful one there is.
   // See src/utils/dopeAnalysis.ts. (#64)
   const confidence = log ? calculateConfidence(log) : undefined;
+
+  // The target marked for this log (#63), read again whenever the screen comes
+  // back into view -- which is how a target saved on Mark Target appears here.
+  const [targetsVersion, setTargetsVersion] = useState(0);
+  useEffect(
+    () => navigation.addListener('focus', () => setTargetsVersion((v) => v + 1)),
+    [navigation]
+  );
+  const [target] = useTargetImages(logId, targetsVersion);
 
   // Set when this screen deletes the log: it is then missing on purpose, and
   // the screen is already on its way back.
@@ -68,6 +83,9 @@ export function DOPELogDetail({ route, navigation }: Props) {
           try {
             deleted.current = true;
             await deleteDopeLog(logId);
+            // The target row goes with the log by foreign-key cascade; its photo
+            // is a file, and would otherwise stay in the app's storage unseen.
+            if (target) deleteTargetPhoto(target.imageUri);
             navigation.goBack();
           } catch (_error) {
             deleted.current = false;
@@ -183,6 +201,35 @@ export function DOPELogDetail({ route, navigation }: Props) {
           </Card>
         )}
 
+        {/* Marked target (#63). Measured again from the stored marks and scale,
+            so it shows exactly what Mark Target showed. */}
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Target</Text>
+          {target && (
+            <View style={styles.target}>
+              <TargetView
+                background={backgroundOf(target)}
+                markers={target.poiMarkers}
+                testID="log-target"
+              />
+              <GroupStatistics
+                group={measureGroup(
+                  target.poiMarkers,
+                  { widthInches: target.targetWidthInches, aspectRatio: target.aspectRatio },
+                  logDistanceInYards(log)
+                )}
+                testID="log-target-statistics"
+              />
+            </View>
+          )}
+          <Button
+            title={target ? 'Edit Target' : 'Mark Target'}
+            onPress={() => navigation.navigate('TargetMarking', { logId })}
+            variant="secondary"
+            accessibilityHint="Marks where each shot of this group landed"
+          />
+        </Card>
+
         {/* Notes */}
         {log.notes && (
           <Card style={styles.card}>
@@ -266,6 +313,10 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: 12,
+  },
+  target: {
+    gap: 12,
+    marginBottom: 12,
   },
   errorText: {
     fontSize: 16,

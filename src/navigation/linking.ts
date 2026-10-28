@@ -151,6 +151,7 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
               DOPELogList: 'logs',
               DOPELogDetail: withIds('logs/:logId'),
               DOPELogEdit: withIds('logs/:logId/edit'),
+              TargetMarking: withIds('logs/:logId/target'),
               DOPECurve: withIds('curve/:rifleId/:ammoId'),
             },
           },

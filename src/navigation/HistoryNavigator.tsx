@@ -6,6 +6,7 @@ import { DOPECurve } from '../screens/DOPECurve';
 import { DOPELogDetail } from '../screens/DOPELogDetail';
 import { DOPELogEntry } from '../screens/DOPELogEntry';
 import { DOPELogList } from '../screens/DOPELogList';
+import { TargetMarking } from '../screens/TargetMarking';
 
 import { stackHeaderOptions } from './navigationTheme';
 
@@ -36,6 +37,11 @@ export const HistoryNavigator: React.FC = () => {
         })}
       />
       <Stack.Screen name="DOPECurve" component={DOPECurve} options={{ title: 'Ballistic Curve' }} />
+      <Stack.Screen
+        name="TargetMarking"
+        component={TargetMarking}
+        options={{ title: 'Mark Target' }}
+      />
     </Stack.Navigator>
   );
 };

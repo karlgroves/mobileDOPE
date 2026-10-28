@@ -112,6 +112,8 @@ export interface TargetImageRow {
   target_type: string;
   poi_markers: string; // JSON string of POI coordinates
   group_size?: number; // inches
+  target_width_inches?: number; // the target's real width; marks are fractions of it (#63)
+  aspect_ratio?: number; // image height / width
   created_at: string;
 }
 
@@ -242,6 +244,8 @@ export const DB_SCHEMA = {
       target_type TEXT NOT NULL,
       poi_markers TEXT NOT NULL,
       group_size REAL,
+      target_width_inches REAL,
+      aspect_ratio REAL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (dope_log_id) REFERENCES dope_logs(id) ON DELETE CASCADE,
       FOREIGN KEY (range_session_id) REFERENCES range_sessions(id) ON DELETE CASCADE
