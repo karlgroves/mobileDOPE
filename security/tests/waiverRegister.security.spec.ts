@@ -81,13 +81,14 @@ describe('the security register matches the waiver file', () => {
     }
   });
 
-  it('states how many are blocked on upstream, which is no longer all of them', () => {
-    // Once one waiver is `fixable-now` the register stops being able to say
-    // "all N are blocked on upstream", and that distinction is the whole point
-    // of the disposition field -- a debt with a date on it reads differently
-    // from a decision. So the split is guarded too, not just the total.
+  it('states how many are blocked on upstream', () => {
+    // While a waiver is `fixable-now` the register cannot say "all N are
+    // blocked on upstream", and that distinction is the whole point of the
+    // disposition field -- a debt with a date on it reads differently from a
+    // decision. So the split is guarded too, not just the total. It is not
+    // pinned below the total: when the last `fixable-now` waiver is fixed
+    // (undici, 6.29.1) every remaining one is blocked on upstream.
     expect(statedCount(/Disposition for (\d+) of the (\d+) is/)).toBe(blockedOnUpstream);
-    expect(blockedOnUpstream).toBeLessThan(waivers.length);
   });
 
   it('points every waiver at a tracking issue in this repository', () => {

@@ -78,6 +78,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The DOPE log CSV has a `Distance Unit` column. Each log keeps its own
   distance unit, so a distance of 500 could have been yards or meters.
 
+### Security
+
+- Dependency advisories cleared: `undici` GHSA-2m5v-pch6-74hx,
+  GHSA-qrxm-fqhp-jwvm and GHSA-xjj6-f33q-929c, by updating it to 6.29.1
+  (#200). It is install-time only, through node-gyp. The first two were new
+  and failed the audit gate; the third had been waived `fixable-now`, and its
+  waiver is removed.
+
 ## [1.1.0] - 2026-09-30
 
 A feature release: your own logged DOPE now shapes what the app shows you,
