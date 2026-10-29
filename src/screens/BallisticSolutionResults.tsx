@@ -502,15 +502,29 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             style={styles.button}
             disabled={isSaving}
           />
-          {/* Only when the two differ. With the adjustment off or unapplied the
-              headline already *is* the stored figure, and a note drawing a
-              distinction would be describing one that is not there (#185). */}
-          {adjustmentApplies && (
+          {/* Only when a headline figure differs from the stored one. With the
+              adjustment off or unapplied the headline already *is* what gets
+              stored, and a note drawing a distinction would be describing one
+              that is not there (#185). Covers windage as well as elevation:
+              #163 made the windage headline adjustable too, and a figure shown
+              as adjusted while a different one is saved is the exact condition
+              #185 was filed over. */}
+          {(adjustmentApplies || windageApplies) && (
             <Text
               style={[styles.saveNote, { color: colors.text.secondary }]}
               testID="save-records-note"
             >
-              {`Saves the solver's ${elevation.toFixed(2)} ${angularUnit}, not the adjusted ${shownElevation.toFixed(2)}. Your logs are measured against the solver, so storing the adjusted figure would fold the offset in twice.`}
+              {[
+                adjustmentApplies
+                  ? `Saves the solver's ${elevation.toFixed(2)} ${angularUnit} elevation, not the adjusted ${shownElevation.toFixed(2)}.`
+                  : undefined,
+                windageApplies
+                  ? `Saves the solver's ${windage.toFixed(2)} ${angularUnit} windage, not the adjusted ${(shownWindage ?? windage).toFixed(2)}.`
+                  : undefined,
+                'Your logs are measured against the solver, so storing an adjusted figure would fold the offset in twice.',
+              ]
+                .filter((part) => part !== undefined)
+                .join(' ')}
             </Text>
           )}
           <Button

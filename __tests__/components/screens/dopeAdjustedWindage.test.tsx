@@ -251,6 +251,22 @@ describe('the solution screen’s windage (#163)', () => {
     );
   });
 
+  it('says the save stores the solver’s windage, not the adjusted one', async () => {
+    // #185 was filed because the headline showed an adjusted figure while the
+    // save stored a different one and nothing said so. #163 made the windage
+    // headline adjustable too, so the note has to cover it or the same gap
+    // reopens for the other half.
+    seed(windyLogs(6, 0.01));
+    const view = renderSolution();
+
+    await waitFor(() => expect(view.getByText('WINDAGE (ADJUSTED)')).toBeTruthy());
+
+    const note = view.getByTestId('save-records-note').props.children as string;
+    expect(note).toMatch(/windage/);
+    expect(note).toContain(solution.windageMIL.toFixed(2));
+    expect(note).toMatch(/measured against the solver/);
+  });
+
   it('returns the solver’s windage when the switch is turned off', async () => {
     seed(windyLogs(6, 0.01));
     const view = renderSolution();
