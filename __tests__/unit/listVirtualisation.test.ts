@@ -107,11 +107,20 @@ describe('unbounded lists are virtualised (#68)', () => {
     }
   });
 
-  it('renders no unbounded collection through a plain ScrollView', () => {
+  it('maps no unbounded collection into elements, which is what a ScrollView row is', () => {
+    // Deliberately NOT filtered to files that contain `ScrollView`, and NOT
+    // skipping files that mention a virtualised component. Both filters were
+    // per-FILE, so a screen that used a `FlatList` for one list and mapped
+    // `dopeLogs` into rows for another passed the gate silently -- verified with
+    // a positive control: the identical violation is caught in a file with no
+    // `FlatList` and missed in one that has it anywhere.
+    //
+    // The narrower rule is also the more accurate one. A virtualised list takes
+    // `data` and `renderItem`; it never maps the collection into elements
+    // itself. So mapping an unbounded collection into JSX in a screen or
+    // component IS the thing being prohibited, whatever else the file contains.
     const offenders = sources
       .filter(([file]) => file.startsWith('screens') || file.startsWith('components'))
-      .filter(([, source]) => /\bScrollView\b/.test(source))
-      .filter(([, source]) => !VIRTUALISED.test(source))
       .flatMap(([file, source]) => rendersUnbounded(source).map((name) => `${file}: ${name}`))
       .sort();
 
