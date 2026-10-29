@@ -171,6 +171,23 @@ const shown = (screen: ReturnType<typeof render>): number =>
 /** `solverElevation` rounded the way the screen rounds it. */
 const SOLVER_SHOWN = Number(solverElevation.toFixed(2));
 
+/**
+ * Every case here renders the screen and runs the **real** solver once per
+ * seeded log, which is seconds rather than milliseconds -- and the interpolated
+ * cases (#162) seed logs either side of the shot, so they solve twice over.
+ *
+ * In isolation they take 1.2-1.7 s and the default 5 s held. Under a full-suite
+ * run they are scheduled alongside every other component suite on the same
+ * cores, and #162's five cases began timing out: a pass that depended on how
+ * busy the machine was, which is not a test result. #163 added another
+ * solver-backed screen suite and tipped it over for good.
+ *
+ * Raised rather than papered over with mocks: what these cases are for is that
+ * the screen reaches the right figure through the real arithmetic, and a
+ * stand-in solver would assert the wiring without asserting that.
+ */
+jest.setTimeout(60_000);
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});

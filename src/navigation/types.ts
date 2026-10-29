@@ -95,6 +95,14 @@ export type CalculatorStackParamList = {
     distance: number;
     distanceUnit: 'yards' | 'meters';
     angularUnit: 'MIL' | 'MOA';
+    /**
+     * The wind the solution was solved in, mph and degrees (#163). The
+     * calculator's wind is its own input, separate from the environment store,
+     * so the windage offset has to be scaled by this one. Optional: absent, the
+     * environment store's wind is used.
+     */
+    windSpeed?: number;
+    windDirection?: number;
   };
   WindTable: { rifleId: number; ammoId: number; distance: number };
   MovingTargetCalculator: { rifleId?: number; ammoId?: number };

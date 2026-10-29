@@ -81,6 +81,51 @@ export const predictElevation = (
 };
 
 /**
+ * The crosswind used to measure the solver's windage per mph (#163).
+ *
+ * Ten mph at 90 degrees: a full-value wind, large enough that the figure is not
+ * dominated by the solver's own rounding, and the number every shooter already
+ * thinks in. The result is divided by it, so the choice does not matter to the
+ * answer -- see `solverInputs.test.ts`, which asserts the solver's windage is
+ * linear in crosswind to within a tenth of a percent across 1-20 mph, which is
+ * what makes a single per-mph figure a legitimate description of it.
+ */
+export const WINDAGE_REFERENCE_MPH = 10;
+
+/**
+ * The solver's windage correction at `yards`, per mph of full-value crosswind.
+ *
+ * Windage drift is linear in crosswind speed in a point-mass model -- the
+ * lateral acceleration is proportional to the crosswind component -- so one
+ * solve at a reference wind describes every wind speed. #163 needs exactly this
+ * figure: "the solver's windage per mph for that log", to subtract from the
+ * shooter's own dialled windage per mph.
+ *
+ * @param rifle - The rifle profile fields the solver reads.
+ * @param ammo - The ammunition profile fields the solver reads.
+ * @param yards - Distance to the target.
+ * @param env - The conditions, or undefined for the standard atmosphere.
+ * @param unit - The working unit.
+ * @returns Windage correction per mph of crosswind, signed as the solver signs it.
+ */
+export const predictWindagePerMph = (
+  rifle: RifleFields,
+  ammo: AmmoFields,
+  yards: number,
+  env: ConditionFields | undefined,
+  unit: 'MIL' | 'MOA'
+): number => {
+  const solution = calculateBallisticSolution(
+    rifleConfigFor(rifle),
+    ammoConfigFor(ammo),
+    { distance: yards, angle: 0, windSpeed: WINDAGE_REFERENCE_MPH, windDirection: 90 },
+    atmosphereFor(env)
+  );
+  const windage = unit === 'MIL' ? solution.windageMIL : solution.windageMOA;
+  return windage / WINDAGE_REFERENCE_MPH;
+};
+
+/**
  * The solver's elevation at any distance up to `maxYards`, from one trajectory.
  *
  * `predictElevation` runs a full solve -- a zero-angle search plus a trajectory
