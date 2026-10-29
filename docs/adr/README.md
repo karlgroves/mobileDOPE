@@ -60,6 +60,7 @@ What becomes easier or more difficult to do because of this change?
 11. [ADR-011: Local-gate-first; no new GitHub Actions, Dependabot, or CodeQL](./011-local-gate-first-no-new-actions.md)
 12. [ADR-012: Upgrade to Expo SDK 55 rather than reverting to SDK 54](./012-target-expo-sdk-55.md)
 13. [ADR-013: Replace jest-worker's force-exit warning rather than chase it](./013-jest-worker-force-exit.md)
+14. [ADR-014: Crash reporting — a local-only crash log, not an SDK](./014-crash-reporting-local-only.md) — **Proposed**
 
 ## Contributing
 

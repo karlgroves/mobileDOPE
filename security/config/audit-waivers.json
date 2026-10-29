@@ -12,16 +12,6 @@
       "tracking": "https://github.com/karlgroves/mobileDOPE/issues/45"
     },
     {
-      "id": "GHSA-86w9-cpqp-85rv",
-      "package": "node-forge",
-      "severity": "high",
-      "reason": "Reached only at build time through the Expo CLI (expo -> @expo/cli -> node-forge, and again via @expo/code-signing-certificates), which uses it to sign expo-updates manifests. This app declares no updates or codeSigning block in app.config.ts and never imports expo-updates, so it neither produces nor verifies a signature, and the shipped bundle contains no RSA verifier. No patched release exists at any version -- npm's only offered fix is a semver-major expo bump, which would change the SDK. Advisory: node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
-      "disposition": "blocked-on-upstream",
-      "owner": "karlgroves",
-      "expires": "2026-11-24",
-      "tracking": "https://github.com/karlgroves/mobileDOPE/issues/169"
-    },
-    {
       "id": "GHSA-w3rx-r6r6-pgpr",
       "package": "image-size",
       "severity": "high",
@@ -35,7 +25,7 @@
       "id": "GHSA-mrhx-c7xc-m3w5",
       "package": "zod",
       "severity": "high",
-      "reason": "Two copies, neither reachable from the app. node_modules/zod 4.6.5 is marked dev and is pulled in by eslint-plugin-react-hooks, knip and zod-validation-error -- lint and dead-code tooling, which parse this repository's own source and configuration. node_modules/expo/node_modules/zod 3.25.76 comes from @expo/cli and runs only while a build is produced. Nothing under src/ imports zod, so the shipped bundle contains no Zod validator and no oversized collection reaches one. The dev copy would clear on a bump to 4.6.6, but the advisory stays reported until Expo's nested 3.x copy moves: npm's only offered fix is expo 54.0.38, a semver-major downgrade from the SDK 55 this project is on -- the same position as the node-forge waiver above. Advisory: Zod can exhaust memory while validating oversized constrained collections",
+      "reason": "Two copies, neither reachable from the app. node_modules/zod 4.6.7 is marked dev and is pulled in by eslint-plugin-react-hooks, knip and zod-validation-error -- lint and dead-code tooling, which parse this repository's own source and configuration. node_modules/expo/node_modules/zod 3.25.76 comes from @expo/cli and runs only while a build is produced. Nothing under src/ imports zod, so the shipped bundle contains no Zod validator and no oversized collection reaches one. The dev copy is past the 4.6.6 fix, but the advisory stays reported until Expo's nested 3.x copy moves: npm's only offered fix is expo 51.0.39, a semver-major downgrade from the SDK 55 this project is on. Advisory: Zod can exhaust memory while validating oversized constrained collections",
       "disposition": "blocked-on-upstream",
       "owner": "karlgroves",
       "expires": "2026-11-24",
