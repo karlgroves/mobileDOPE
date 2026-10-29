@@ -127,7 +127,7 @@ It then moved again, in both directions at once. `braces`
 (GHSA-vfj7-8cjw-p6xm, #170) **was withdrawn upstream** on 2026-10-23 and is no longer
 reported at all, so its waiver was deleted rather than re-dated — a withdrawn advisory
 is not a waived one, and leaving the entry in place would have claimed a review of
-something that no longer exists. Issue #170 is left open for the maintainer to close.
+something that no longer exists. Issue #170 was closed on 2026-10-20.
 In the same advisory-database refresh `undici` returned under a second id and `zod`
 appeared for the first time, which is why the net count went from 4 to 5.
 
@@ -141,8 +141,10 @@ It fell to 3 when `node-forge` reached 1.4.2 in the lockfile, which patches
 GHSA-86w9-cpqp-85rv. That waiver said in terms that _"no patched release exists at any
 version"_ and that a semver-major bump of the parent was npm's only offered fix. Both
 had stopped being true: a plain `npm audit fix` moved the transitive copy forward
-without touching `expo`. So the waiver was deleted rather than re-dated, and #169 is
-left open for the maintainer to close. Worth noting for the next renewal — the reason
+without touching `expo`. So the waiver was deleted rather than re-dated. #169 was
+already closed, on 2026-10-20, eight days before the waiver tracking it came off file --
+`waiverRegister.security.spec.ts` checks that a waiver points at an issue in this
+repository, not that the issue is still open. Worth noting for the next renewal — the reason
 a `blocked-on-upstream` waiver gives is a claim about the ecosystem on the day it was
 written, and the ecosystem moves without telling you.
 
