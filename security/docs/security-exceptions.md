@@ -103,8 +103,8 @@ there and not duplicated here so there is exactly one place to update.
 
 Disposition for 3 of the 3 is `blocked-on-upstream`: they clear when the toolchain
 ships a dependency set that resolves them. `zod` (GHSA-mrhx-c7xc-m3w5) is the shape for
-the copy that matters: the dev copy would clear on a bump to 4.6.6, but Expo's nested
-3.x copy keeps the advisory reported and npm's only offered fix is `expo` 54.0.38, a
+the copy that matters: the dev copy is already past the 4.6.6 fix, but Expo's nested
+3.x copy keeps the advisory reported and npm's only offered fix is `expo` 51.0.39, a
 semver-major **downgrade** from the SDK 55 this project is on.
 
 `npm run security:audit` fails the moment a new advisory appears that is not on that
@@ -142,7 +142,7 @@ GHSA-86w9-cpqp-85rv. That waiver said in terms that _"no patched release exists 
 version"_ and that a semver-major bump of the parent was npm's only offered fix. Both
 had stopped being true: a plain `npm audit fix` moved the transitive copy forward
 without touching `expo`. So the waiver was deleted rather than re-dated. #169 was
-already closed, on 2026-10-20, eight days before the waiver tracking it came off file --
+already closed, on 2026-10-20, eight days before the waiver tracking it came off file —
 `waiverRegister.security.spec.ts` checks that a waiver points at an issue in this
 repository, not that the issue is still open. Worth noting for the next renewal — the reason
 a `blocked-on-upstream` waiver gives is a claim about the ecosystem on the day it was
