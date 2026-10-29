@@ -10,6 +10,7 @@ import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { conditionsToMatch, describeSnapshotAge } from '../utils/matchConditions';
 
+import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
 import type { SessionStackScreenProps } from '../navigation/types';
 
 type Props = SessionStackScreenProps<'RangeSessionStart'>;
@@ -108,8 +109,13 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
    *
    * @param source - The snapshot the session's conditions are taken from.
    */
-  async function startWith(source: typeof latestSnapshot): Promise<void> {
-    if (!selectedRifleId || !selectedAmmoId || !source) return;
+  async function startWith(source: EnvironmentSnapshot): Promise<void> {
+    if (!selectedRifleId || !selectedAmmoId) {
+      // Both callers check first, so reaching this means state changed under an
+      // open alert. Say so rather than dismissing to nothing.
+      Alert.alert('Missing Selection', 'Please select both a rifle and ammunition profile.');
+      return;
+    }
 
     setIsStarting(true);
 
