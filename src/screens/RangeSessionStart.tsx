@@ -111,8 +111,9 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
    */
   async function startWith(source: EnvironmentSnapshot): Promise<void> {
     if (!selectedRifleId || !selectedAmmoId) {
-      // Both callers check first, so reaching this means state changed under an
-      // open alert. Say so rather than dismissing to nothing.
+      // Unreachable: both callers check first, and the alert's onPress closes
+      // over this render's selection. The guard narrows the ids for the calls
+      // below; if it ever fires, say so rather than dismissing to nothing.
       Alert.alert('Missing Selection', 'Please select both a rifle and ammunition profile.');
       return;
     }
