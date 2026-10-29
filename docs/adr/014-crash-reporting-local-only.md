@@ -98,9 +98,10 @@ In scope, in this order:
 Strike the monitoring section from #61, record the decision, and name the
 honest fallback: users tell us, and the local Husky gate of ADR-011 is where
 defects are meant to be caught instead — lint, staged type-check and a
-trufflehog secret scan on every commit; lint, types, duplication, knip,
-`npm audit`, semgrep (when installed) and trufflehog on every push. The test
-suite is not in either hook; it runs in `npm run check:all`.
+trufflehog secret scan on every commit; lint, types, markdownlint,
+duplication, knip, `npm audit`, osv-scanner and semgrep (each when installed)
+and trufflehog on every push. The test suite is not in either hook; it runs in
+`npm run check:all`.
 
 **Real cost:** when a shooter says "it crashed", there is nothing to look at.
 That is the gap, and it is a real one.
