@@ -17,7 +17,7 @@ What currently says no:
 | where              | what it says                                                                                                                                                                                                |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PRIVACY.md:8`     | _"Mobile DOPE has no network layer. It does not contain an analytics SDK, a **crash reporter**, a telemetry client, an advertising identifier, or any code that sends a network request to a remote host."_ |
-| `PRIVACY.md:81`    | _"No analytics, telemetry, crash reporting, or usage measurement."_                                                                                                                                         |
+| `PRIVACY.md:146`   | _"No analytics, telemetry, crash reporting, or usage measurement."_                                                                                                                                         |
 | `app/CLAUDE.md`    | _"No analytics, telemetry, crash reporting or advertising identifiers. The app has no network layer."_                                                                                                      |
 | `app.config.ts:48` | `usesNonExemptEncryption: false`, _"The app has no network layer, collects no identifiers and does no tracking."_                                                                                           |
 
@@ -121,8 +121,10 @@ uses — so a shooter can attach it to an email **if they choose to**.
 - The pieces already exist: `ErrorBoundary`, `expo-file-system`,
   `expo-sharing`, and a Settings screen with a Data Management section. This is
   a small amount of new code rather than a dependency and a posture change.
-- The egress model is the one `PRIVACY.md` already describes for exports:
-  _"User-initiated exports are the only egress."_ A crash log the user chooses
+- The egress model is the one already recorded for exports --
+  _"User-initiated exports are the only egress."_ (`app/CLAUDE.md:248`), which
+  `PRIVACY.md:11` states as "the only way data leaves your device is when you
+  deliberately export or share a file". A crash log the user chooses
   to send is the same shape as a backup the user chooses to send, so the
   document needs an entry rather than a rewrite.
 
