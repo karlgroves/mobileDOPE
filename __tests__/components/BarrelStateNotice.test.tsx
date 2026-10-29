@@ -18,6 +18,8 @@ import type { BarrelStateResult } from '../../src/hooks/useBarrelState';
 
 const nothing: BarrelStateResult = {
   analysis: { coldBore: undefined, heatShift: undefined },
+  coldBoreModelled: true,
+  heatShiftModelled: true,
   loading: false,
 };
 
@@ -30,6 +32,8 @@ const measured: BarrelStateResult = {
   heatShiftCaption: 'Barrel heating: 0.20 MIL low expected by shot 11',
   coldBoreCorrection: 0.15,
   heatShiftCorrection: 0.2,
+  coldBoreModelled: true,
+  heatShiftModelled: true,
   loading: false,
 };
 
@@ -129,11 +133,39 @@ describe('BarrelStateNotice with too little data (#165)', () => {
     // statement from "not enough shots to fit one", and the shooter is entitled
     // to the difference.
     const { getByTestId } = render({
+      ...nothing,
       analysis: { coldBore: undefined, heatShift: { perShot: 0.0001, shots: 20 } },
-      loading: false,
     });
 
     expect(getByTestId('heat-shift-short').props.children).toContain('holds steady');
+  });
+});
+
+describe('BarrelStateNotice with modelling switched off in Settings (#167)', () => {
+  it('says cold-bore modelling is off rather than that data is short', () => {
+    const { getByTestId, queryByTestId } = render({
+      ...nothing,
+      coldBoreModelled: false,
+      heatShiftModelled: true,
+    });
+
+    expect(getByTestId('cold-bore-off')).toBeTruthy();
+    expect(queryByTestId('cold-bore-short')).toBeNull();
+    expect(queryByTestId('apply-cold-bore')).toBeNull();
+    expect(getByTestId('heat-shift-short')).toBeTruthy();
+  });
+
+  it('says heat-shift modelling is off rather than that data is short', () => {
+    const { getByTestId, queryByTestId } = render({
+      ...nothing,
+      coldBoreModelled: true,
+      heatShiftModelled: false,
+    });
+
+    expect(getByTestId('heat-shift-off')).toBeTruthy();
+    expect(queryByTestId('heat-shift-short')).toBeNull();
+    expect(queryByTestId('apply-heat-shift')).toBeNull();
+    expect(getByTestId('cold-bore-short')).toBeTruthy();
   });
 });
 

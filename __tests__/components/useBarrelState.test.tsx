@@ -5,6 +5,7 @@ import { useBarrelState } from '../../src/hooks/useBarrelState';
 import { DOPELog } from '../../src/models/DOPELog';
 import { environmentRepository } from '../../src/services/database';
 import { useAmmoStore } from '../../src/store/useAmmoStore';
+import { DEFAULT_SETTINGS, useAppStore } from '../../src/store/useAppStore';
 import { useDOPEStore } from '../../src/store/useDOPEStore';
 import { useEnvironmentStore } from '../../src/store/useEnvironmentStore';
 import { useRifleStore } from '../../src/store/useRifleStore';
@@ -253,6 +254,64 @@ describe('useBarrelState heat shift (#165)', () => {
     expect(latest().analysis.heatShift).toBeDefined();
     expect(latest().heatShiftCaption).toBeUndefined();
     expect(latest().heatShiftCorrection).toBeUndefined();
+  });
+});
+
+describe('useBarrelState with modelling switched off in Settings (#167)', () => {
+  const setModelling = (coldBore: boolean, heatShift: boolean) =>
+    useAppStore.setState({
+      settings: {
+        ...useAppStore.getState().settings,
+        coldBoreModellingEnabled: coldBore,
+        heatShiftModellingEnabled: heatShift,
+      },
+    });
+
+  // Enough for both halves: three cold, three warm, and a string heating by
+  // 0.02 MIL a shot across six positions.
+  const both = (): DOPELog[] => [
+    ...Array.from({ length: 3 }, () =>
+      log({ coldBoreShot: true, shotNumberInSession: 1, elevationCorrection: 3.4 })
+    ),
+    ...Array.from({ length: 20 }, (_, i) =>
+      log({ coldBoreShot: false, shotNumberInSession: i + 2, elevationCorrection: 3.1 + i * 0.02 })
+    ),
+  ];
+
+  afterEach(() => {
+    setModelling(
+      DEFAULT_SETTINGS.coldBoreModellingEnabled,
+      DEFAULT_SETTINGS.heatShiftModellingEnabled
+    );
+  });
+
+  it('offers both figures when both are on, which is the shipped default', async () => {
+    const { latest } = await observe(both(), 11);
+
+    expect(latest().coldBoreModelled).toBe(true);
+    expect(latest().heatShiftModelled).toBe(true);
+    expect(latest().coldBoreCorrection).toBeDefined();
+    expect(latest().heatShiftCorrection).toBeDefined();
+  });
+
+  it('offers no cold-bore figure or correction when cold-bore modelling is off', async () => {
+    setModelling(false, true);
+    const { latest } = await observe(both(), 11);
+
+    expect(latest().coldBoreModelled).toBe(false);
+    expect(latest().coldBoreCaption).toBeUndefined();
+    expect(latest().coldBoreCorrection).toBeUndefined();
+    expect(latest().heatShiftCorrection).toBeDefined();
+  });
+
+  it('offers no heat-shift figure or correction when heat-shift modelling is off', async () => {
+    setModelling(true, false);
+    const { latest } = await observe(both(), 11);
+
+    expect(latest().heatShiftModelled).toBe(false);
+    expect(latest().heatShiftCaption).toBeUndefined();
+    expect(latest().heatShiftCorrection).toBeUndefined();
+    expect(latest().coldBoreCorrection).toBeDefined();
   });
 });
 

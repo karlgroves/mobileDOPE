@@ -69,12 +69,11 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   /**
    * DOPE-assisted aiming in session mode (#166).
    *
-   * The same switch as the calculator's (#168), and the same default: on. It is
-   * local state rather than a setting because #167 owns the stored default, and
-   * two screens reading a setting that does not exist yet would be worse than
-   * two screens agreeing on `true`.
+   * The same switch as the calculator's (#168), starting from the same stored
+   * default (#167). Local state seeded from the setting, so turning it off for
+   * one string does not turn it off tomorrow.
    */
-  const [adjustByDope, setAdjustByDope] = useState(true);
+  const [adjustByDope, setAdjustByDope] = useState(settings.dopeAdjustmentEnabled);
   const [showDopeDetails, setShowDopeDetails] = useState(false);
   /** Both barrel-state corrections are opt-in, per #165. */
   const [applyColdBore, setApplyColdBore] = useState(false);

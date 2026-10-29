@@ -126,7 +126,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   /**
-   * Puts the three DOPE-assisted settings back where they started (#167 and
+   * Puts the DOPE-assisted settings back where they started (#167 and
    * #70 §10's "reset to defaults").
    *
    * Scoped to this section rather than reusing `resetSettings`, which clears
@@ -139,7 +139,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       'Reset DOPE-Assisted Aiming',
       `Put the matching window back to ${DEFAULT_SETTINGS.dopeDistanceDeltaYards} yards, ` +
         `the confidence threshold to ${thresholdPercent(DEFAULT_SETTINGS.dopeConfidenceThreshold)}%, ` +
-        'and the adjustment back on? Nothing else changes.',
+        'and the adjustment, cold-bore and heat-shift modelling back on? Nothing else changes.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -149,6 +149,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               dopeAdjustmentEnabled: DEFAULT_SETTINGS.dopeAdjustmentEnabled,
               dopeDistanceDeltaYards: DEFAULT_SETTINGS.dopeDistanceDeltaYards,
               dopeConfidenceThreshold: DEFAULT_SETTINGS.dopeConfidenceThreshold,
+              coldBoreModellingEnabled: DEFAULT_SETTINGS.coldBoreModellingEnabled,
+              heatShiftModellingEnabled: DEFAULT_SETTINGS.heatShiftModellingEnabled,
             });
           },
         },
@@ -751,7 +753,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Reset DOPE-assisted aiming settings"
-              accessibilityHint="Puts the matching window, confidence threshold and adjustment default back to their shipped values"
+              accessibilityHint="Puts the matching window, confidence threshold, adjustment default and barrel-state modelling back to their shipped values"
               onPress={handleResetDopeSettings}
             >
               <Text style={[styles.resetLink, { color: colors.primaryText }]}>Reset</Text>
@@ -822,6 +824,54 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 'told less often and trust it more when you are; lower it to use thinner ' +
                 'evidence. At 0 any single log moves the figure.'
               }
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Cold-Bore Modelling
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Whether a range session measures how far your first shot from a cold barrel lands
+                from the warm ones, and offers to dial it. Off, the session shows no cold-bore
+                figure. Either way nothing is dialled unless you turn it on for the shot.
+              </Text>
+            </View>
+            <Switch
+              value={settings.coldBoreModellingEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ coldBoreModellingEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.coldBoreModellingEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Cold-bore modelling"
+              accessibilityHint="Sets whether range sessions measure and offer a cold-bore shift"
+              testID="cold-bore-modelling"
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Heat-Shift Modelling
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Whether a range session measures how your point of impact walks as a string heats
+                the barrel, and offers to dial it. Off, the session shows no heat-shift figure.
+                Either way nothing is dialled unless you turn it on.
+              </Text>
+            </View>
+            <Switch
+              value={settings.heatShiftModellingEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ heatShiftModellingEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.heatShiftModellingEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Heat-shift modelling"
+              accessibilityHint="Sets whether range sessions measure and offer a heat shift"
+              testID="heat-shift-modelling"
             />
           </View>
         </Card>

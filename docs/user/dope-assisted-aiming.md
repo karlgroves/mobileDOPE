@@ -118,8 +118,9 @@ combined at all.
 Both refuse to answer on thin evidence. A cold-bore bias needs at least three
 logged cold-bore shots and three warm ones (shots 2–5 of a string); a heat shift
 needs at least six logged shots with a shot number recorded, at three or more
-different positions in the string. Below those it shows nothing rather than a
-number built from one group's luck.
+different positions in the string. Below those it shows no figure — it says which half
+is short and what would answer it — rather than a number built from one group's
+luck. Neither correction is dialled unless you turn it on for the shot.
 
 For either to work, your logs have to record barrel state. The **New DOPE Log**
 screen suggests cold bore when the rifle has not fired for ten minutes, and you
@@ -130,13 +131,15 @@ can change it — it is never assumed silently.
 **Settings → DOPE-Assisted Aiming.** Each has a plain-words description on the
 screen; this is what they are for.
 
-| Setting              | Default  | What it changes                                                                                 |
-| -------------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| Adjust by My DOPE    | On       | Where the calculator's switch starts. Off gives you the solver until you turn it on for a shot. |
-| Matching Window      | 50 yards | How far from the shot a log can have been fired and still count. 25–100.                        |
-| Confidence Threshold | 40%      | How much the app has to believe its own recommendation before using it.                         |
+| Setting              | Default  | What it changes                                                                              |
+| -------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| Adjust by My DOPE    | On       | Where the switch starts, in the calculator and in a range session. Off gives you the solver. |
+| Matching Window      | 50 yards | How far from the shot a log can have been fired and still count. 25–100.                     |
+| Confidence Threshold | 40%      | How much the app has to believe its own recommendation before using it.                      |
+| Cold-Bore Modelling  | On       | Whether a range session measures and offers a cold-bore shift.                               |
+| Heat-Shift Modelling | On       | Whether a range session measures and offers a heat shift.                                    |
 
-**Reset** puts those three back and changes nothing else — not your theme, your
+**Reset** puts those five back and changes nothing else — not your theme, your
 units, your custom calibers or your barometer calibration.
 
 ### Choosing a matching window

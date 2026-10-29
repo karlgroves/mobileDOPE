@@ -265,7 +265,22 @@ describe('the Settings screen (#167)', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalled();
   });
 
-  it('puts the three back, and nothing else, on reset', async () => {
+  it('stores a change to each barrel-state modelling switch', async () => {
+    const view = renderSettings();
+
+    await waitFor(() => expect(view.getByTestId('cold-bore-modelling')).toBeTruthy());
+    fireEvent(view.getByTestId('cold-bore-modelling'), 'valueChange', false);
+    await waitFor(() =>
+      expect(useAppStore.getState().settings.coldBoreModellingEnabled).toBe(false)
+    );
+
+    fireEvent(view.getByTestId('heat-shift-modelling'), 'valueChange', false);
+    await waitFor(() =>
+      expect(useAppStore.getState().settings.heatShiftModellingEnabled).toBe(false)
+    );
+  });
+
+  it('puts the DOPE settings back, and nothing else, on reset', async () => {
     // Scoped deliberately: `resetSettings` would also clear the theme, the
     // units, the custom calibers and a measured barometer offset. A shooter who
     // wants their matching window back has not asked to lose a sensor
@@ -274,6 +289,8 @@ describe('the Settings screen (#167)', () => {
       dopeAdjustmentEnabled: false,
       dopeDistanceDeltaYards: 100,
       dopeConfidenceThreshold: 0.9,
+      coldBoreModellingEnabled: false,
+      heatShiftModellingEnabled: false,
       themeMode: 'nightVision',
       barometerOffsetInHg: 0.07,
       defaultCorrectionUnit: 'MOA',
@@ -290,6 +307,8 @@ describe('the Settings screen (#167)', () => {
       expect(settings.dopeAdjustmentEnabled).toBe(DEFAULT_SETTINGS.dopeAdjustmentEnabled);
       expect(settings.dopeDistanceDeltaYards).toBe(DEFAULT_SETTINGS.dopeDistanceDeltaYards);
       expect(settings.dopeConfidenceThreshold).toBe(DEFAULT_SETTINGS.dopeConfidenceThreshold);
+      expect(settings.coldBoreModellingEnabled).toBe(DEFAULT_SETTINGS.coldBoreModellingEnabled);
+      expect(settings.heatShiftModellingEnabled).toBe(DEFAULT_SETTINGS.heatShiftModellingEnabled);
     });
 
     const settings = useAppStore.getState().settings;

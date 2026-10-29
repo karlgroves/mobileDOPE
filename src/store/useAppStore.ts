@@ -77,6 +77,14 @@ interface AppSettings {
    * (#161). Default 0.4, which is `DEFAULT_CONFIDENCE_THRESHOLD`.
    */
   dopeConfidenceThreshold: number;
+  /**
+   * Whether the session screen measures and offers a cold-bore bias (#165,
+   * #167). On by default: the correction itself is still off until the shooter
+   * turns it on for a shot, so this only decides whether the figure is shown.
+   */
+  coldBoreModellingEnabled: boolean;
+  /** The same for the heat shift. */
+  heatShiftModellingEnabled: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -124,6 +132,8 @@ const defaultSettings: AppSettings = {
   dopeAdjustmentEnabled: true,
   dopeDistanceDeltaYards: DEFAULT_DISTANCE_DELTA,
   dopeConfidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
+  coldBoreModellingEnabled: true,
+  heatShiftModellingEnabled: true,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
@@ -180,6 +190,12 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
       }
       if (typeof merged.dopeAdjustmentEnabled !== 'boolean') {
         merged.dopeAdjustmentEnabled = defaultSettings.dopeAdjustmentEnabled;
+      }
+      if (typeof merged.coldBoreModellingEnabled !== 'boolean') {
+        merged.coldBoreModellingEnabled = defaultSettings.coldBoreModellingEnabled;
+      }
+      if (typeof merged.heatShiftModellingEnabled !== 'boolean') {
+        merged.heatShiftModellingEnabled = defaultSettings.heatShiftModellingEnabled;
       }
       return merged;
     }
