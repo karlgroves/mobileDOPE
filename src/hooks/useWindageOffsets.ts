@@ -112,13 +112,15 @@ export const useWindageOffsets = ({
     ]);
 
     // One solve per log, at that log's own distance, cached across every row.
-    const perMphCache = new Map<number | undefined, number | undefined>();
+    // Keyed by id, so a log without one is solved each time rather than sharing
+    // another unsaved log's cached figure.
+    const perMphCache = new Map<number, number | undefined>();
     const perMphFor = (log: DOPELogData, yards: number): number | undefined => {
-      if (perMphCache.has(log.id)) return perMphCache.get(log.id);
+      if (log.id !== undefined && perMphCache.has(log.id)) return perMphCache.get(log.id);
       const env = environmentById.get(log.environmentId);
       const value =
         env === undefined ? undefined : predictWindagePerMph(rifle, ammo, yards, env, unit);
-      perMphCache.set(log.id, value);
+      if (log.id !== undefined) perMphCache.set(log.id, value);
       return value;
     };
 

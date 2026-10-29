@@ -136,8 +136,10 @@ describe('predictWindagePerMph (#163)', () => {
   it.each([1, 3, 5, 10, 15, 20])('is linear in crosswind at %i mph', (mph) => {
     const perMph = predictWindagePerMph(rifle, ammo, 600, env, 'MIL');
 
-    // Within a tenth of a percent of the full solve at that wind speed.
-    expect(perMph * mph).toBeCloseTo(windageAt(mph, 600), 3);
+    // Within a tenth of a percent of the full solve at that wind speed --
+    // relative, so the 1 mph case is held as tightly as the 20 mph one.
+    const full = windageAt(mph, 600);
+    expect(Math.abs(perMph * mph - full)).toBeLessThanOrEqual(Math.abs(full) * 1e-3);
   });
 
   it('does not depend on the reference wind it was measured at', () => {

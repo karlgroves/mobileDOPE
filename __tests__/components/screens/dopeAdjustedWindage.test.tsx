@@ -291,6 +291,53 @@ describe('the solution screen’s windage (#163)', () => {
     expect(shownWindage(view)).toBe(Number(solution.windageMIL.toFixed(2)));
   });
 
+  it('scales by the wind the solution was solved in, not the Environment screen’s', async () => {
+    // The calculator's wind is its own input, not the environment store's. A
+    // solution solved in dead calm must not be shown a correction for the
+    // 10 mph the Environment screen happens to hold.
+    seed(windyLogs(6, 0.01));
+    const view = renderWithProviders(
+      <BallisticSolutionResults
+        route={
+          {
+            ...solutionRoute,
+            params: { ...solutionRoute.params, windSpeed: 0, windDirection: 90 },
+          } as never
+        }
+        navigation={navigation as never}
+      />
+    );
+
+    await waitFor(() =>
+      expect(view.getByTestId('dope-windage-caption').props.children).toMatch(
+        /No crosswind to scale from/
+      )
+    );
+    expect(view.queryByText('WINDAGE (ADJUSTED)')).toBeNull();
+  });
+
+  it('reverses the offset when the solved wind blows from the other side', async () => {
+    seed(windyLogs(6, 0.01));
+    const view = renderWithProviders(
+      <BallisticSolutionResults
+        route={
+          {
+            ...solutionRoute,
+            params: { ...solutionRoute.params, windSpeed: 10, windDirection: 270 },
+          } as never
+        }
+        navigation={navigation as never}
+      />
+    );
+
+    await waitFor(() => expect(view.getByTestId('dope-windage-offset')).toBeTruthy());
+    const offset = view.getByTestId('dope-windage-offset').props.children as (string | number)[];
+    // The same logs in a 3 o'clock wind give a positive offset (above); a
+    // 9 o'clock one must give a negative offset, not the same one.
+    expect(offset.join('')).toMatch(/^-0\.\d\d MIL$/);
+    expect(offset.join('')).not.toBe('-0.00 MIL');
+  });
+
   it('says none of the logs were shot in a crosswind when they were not', async () => {
     // Plenty of logs to rank, none of them usable for windage. The two reasons
     // are answered differently -- wait for wind, or log in it -- so they are
@@ -366,7 +413,11 @@ describe('the wind table’s source toggle (#163)', () => {
 
     fireEvent.press(view.getByText('My DOPE'));
 
-    await waitFor(() => expect(view.getByText(/adjusted by your logged DOPE/)).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        view.getByText(/corrections adjusted by your logged DOPE, drift is the solver's/)
+      ).toBeTruthy()
+    );
   });
 
   it('leaves the 0 mph column alone, because the offset is per mph', async () => {

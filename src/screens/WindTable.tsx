@@ -334,7 +334,7 @@ export function WindTable({ route }: Props) {
               testID="windage-source-note"
             >
               {adjustByDope
-                ? `Adjusted by your logged windage at ${windageOffsets.offsetPerMph.size} of ${distances.length} distances. Rows with no nearby logs show the solver's own figure.`
+                ? `Adjusted by your logged windage at ${windageOffsets.offsetPerMph.size} of ${distances.length} distances. Rows with no nearby logs show the solver's own figure, and drift and the chart are always the solver's.`
                 : "The solver's own figures, with no correction from your logs."}
             </Text>
           </View>
@@ -545,7 +545,11 @@ export function WindTable({ route }: Props) {
         <Text style={[styles.legendText, { color: colors.text.secondary }]}>
           Wind: {getWindDirectionLabel(windDirection)} • Correction shows {angularUnit} adjustment •
           Drift shows inches of movement •{' '}
-          {adjustByDope ? 'adjusted by your logged DOPE' : 'solver only'}
+          {/* Only the correction column is adjusted: drift (and the chart, which
+              plots it) is the solver's either way, so the footer says which. */}
+          {adjustByDope
+            ? "corrections adjusted by your logged DOPE, drift is the solver's"
+            : 'solver only'}
         </Text>
       </View>
     </View>

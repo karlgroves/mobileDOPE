@@ -35,10 +35,10 @@
  * A log shot in dead air, or with the wind at 12 or 6 o'clock, carries no
  * information about wind at all, and dividing by its crosswind is a division by
  * (almost) zero. "Almost" is the operative word: a wind recorded at exactly 180
- * degrees gives `sin(pi)` = 1.2e-16 rather than 0, so a guard against literal
- * zero would let a 15 mph tailwind through as an offset of around 1e17 per mph
- * and that single log would obliterate every other. Hence a threshold, not an
- * equality test.
+ * degrees gives `sin(pi)` = 1.2e-16 rather than 0 -- a crosswind of 1.8e-15 for
+ * a 15 mph tailwind -- so a guard against literal zero would let it through as
+ * an offset of around 1e14-1e15 per mph and that single log would obliterate
+ * every other. Hence a threshold, not an equality test.
  *
  * Pure. No store, no solver -- the caller supplies the per-mph prediction and
  * each log's crosswind, which is what makes this testable without a trajectory.
@@ -61,9 +61,9 @@ export const NO_WINDY_LOGS_REASON =
  * Crosswind below which a log is left out, in mph.
  *
  * Half a mile an hour. Two reasons it is not zero. The arithmetic one: wind
- * recorded at 180 degrees gives a crosswind of 1.2e-16 rather than 0, and
- * dividing by that produces an offset around 1e17 per mph which would swamp
- * every other log. The physical one: a shooter's recorded wind is a guess to
+ * recorded at 180 degrees gives a crosswind of `speed * 1.2e-16` (1.8e-15 at
+ * 15 mph) rather than 0, and dividing by that produces an offset around
+ * 1e14-1e15 per mph which would swamp every other log. The physical one: a shooter's recorded wind is a guess to
  * within a mile an hour at best, so an offset divided by 0.3 mph is noise
  * multiplied by three, presented as a measurement.
  */

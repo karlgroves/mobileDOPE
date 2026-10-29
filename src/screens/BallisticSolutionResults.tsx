@@ -31,7 +31,16 @@ import type { CalculatorStackScreenProps } from '../navigation/types';
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
 export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation }) => {
-  const { solution, rifleId, ammoId, distance, distanceUnit, angularUnit } = route.params;
+  const {
+    solution,
+    rifleId,
+    ammoId,
+    distance,
+    distanceUnit,
+    angularUnit,
+    windSpeed: solvedWindSpeed,
+    windDirection: solvedWindDirection,
+  } = route.params;
   const { settings } = useAppStore();
 
   /**
@@ -92,13 +101,17 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     enabled: adjustByDope,
     // #163: the windage half, normalised by the crosswind each log was shot in.
     // Today's crosswind comes from the same `calculateCrosswindComponent` the
-    // wind table and the solver use, from whichever air the solution was
-    // computed in.
+    // wind table and the solver use, from the wind the solution was solved in.
+    // That is the calculator's own input, not the environment store's: scaling
+    // by the store's wind would correct a calm solution for a wind it was never
+    // solved in. The store is only the fallback for a caller that omits it.
     solverWindage: windage,
     crosswindMph:
-      currentEnv === null
-        ? 0
-        : calculateCrosswindComponent(currentEnv.windSpeed, currentEnv.windDirection),
+      solvedWindSpeed !== undefined && solvedWindDirection !== undefined
+        ? calculateCrosswindComponent(solvedWindSpeed, solvedWindDirection)
+        : currentEnv === null
+          ? 0
+          : calculateCrosswindComponent(currentEnv.windSpeed, currentEnv.windDirection),
   });
 
   const [isExporting, setIsExporting] = useState(false);
