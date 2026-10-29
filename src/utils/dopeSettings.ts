@@ -21,8 +21,13 @@
  *
  * None of those produce an error. They produce a correct-looking solver figure
  * and no explanation, which is the failure mode this repository has filed
- * issues about before. So the clamp lives next to the bounds, is exported, and
+ * issues about before. So the check lives next to the bounds, is exported, and
  * is applied on load -- `barometerOffsetInHg` already works this way.
+ *
+ * An out-of-range value falls back to the shipped default rather than being
+ * clamped to the nearest bound. A stored 150 becomes 50, not 100: a value that
+ * far outside the range did not come from the slider, so the nearest legal
+ * figure is a guess at an intent there is no evidence for.
  */
 
 /** The distance window the matcher searches, in yards. #70 §10's range. */
