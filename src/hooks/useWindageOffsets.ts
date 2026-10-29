@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -77,6 +78,7 @@ export const useWindageOffsets = ({
   const { getAmmoById } = useAmmoStore();
   const { current: currentEnv, snapshots } = useEnvironmentStore();
   const { dopeLogs } = useDOPEStore();
+  const dopeDistanceDeltaYards = useAppStore((state) => state.settings.dopeDistanceDeltaYards);
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -136,12 +138,19 @@ export const useWindageOffsets = ({
     );
 
     for (const yards of distances) {
-      const matches = rankMatches(matchable, {
-        rifleId,
-        ammoId,
-        distance: yards,
-        environment: matchEnvironment,
-      });
+      // The shooter's matching window, with sigma following it, exactly as
+      // `useDopeAdjustment` ranks (#167). Left at the shipped window, the table
+      // would disagree with the calculator about which logs count.
+      const matches = rankMatches(
+        matchable,
+        {
+          rifleId,
+          ammoId,
+          distance: yards,
+          environment: matchEnvironment,
+        },
+        { delta: dopeDistanceDeltaYards, sigmaYards: dopeDistanceDeltaYards / 2 }
+      );
       if (matches.length === 0) continue;
 
       // A unit crosswind and a zero solver figure, so `offset` comes back as the
@@ -175,6 +184,7 @@ export const useWindageOffsets = ({
     ammoId,
     key,
     unit,
+    dopeDistanceDeltaYards,
   ]);
 
   return { ...result, loading: candidateLogs.length > 0 && loadedSnapshots === undefined };

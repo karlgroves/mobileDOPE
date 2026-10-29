@@ -89,7 +89,7 @@ export const EVIDENCE_SOFTENING = 2;
 export const AGREEMENT_SCALE_MIL = 0.15;
 
 /**
- * Gaussian width for `proximity`, in yards.
+ * Default Gaussian width for `proximity`, in yards.
  *
  * The same sigma `dopeMatching` scores distance similarity with, so a log the
  * matcher called a weak match is not then called a strong basis for a
@@ -261,11 +261,19 @@ const explain = (
  * `distanceYards` is the shot being aimed, in yards — the same figure the
  * matcher ranked against, so proximity is measured on the scale the ranking
  * used.
+ *
+ * `proximitySigmaYards` defaults to {@link PROXIMITY_SIGMA_YARDS} and is passed
+ * in when the shooter has widened the matching window (#167). It has to move
+ * with it: the default is half the *default* window precisely so that a log at
+ * the window's edge scores as a weak match, and leaving it fixed while the
+ * window widens would mark every newly-admitted log down for being exactly
+ * where the shooter asked the app to look.
  */
 export const adjustmentConfidence = <T extends MatchableLog>(
   adjustment: ElevationAdjustment<T>,
   distanceYards: number,
-  unit: 'MIL' | 'MOA'
+  unit: 'MIL' | 'MOA',
+  proximitySigmaYards: number = PROXIMITY_SIGMA_YARDS
 ): AdjustmentConfidence => {
   const { contributions, rawOffset } = adjustment;
 
@@ -304,7 +312,7 @@ export const adjustmentConfidence = <T extends MatchableLog>(
     (nearest, c) => Math.min(nearest, Math.abs(logDistanceInYards(c.log) - distanceYards)),
     Number.POSITIVE_INFINITY
   );
-  const proximity = gaussian(nearestLogYards, PROXIMITY_SIGMA_YARDS);
+  const proximity = gaussian(nearestLogYards, proximitySigmaYards);
 
   const factors = { evidence, quality, agreement, proximity };
 

@@ -118,7 +118,11 @@ export const BarrelStateNotice: React.FC<BarrelStateNoticeProps> = ({
           shown later, because knowing the rifle throws its first shot low is
           worth knowing at shot six -- but the switch would be dialling a
           correction for a condition that has passed. */}
-      {coldBoreCaption !== undefined ? (
+      {!state.coldBoreModelled ? (
+        <Text style={[styles.caption, { color: colors.text.secondary }]} testID="cold-bore-off">
+          Cold-bore modelling is off in Settings.
+        </Text>
+      ) : coldBoreCaption !== undefined ? (
         isColdBoreShot ? (
           <Correction
             caption={coldBoreCaption}
@@ -140,7 +144,11 @@ export const BarrelStateNotice: React.FC<BarrelStateNoticeProps> = ({
         </Text>
       )}
 
-      {heatShiftCaption !== undefined ? (
+      {!state.heatShiftModelled ? (
+        <Text style={[styles.caption, { color: colors.text.secondary }]} testID="heat-shift-off">
+          Heat-shift modelling is off in Settings.
+        </Text>
+      ) : heatShiftCaption !== undefined ? (
         <Correction
           caption={heatShiftCaption}
           value={applyHeatShift}

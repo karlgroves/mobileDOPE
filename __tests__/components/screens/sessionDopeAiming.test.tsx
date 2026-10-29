@@ -156,7 +156,11 @@ beforeEach(() => {
   createDopeLog.mockImplementation(() => Promise.resolve(log()));
   loadDopeLogs.mockImplementation(() => Promise.resolve());
   useAppStore.setState({
-    settings: { ...useAppStore.getState().settings, defaultCorrectionUnit: 'MIL' },
+    settings: {
+      ...useAppStore.getState().settings,
+      defaultCorrectionUnit: 'MIL',
+      dopeAdjustmentEnabled: true,
+    },
   });
 });
 
@@ -229,6 +233,23 @@ describe('session mode with DOPE to rank (#166)', () => {
       'Adjustment off. Showing the solver alone.'
     );
     expect(shownElevation(view)).not.toBe(adjusted);
+  });
+
+  it('starts with the switch off when the stored default is off (#167)', async () => {
+    // The calculator and the session share one stored default. Before #167 the
+    // session hard-coded `true`, so a shooter who turned the setting off still
+    // got the adjustment the moment they started a string.
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, dopeAdjustmentEnabled: false },
+    });
+    const view = await mount([log(), log(), log()]);
+
+    await waitFor(() =>
+      expect(view.getByTestId('session-dope-caption').props.children).toBe(
+        'Adjustment off. Showing the solver alone.'
+      )
+    );
+    expect(view.getByTestId('session-dope-adjust-switch').props.value).toBe(false);
   });
 
   it('breaks the figure down on demand, and not before', async () => {

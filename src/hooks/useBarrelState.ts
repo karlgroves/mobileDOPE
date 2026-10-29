@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -47,6 +48,13 @@ export interface BarrelStateResult {
   coldBoreCorrection?: number;
   /** What applying the heat shift would add at `shotNumber`. */
   heatShiftCorrection?: number;
+  /**
+   * Whether each half is switched on in Settings (#167). When one is off its
+   * caption and correction are `undefined`, and the notice says it is off
+   * rather than that there is too little data.
+   */
+  coldBoreModelled: boolean;
+  heatShiftModelled: boolean;
   /** True until every candidate log's own snapshot has been read back. */
   loading: boolean;
 }
@@ -91,6 +99,9 @@ export const useBarrelState = ({
   const { getAmmoById } = useAmmoStore();
   const { snapshots } = useEnvironmentStore();
   const { dopeLogs } = useDOPEStore();
+  const { coldBoreModellingEnabled, heatShiftModellingEnabled } = useAppStore(
+    (state) => state.settings
+  );
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -139,22 +150,26 @@ export const useBarrelState = ({
   }, [rifle, ammo, candidateLogs, loadedSnapshots, snapshots, unit]);
 
   const heatShiftCaption =
-    analysis.heatShift === undefined
+    !heatShiftModellingEnabled || analysis.heatShift === undefined
       ? undefined
       : describeHeatShift(analysis.heatShift, shotNumber, unit);
 
   return {
     analysis,
     coldBoreCaption:
-      analysis.coldBore === undefined ? undefined : describeColdBoreShift(analysis.coldBore, unit),
+      !coldBoreModellingEnabled || analysis.coldBore === undefined
+        ? undefined
+        : describeColdBoreShift(analysis.coldBore, unit),
     heatShiftCaption,
-    coldBoreCorrection: analysis.coldBore?.bias,
+    coldBoreCorrection: coldBoreModellingEnabled ? analysis.coldBore?.bias : undefined,
     // Only offered when the slope was worth mentioning: a correction the
     // shooter was never told about is not a correction they chose.
     heatShiftCorrection:
       analysis.heatShift === undefined || heatShiftCaption === undefined
         ? undefined
         : predictHeatShift(analysis.heatShift, shotNumber),
+    coldBoreModelled: coldBoreModellingEnabled,
+    heatShiftModelled: heatShiftModellingEnabled,
     loading: candidateLogs.length > 0 && loadedSnapshots === undefined,
   };
 };

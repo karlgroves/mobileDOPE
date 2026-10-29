@@ -16,6 +16,8 @@ Documentation for people using the app. For developer setup see the
   strings, reading the curve
 - **[The ballistic calculator](./ballistic-calculator.md)** — solutions, wind
   tables, moving targets, and what the solver does not model
+- **[Understanding DOPE-assisted aiming](./dope-assisted-aiming.md)** — how your
+  own logs correct the solver, what confidence means, and when to trust which
 - **[DOPE cards](./dope-cards.md)** — generating and printing a field card
 
 ## Reference
