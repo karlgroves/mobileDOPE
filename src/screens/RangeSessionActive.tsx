@@ -206,20 +206,30 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
   }, [session, environment, distance, rifles, ammoProfiles]);
 
   /**
-   * The logs for this rifle and load, so the adjustment has something to rank.
+   * The logs, so the adjustment has something to rank.
    *
    * `useDOPEStore` is filled by the History tab, which a shooter who went
    * straight to a session has never opened -- so without this the session would
    * show "No historical data, using solver only" for a rifle with fifty logs.
+   *
+   * Every log, not just this rifle's: `loadDopeLogs` *replaces* the shared
+   * store, and the History list and the full-backup export both read it. A
+   * filtered load here would leave a backup taken after a session silently
+   * missing every other rifle's logs. Both hooks filter by rifle and load
+   * themselves.
+   *
+   * Keyed on the session having loaded rather than on the session object,
+   * which SHOT replaces on every press.
    */
+  const sessionLoaded = session !== null;
   useEffect(() => {
-    if (!session) return;
-    loadDopeLogs(session.rifleId, session.ammoId).catch((error) => {
+    if (!sessionLoaded) return;
+    loadDopeLogs().catch((error) => {
       // The recommendation falls back to the solver alone, which is the same
       // thing it shows for a rifle with no logs, so this is not fatal.
       console.error('Failed to load DOPE logs for the session:', error);
     });
-  }, [session, loadDopeLogs]);
+  }, [sessionLoaded, loadDopeLogs]);
 
   const unit = settings.defaultCorrectionUnit;
   const solverElevation = solution
@@ -434,8 +444,7 @@ export const RangeSessionActive: React.FC<Props> = ({ navigation, route }) => {
                 // #164's remaining criterion: session logging supplies the shot
                 // number, so barrel-state analysis has a string to fit.
                 shotNumberInSession: loggingShotNumber,
-                coldBoreShot:
-                  isColdBoreShot || loggingShotNumber === 1 ? session.coldBoreShot : false,
+                coldBoreShot: loggingShotNumber === 1 ? session.coldBoreShot : false,
               });
               setUpdatedFromLastShot(true);
               setElevationAdjustment(0);

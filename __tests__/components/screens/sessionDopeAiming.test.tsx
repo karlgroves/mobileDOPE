@@ -175,10 +175,30 @@ describe('session mode with no DOPE (#166)', () => {
 });
 
 describe('session mode with DOPE to rank (#166)', () => {
-  it('loads the logs for this rifle and load, which the History tab may never have', async () => {
+  it('loads the logs, which the History tab may never have', async () => {
     await mount([]);
 
-    expect(loadDopeLogs).toHaveBeenCalledWith(1, 1);
+    expect(loadDopeLogs).toHaveBeenCalled();
+  });
+
+  it('loads every log, because a filtered load would replace the shared store', async () => {
+    await mount([]);
+
+    // History and the full-backup export read the same store; a load filtered
+    // to this rifle would leave both missing every other rifle's logs.
+    expect(loadDopeLogs).toHaveBeenCalledWith();
+  });
+
+  it('does not reload the logs each time SHOT is pressed', async () => {
+    jest
+      .spyOn(rangeSessionRepository, 'incrementShotCount')
+      .mockImplementation(() => Promise.resolve(session({ shotCount: 1 }) as never));
+    const view = await mount([]);
+
+    fireEvent.press(view.getByLabelText('Record shot'));
+    await waitFor(() => expect(view.getByText('1')).toBeTruthy());
+
+    expect(loadDopeLogs).toHaveBeenCalledTimes(1);
   });
 
   it('says how many logs the recommendation came from', async () => {
