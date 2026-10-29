@@ -35,6 +35,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { aspectRatioOf } from '../utils/targetMarking';
 import {
   FULL_VIEW,
+  MAX_ZOOM,
   ZOOM_STEP,
   describeZoom,
   panBy,
@@ -108,12 +109,16 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
    */
   const pinch = Gesture.Pinch()
     .runOnJS(true)
-    .onUpdate((event) => {
+    .withTestId('target-pinch')
+    // `scaleChange`, not `scale`: `scale` is cumulative from the start of the
+    // pinch, and applying it to the window on every update compounds it -- a
+    // gentle 1.2x pinch would run straight to the maximum.
+    .onChange((event) => {
       if (size.width <= 0) return;
       setWindow((current) =>
         zoomAbout(
           current,
-          event.scale,
+          event.scaleChange,
           event.focalX / size.width,
           size.height > 0 ? event.focalY / size.height : 0.5
         )
@@ -283,7 +288,7 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
           'Shows less of the target, so shots close together can be told apart',
           '+',
           () => setWindow((current) => zoomAbout(current, ZOOM_STEP)),
-          zoomOf(window) >= 8,
+          zoomOf(window) >= MAX_ZOOM,
           'target-zoom-in'
         )}
         <Text
@@ -311,7 +316,7 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
         {control(
           'Pan up',
           'Moves the view towards the top of the target',
-          '‹',
+          '˄',
           () => setWindow((current) => panBy(current, 0, -1)),
           !zoomed,
           'target-pan-up'
@@ -319,7 +324,7 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
         {control(
           'Pan down',
           'Moves the view towards the bottom of the target',
-          '›',
+          '˅',
           () => setWindow((current) => panBy(current, 0, 1)),
           !zoomed,
           'target-pan-down'

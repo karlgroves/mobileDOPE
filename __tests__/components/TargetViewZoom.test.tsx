@@ -1,5 +1,7 @@
-import { fireEvent } from '@testing-library/react-native';
+import { act, fireEvent } from '@testing-library/react-native';
 import React from 'react';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { TargetView } from '../../src/components/TargetView';
 import { MAX_ZOOM } from '../../src/utils/targetZoom';
@@ -14,9 +16,10 @@ import type { POIMarker } from '../../src/models/TargetImage';
  * surface uses it in both directions: a tap while zoomed is stored where the
  * shooter aimed it, and a stored mark is drawn back under that tap.
  *
- * The buttons are driven rather than the pinch gesture, deliberately -- they
- * are the single-pointer alternative WCAG 2.5.1 requires, they run the same
- * code, and a gesture-handler pinch cannot be synthesised in this renderer.
+ * Most cases drive the buttons rather than the pinch -- they are the
+ * single-pointer alternative WCAG 2.5.1 requires, and they run the same code.
+ * The pinch gets its own case, through the gesture handler's
+ * `fireGestureHandler`, because how it reads the scale is its own code.
  */
 
 const FRAME = 300;
@@ -248,5 +251,42 @@ describe('marking through the zoom (#63)', () => {
     fireEvent.press(view.getByTestId('target-zoom-in'));
 
     expect(markerStyle(view, '1').width).toBe(before);
+  });
+});
+
+describe('pinching the surface (#63)', () => {
+  /**
+   * A pinch whose `scale` rises steadily to `final`, in the cumulative form the
+   * gesture handler reports it. `scaleChange` is derived from consecutive events.
+   */
+  const pinchTo = (final: number, steps: number) => {
+    const events = Array.from({ length: steps }, (_, i) => ({
+      scale: 1 + ((final - 1) * (i + 1)) / steps,
+      focalX: FRAME / 2,
+      focalY: FRAME / 2,
+    }));
+    // The gesture reports through an event emitter rather than a prop, so the
+    // state updates it causes have to be flushed by hand.
+    act(() => {
+      fireGestureHandler(getByGestureTestId('target-pinch'), [
+        { state: State.BEGAN, scale: 1, focalX: FRAME / 2, focalY: FRAME / 2 },
+        { state: State.ACTIVE, scale: 1, focalX: FRAME / 2, focalY: FRAME / 2 },
+        ...events,
+        { state: State.END },
+      ]);
+    });
+  };
+
+  it('zooms by the size of the pinch, not by every update compounded', async () => {
+    const { view } = render();
+    // The detector hands a re-rendered gesture its new callbacks in a
+    // microtask; without this the pinch would still see the pre-layout size.
+    await act(async () => {});
+
+    // Ten updates rising to 2x. Applying the cumulative scale on each one
+    // multiplies 1.1 x 1.2 x ... x 2.0 and lands on the 8x ceiling.
+    pinchTo(2, 10);
+
+    expect(view.getByTestId('target-zoom-level').props.children).toBe('2.0x');
   });
 });
