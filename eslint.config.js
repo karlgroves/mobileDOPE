@@ -324,7 +324,13 @@ module.exports = [
 
   // The eslintrc's single `overrides` entry.
   {
-    files: ['jest.setup.js', '__tests__/**/*.{js,ts,tsx}', 'security/tests/**/*.{ts,tsx}'],
+    files: [
+      'jest.setup.js',
+      // Runs in `setupFilesAfterEnv`, so it legitimately calls `jest.setTimeout`.
+      'jest.timeout.js',
+      '__tests__/**/*.{js,ts,tsx}',
+      'security/tests/**/*.{ts,tsx}',
+    ],
     languageOptions: {
       globals: { ...globals.jest },
     },

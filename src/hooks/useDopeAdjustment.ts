@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -153,6 +154,15 @@ export const useDopeAdjustment = ({
   const { getAmmoById } = useAmmoStore();
   const { current: currentEnv, snapshots } = useEnvironmentStore();
   const { dopeLogs } = useDOPEStore();
+  /**
+   * The matcher's window and the confidence gate, as the shooter set them
+   * (#167). Read here rather than copied into `dopeMatching` or
+   * `adjustmentConfidence`: both already take the figures as parameters, and a
+   * pure module that reaches into a store stops being testable without one.
+   */
+  const { dopeDistanceDeltaYards, dopeConfidenceThreshold } = useAppStore(
+    (state) => state.settings
+  );
 
   const rifle = getRifleById(rifleId);
   const ammo = getAmmoById(ammoId);
@@ -184,13 +194,37 @@ export const useDopeAdjustment = ({
       })
     );
 
-    return rankMatches(matchable, {
-      rifleId,
-      ammoId,
-      distance: distanceYards,
-      environment: matchEnvironment,
-    });
-  }, [dopeLogs, snapshots, loadedSnapshots, rifleId, ammoId, distanceYards, matchEnvironment]);
+    return rankMatches(
+      matchable,
+      {
+        rifleId,
+        ammoId,
+        distance: distanceYards,
+        environment: matchEnvironment,
+      },
+      {
+        delta: dopeDistanceDeltaYards,
+        // Half the window the shooter actually set, not half the shipped one
+        // (#167). `DEFAULT_SIGMA_YARDS` is defined as half
+        // `DEFAULT_DISTANCE_DELTA` so a log at the edge of the window scores
+        // exp(-2) -- a weak match rather than a direct hit. That relationship
+        // is the point of the figure, and it holds at every window width only
+        // if sigma moves with the window. Left fixed, widening the window to
+        // 100 yards admits logs that are then scored as though the window were
+        // still 50, so the setting finds more logs and ignores all of them.
+        sigmaYards: dopeDistanceDeltaYards / 2,
+      }
+    );
+  }, [
+    dopeLogs,
+    snapshots,
+    loadedSnapshots,
+    rifleId,
+    ammoId,
+    distanceYards,
+    matchEnvironment,
+    dopeDistanceDeltaYards,
+  ]);
 
   const dopeAdjusted = useMemo(() => {
     if (!rifle || !ammo || relevantDope.length === 0) return undefined;
@@ -213,16 +247,24 @@ export const useDopeAdjustment = ({
     () =>
       dopeAdjusted === undefined
         ? undefined
-        : adjustmentConfidence(dopeAdjusted, distanceYards, unit),
-    [dopeAdjusted, distanceYards, unit]
+        : adjustmentConfidence(
+            dopeAdjusted,
+            distanceYards,
+            unit,
+            // Same reasoning as `sigmaYards` above: proximity's default is half
+            // the shipped window, so it has to follow a window the shooter
+            // widened or it marks down every log the wider window admitted.
+            dopeDistanceDeltaYards / 2
+          ),
+    [dopeAdjusted, distanceYards, unit, dopeDistanceDeltaYards]
   );
 
   const confident = useMemo(
     () =>
       dopeAdjusted === undefined || confidence === undefined
         ? undefined
-        : applyConfidence(dopeAdjusted, confidence),
-    [dopeAdjusted, confidence]
+        : applyConfidence(dopeAdjusted, confidence, dopeConfidenceThreshold),
+    [dopeAdjusted, confidence, dopeConfidenceThreshold]
   );
 
   const matchedApplies = confident !== undefined && !confident.solverOnly;
@@ -263,7 +305,8 @@ export const useDopeAdjustment = ({
       predict,
       distanceYards,
       solverElevation,
-      unit
+      unit,
+      dopeConfidenceThreshold
     );
     return result === undefined || result.solverOnly ? undefined : result;
   }, [
@@ -277,6 +320,7 @@ export const useDopeAdjustment = ({
     distanceYards,
     solverElevation,
     unit,
+    dopeConfidenceThreshold,
   ]);
 
   /**

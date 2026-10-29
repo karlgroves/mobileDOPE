@@ -7,6 +7,7 @@ import { BallisticSolutionResults } from '../../../src/screens/BallisticSolution
 import { WindTable } from '../../../src/screens/WindTable';
 import { environmentRepository } from '../../../src/services/database';
 import { useAmmoStore } from '../../../src/store/useAmmoStore';
+import { DEFAULT_SETTINGS, useAppStore } from '../../../src/store/useAppStore';
 import { useDOPEStore } from '../../../src/store/useDOPEStore';
 import { useEnvironmentStore } from '../../../src/store/useEnvironmentStore';
 import { useRifleStore } from '../../../src/store/useRifleStore';
@@ -437,5 +438,34 @@ describe('the wind table’s source toggle (#163)', () => {
       expect(view.getByTestId('windage-source-note').props.children).toMatch(/Adjusted/)
     );
     expect(zeros()).toBe(before);
+  });
+});
+
+describe('the wind table’s matching window (#167)', () => {
+  afterEach(() => {
+    useAppStore.setState({ settings: { ...DEFAULT_SETTINGS } });
+  });
+
+  // Logs at 540 yd: 40 from the 500 row, 60 from the 600 row. Inside the
+  // shipped 50 yd window for one row; outside a 25 yd window for every row.
+  const logsAt540 = () =>
+    Array.from({ length: 6 }, () =>
+      log({ distance: 540, windageCorrection: (PER_MPH_500 + 0.01) * 10 })
+    );
+
+  it('finds the logs within the shipped window', async () => {
+    seed(logsAt540());
+    const view = renderWindTable();
+
+    await waitFor(() => expect(view.getByTestId('windage-source-note')).toBeTruthy());
+  });
+
+  it('ranks with the window the shooter set, as the calculator does', async () => {
+    useAppStore.setState({ settings: { ...DEFAULT_SETTINGS, dopeDistanceDeltaYards: 25 } });
+    seed(logsAt540());
+    const view = renderWindTable();
+
+    await waitFor(() => expect(view.queryByText('Generating wind table...')).toBeNull());
+    expect(view.queryByTestId('windage-source-note')).toBeNull();
   });
 });
