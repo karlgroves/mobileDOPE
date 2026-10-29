@@ -109,6 +109,22 @@ export const elevationIn = (
 };
 
 /**
+ * A log's dialled windage in `unit`, whatever it was recorded in (#125).
+ *
+ * The same conversion {@link elevationIn} makes, on the other column. Kept
+ * beside it rather than in `windageAdjustment` so the two cannot drift: a bug
+ * fixed in one would otherwise have to be remembered in the other.
+ */
+export const windageIn = (
+  log: MatchableLog & Partial<DOPELogData>,
+  unit: 'MIL' | 'MOA'
+): number => {
+  const value = log.windageCorrection ?? 0;
+  if (log.correctionUnit === undefined || log.correctionUnit === unit) return value;
+  return unit === 'MIL' ? moaToMil(value) : milToMoa(value);
+};
+
+/**
  * Today's solution, adjusted by what the relevant logs say the solver gets
  * wrong.
  *
