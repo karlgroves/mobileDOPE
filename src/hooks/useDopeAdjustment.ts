@@ -10,6 +10,9 @@ import { rankMatches } from '../utils/dopeMatching';
 import { adjustByInterpolation } from '../utils/interpolatedAdjustment';
 import { conditionsToMatch, matchesCaption } from '../utils/matchConditions';
 import { perLogElevation } from '../utils/perLogElevation';
+import { predictWindagePerMph } from '../utils/solverInputs';
+import { adjustWindage, windageCaption } from '../utils/windageAdjustment';
+import { calculateCrosswindComponent } from '../utils/windTable';
 
 import { useSnapshotsFor } from './useSnapshotsFor';
 
@@ -20,6 +23,7 @@ import type { ElevationAdjustment } from '../utils/dopeAdjustment';
 import type { Match, MatchableEnvironment } from '../utils/dopeMatching';
 import type { InterpolatedAdjustment } from '../utils/interpolatedAdjustment';
 import type { MatchConditions } from '../utils/matchConditions';
+import type { WindageAdjustment } from '../utils/windageAdjustment';
 
 /** What to adjust, and for which rifle and load. */
 export interface DopeAdjustmentRequest {
@@ -32,6 +36,16 @@ export interface DopeAdjustmentRequest {
   unit: 'MIL' | 'MOA';
   /** The "Adjust by my DOPE" switch. Off returns the solver's figure. */
   enabled: boolean;
+  /**
+   * The solver's own windage for this shot, in `unit` (#163).
+   *
+   * Optional: a caller that shows no windage -- or one written before #163 --
+   * omits it and nothing windage-related is computed. Supplying it without
+   * {@link crosswindMph} is the same as having no wind today.
+   */
+  solverWindage?: number;
+  /** Today's crosswind component, mph, signed as `calculateCrosswindComponent` signs it. */
+  crosswindMph?: number;
 }
 
 /** Everything a screen needs to show the adjusted figure and explain it. */
@@ -60,6 +74,17 @@ export interface DopeAdjustmentResult {
   adjustmentApplies: boolean;
   /** The figure to put in the headline. */
   shownElevation: number;
+  /**
+   * The windage adjusted by the shooter's own logs, normalised by the crosswind
+   * each was shot in (#163). Undefined when the caller supplied no windage.
+   */
+  windage?: WindageAdjustment<DOPELogData & { environment?: MatchableEnvironment }>;
+  /** What the windage adjustment was based on, when it was applied. */
+  windageCaption?: string;
+  /** True when the windage shown is adjusted rather than the solver's own. */
+  windageApplies: boolean;
+  /** The windage figure to show: adjusted when it applies, else the solver's. */
+  shownWindage?: number;
 }
 
 /** The adjustment that reached the headline, however it was arrived at. */
@@ -121,6 +146,8 @@ export const useDopeAdjustment = ({
   solverElevation,
   unit,
   enabled,
+  solverWindage,
+  crosswindMph,
 }: DopeAdjustmentRequest): DopeAdjustmentResult => {
   const { getRifleById } = useRifleStore();
   const { getAmmoById } = useAmmoStore();
@@ -252,6 +279,46 @@ export const useDopeAdjustment = ({
     unit,
   ]);
 
+  /**
+   * The windage adjustment (#163), from the same ranking as the elevation one.
+   *
+   * Normalised by the crosswind each log was shot in before averaging, which is
+   * why it needs the *full* snapshots rather than the reduced shape the matcher
+   * scores on -- `MatchableEnvironment` carries neither wind speed nor
+   * direction.
+   *
+   * One solve per log here rather than a cached table: windage is linear in
+   * crosswind, so `predictWindagePerMph` describes every wind speed from one
+   * solve, and there are at most `DEFAULT_MATCH_LIMIT` matches. Caching by
+   * snapshot would not help -- each log needs its own distance, which is what
+   * the elevation table exists to amortise.
+   */
+  const windage = useMemo(() => {
+    if (solverWindage === undefined || !rifle || !ammo || relevantDope.length === 0) {
+      return undefined;
+    }
+
+    const environmentById = snapshotsById(snapshots, loadedSnapshots);
+
+    return adjustWindage(
+      relevantDope,
+      (log, yards) => {
+        const env = environmentById.get(log.environmentId);
+        return env === undefined ? undefined : predictWindagePerMph(rifle, ammo, yards, env, unit);
+      },
+      (log) => {
+        const env = environmentById.get(log.environmentId);
+        if (env === undefined) return undefined;
+        return calculateCrosswindComponent(env.windSpeed, env.windDirection);
+      },
+      crosswindMph ?? 0,
+      solverWindage,
+      unit
+    );
+  }, [solverWindage, crosswindMph, rifle, ammo, relevantDope, snapshots, loadedSnapshots, unit]);
+
+  const windageApplies = enabled && windage !== undefined && windage.reason === undefined;
+
   let applied: AppliedAdjustment | undefined;
   if (enabled && matchedApplies && dopeAdjusted !== undefined) {
     applied = {
@@ -280,5 +347,11 @@ export const useDopeAdjustment = ({
     shownConfidence: interpolated?.confidence ?? confidence,
     adjustmentApplies: applied !== undefined,
     shownElevation: applied === undefined ? solverElevation : solverElevation + applied.offset,
+    windage,
+    windageCaption: windageApplies
+      ? windageCaption(windage.contributions.length, windage.crosswind)
+      : undefined,
+    windageApplies,
+    shownWindage: windageApplies ? windage.adjustedWindage : solverWindage,
   };
 };
