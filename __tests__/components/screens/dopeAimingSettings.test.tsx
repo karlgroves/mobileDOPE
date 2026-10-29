@@ -250,9 +250,13 @@ describe('the Settings screen (#167)', () => {
     const view = renderSettings();
 
     await waitFor(() => expect(view.getByText('DOPE-Assisted Aiming')).toBeTruthy());
-    expect(view.getByText(/Where the calculator's switch starts/)).toBeTruthy();
+    expect(
+      view.getByText(/Where the switch starts in the calculator and in a range session/)
+    ).toBeTruthy();
     expect(view.getByText(/How far from the shot a log can have been fired/)).toBeTruthy();
-    expect(view.getByText(/How much the app has to believe its own recommendation/)).toBeTruthy();
+    expect(
+      view.getByText(/How much the app has to believe its own elevation recommendation/)
+    ).toBeTruthy();
   });
 
   it('stores a change to the adjustment default', async () => {

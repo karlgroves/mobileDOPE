@@ -766,10 +766,10 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 Adjust by My DOPE
               </Text>
               <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
-                Where the calculator&apos;s switch starts. On, it corrects the solver&apos;s
-                elevation by what your own logs say it gets wrong in conditions like today&apos;s.
-                Off, you get the solver alone until you turn it on for a shot. The solver&apos;s own
-                figure is on screen either way.
+                Where the switch starts in the calculator and in a range session. On, it corrects
+                the solver&apos;s elevation and windage by what your own logs say it gets wrong in
+                conditions like today&apos;s. Off, you get the solver alone until you turn it on for
+                a shot. The solver&apos;s own figure is on screen either way.
               </Text>
             </View>
             <Switch
@@ -780,7 +780,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={settings.dopeAdjustmentEnabled ? '#ffffff' : '#f4f3f4'}
               accessibilityLabel="Adjust by my DOPE"
-              accessibilityHint="Sets whether the calculator starts with the DOPE adjustment on"
+              accessibilityHint="Sets whether the calculator and range sessions start with the DOPE adjustment on"
               testID="dope-adjustment-default"
             />
           </View>
@@ -819,8 +819,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               unit="%"
               presets={[20, 40, 60, 80]}
               helperText={
-                'How much the app has to believe its own recommendation before it uses ' +
-                'it. Below this it shows the solver alone and says why. Raise it to be ' +
+                'How much the app has to believe its own elevation recommendation before ' +
+                'it uses it. Below this it shows the solver alone and says why. Raise it to be ' +
                 'told less often and trust it more when you are; lower it to use thinner ' +
                 'evidence. At 0 any single log moves the figure.'
               }

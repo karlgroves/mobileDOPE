@@ -56,6 +56,16 @@ Two consequences worth knowing:
   count fully towards elevation.
 - **With no crosswind today there is nothing to scale, so you get the solver's
   windage.** The screen says so rather than leaving you to wonder.
+- **The confidence threshold gates elevation only.** The windage correction is
+  applied whenever a matching log was shot in a crosswind, and is damped instead:
+  one log moves it less than several.
+
+The **wind table** can show the same correction, row by row, once your logs
+give it one. Its **Solver / My DOPE** toggle starts on Solver every time,
+whatever the Adjust by My DOPE setting says,
+because a table is often printed onto a card and a printed figure should be
+plainly the solver's unless you chose otherwise. Each row uses the same matching
+window as the calculator.
 
 ## Confidence, and what it is not
 
@@ -135,7 +145,7 @@ screen; this is what they are for.
 | -------------------- | -------- | -------------------------------------------------------------------------------------------- |
 | Adjust by My DOPE    | On       | Where the switch starts, in the calculator and in a range session. Off gives you the solver. |
 | Matching Window      | 50 yards | How far from the shot a log can have been fired and still count. 25–100.                     |
-| Confidence Threshold | 40%      | How much the app has to believe its own recommendation before using it.                      |
+| Confidence Threshold | 40%      | How much the app has to believe its elevation recommendation before using it.                |
 | Cold-Bore Modelling  | On       | Whether a range session measures and offers a cold-bore shift.                               |
 | Heat-Shift Modelling | On       | Whether a range session measures and offers a heat shift.                                    |
 
