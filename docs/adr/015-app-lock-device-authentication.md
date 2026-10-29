@@ -136,9 +136,10 @@ triaging and would otherwise be lost.
 - **Caliber database management — already shipped.** PR #197 added adding,
   renaming and deleting custom calibers. The box can be ticked.
 - **Sound effects toggle — nothing to toggle.** The app has no audio
-  dependency and no sound playback anywhere in `src/`; the only matches for
-  "sound" are the speed of sound in `ballistics.ts`, `subsonic.ts` and
-  `atmospheric.ts`. A toggle would govern nothing. The real question is
+  dependency and no sound playback anywhere in `src/`; every match for "sound"
+  is the speed of sound (`ballistics.ts`, `subsonic.ts`, `atmospheric.ts`,
+  `dragModels.ts`) or the adjective (`offsetInterpolation.ts`). A toggle would
+  govern nothing. The real question is
   whether the app should have sounds at all, which is a feature request rather
   than a preference, and `hapticFeedbackEnabled` may already cover the
   intent.
