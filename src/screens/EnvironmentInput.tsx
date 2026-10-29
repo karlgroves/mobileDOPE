@@ -4,7 +4,7 @@
  */
 
 import * as Location from 'expo-location';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   View,
@@ -92,6 +92,20 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
    */
   const editingId = route?.params?.snapshotId;
   const editing = editingId !== undefined;
+
+  /**
+   * Whether the list has been loaded for an edit that found the store empty.
+   *
+   * A ref guards the request because `loadSnapshots` always sets a new array:
+   * with nothing saved, every load would re-run the effect below and load again.
+   * The state is what lets the screen say the reading is gone once it has looked.
+   */
+  const editLoadRequested = useRef(false);
+  const [editLoadFinished, setEditLoadFinished] = useState(false);
+  const editingMissing =
+    editing &&
+    !snapshots.some((candidate) => candidate.id === editingId) &&
+    (snapshots.length > 0 || editLoadFinished);
 
   // Environmental parameters
   const [temperature, setTemperature] = useState<number | undefined>(current?.temperature || 59);
@@ -297,10 +311,13 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
 
     const snapshot = snapshots.find((candidate) => candidate.id === editingId);
     if (snapshot === undefined) {
-      if (snapshots.length === 0) {
-        loadSnapshots().catch((error) => {
-          console.error('Failed to load snapshots for editing:', error);
-        });
+      if (snapshots.length === 0 && !editLoadRequested.current) {
+        editLoadRequested.current = true;
+        loadSnapshots()
+          .catch((error) => {
+            console.error('Failed to load snapshots for editing:', error);
+          })
+          .finally(() => setEditLoadFinished(true));
       }
       return;
     }
@@ -577,7 +594,11 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          {editing ? (
+          {editingMissing ? (
+            <Text style={[styles.sectionNote, { color: colors.text.secondary }]}>
+              This saved reading could not be found. It may have been deleted.
+            </Text>
+          ) : editing ? (
             <>
               <Text style={[styles.sectionNote, { color: colors.text.secondary }]}>
                 Editing a saved reading. Its recorded time does not change, because that is when the

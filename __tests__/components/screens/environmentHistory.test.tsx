@@ -266,7 +266,7 @@ describe('editing and deleting a saved reading (#62)', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('EnvironmentInput', { snapshotId: 7 });
   });
 
-  it('asks before deleting, and says logs are unaffected', async () => {
+  it('asks before deleting, and says a reading a log uses cannot go', async () => {
     seed([snapshot(7)]);
     const view = renderHistory();
 
@@ -274,10 +274,28 @@ describe('editing and deleting a saved reading (#62)', () => {
     fireEvent.press(view.getByText('Delete'));
 
     expect(deleteSnapshot).not.toHaveBeenCalled();
-    expect((Alert.alert as jest.Mock).mock.calls[0][1]).toMatch(/logs are unaffected/);
+    expect((Alert.alert as jest.Mock).mock.calls[0][1]).toMatch(/log refers to it/);
 
     await pressAlertButton('Delete');
     await waitFor(() => expect(deleteSnapshot).toHaveBeenCalledWith(7));
+  });
+
+  it('says why when a log or session still refers to the reading', async () => {
+    // `dope_logs.environment_id` and `range_sessions.environment_id` are foreign
+    // keys, so SQLite refuses the delete rather than leaving a log without air.
+    deleteSnapshot.mockImplementation(() =>
+      Promise.reject(new Error('FOREIGN KEY constraint failed'))
+    );
+    seed([snapshot(7)]);
+    const view = renderHistory();
+
+    await waitFor(() => expect(view.getByText('Delete')).toBeTruthy());
+    fireEvent.press(view.getByText('Delete'));
+    await pressAlertButton('Delete');
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenLastCalledWith('Reading In Use', expect.any(String))
+    );
   });
 });
 
@@ -333,6 +351,28 @@ describe('the capture screen in edit mode (#62)', () => {
 
     await waitFor(() => expect(view.getByText(/Editing a saved reading/)).toBeTruthy());
     expect(view.queryByText('Save to History')).toBeNull();
+  });
+
+  it('says the reading is gone rather than offering to save over nothing', async () => {
+    seed([snapshot(7)]);
+    const view = renderEdit(99);
+
+    await waitFor(() => expect(view.getByText(/could not be found/)).toBeTruthy());
+    expect(view.queryByText('Save Changes')).toBeNull();
+  });
+
+  it('loads an empty list once, not on every load it triggers', async () => {
+    // `loadSnapshots` always sets a fresh array, which re-runs the effect that
+    // called it; with nothing saved, that would reload for ever.
+    loadSnapshots.mockImplementation(() => {
+      useEnvironmentStore.setState({ snapshots: [] });
+      return Promise.resolve();
+    });
+    seed([]);
+    const view = renderEdit(7);
+
+    await waitFor(() => expect(view.getByText(/could not be found/)).toBeTruthy());
+    expect(loadSnapshots).toHaveBeenCalledTimes(1);
   });
 
   it('still captures a new reading when no id is given', async () => {

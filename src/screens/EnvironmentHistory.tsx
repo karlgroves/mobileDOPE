@@ -116,8 +116,8 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
   const confirmDelete = (id: number) => {
     Alert.alert(
       'Delete Reading',
-      'Delete this set of conditions? A DOPE log that was shot in them keeps its own copy, ' +
-        'so your logs are unaffected.',
+      'Delete this set of conditions? A reading that a DOPE log or range session was ' +
+        'recorded in cannot be deleted, because the log refers to it. You can edit it instead.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -128,6 +128,16 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
               await deleteSnapshot(id);
               setSelected((chosen) => chosen.filter((candidate) => candidate !== id));
             } catch (error) {
+              // `dope_logs` and `range_sessions` hold a foreign key to the reading,
+              // not a copy of it, so SQLite refuses the delete while one refers to it.
+              if (error instanceof Error && /FOREIGN KEY/i.test(error.message)) {
+                Alert.alert(
+                  'Reading In Use',
+                  'A DOPE log or range session was recorded in these conditions, so the ' +
+                    'reading cannot be deleted. You can edit it instead.'
+                );
+                return;
+              }
               console.error('Failed to delete snapshot:', error);
               Alert.alert('Error', 'Could not delete this reading.');
             }
@@ -168,14 +178,15 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
     if (id === undefined) return null;
     const isSelected = selected.includes(id);
     const summary = summariseConditions(snapshot);
+    const at = recordedAt(snapshot.timestamp);
 
     return (
-      <Card key={id} style={styles.card}>
+      <Card style={styles.card}>
         <Pressable
           onPress={() => toggle(id)}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: isSelected }}
-          accessibilityLabel={`Conditions recorded ${recordedAt(snapshot.timestamp)}`}
+          accessibilityLabel={`Conditions recorded ${at}`}
           accessibilityHint="Choose two readings to compare the air between them"
           testID={`snapshot-${id}`}
           style={[
@@ -184,9 +195,7 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
           ]}
         >
           <View style={styles.rowHeader}>
-            <Text style={[styles.rowDate, { color: colors.text.primary }]}>
-              {recordedAt(snapshot.timestamp)}
-            </Text>
+            <Text style={[styles.rowDate, { color: colors.text.primary }]}>{at}</Text>
             {/* The selection is named in words, not only drawn as a border
                     (WCAG 1.4.1), and the accessible state carries it too. */}
             <Text style={[styles.rowSelected, { color: colors.primaryText }]}>
@@ -222,94 +231,92 @@ export const EnvironmentHistory: React.FC<Props> = ({ navigation }) => {
         keyExtractor={(snapshot) => String(snapshot.id)}
         renderItem={renderSnapshot}
         contentContainerStyle={styles.content}
+        // The comparison, once two are chosen. A headline in words rather than
+        // four deltas to interpret -- see `environmentComparison`'s own reasoning
+        // for why density altitude is the one figure that answers "why did today
+        // not match my DOPE?".
         ListHeaderComponent={
-          <>
-            {/* The comparison, once two are chosen. A headline in words rather than
-          four deltas to interpret -- see `environmentComparison`'s own
-          reasoning for why density altitude is the one figure that answers
-          "why did today not match my DOPE?". */}
-            <Card style={styles.card}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Compare</Text>
-              {comparison === undefined ? (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Compare</Text>
+            {comparison === undefined ? (
+              <Text
+                style={[styles.helpText, { color: colors.text.secondary }]}
+                testID="compare-prompt"
+              >
+                {selected.length === 0
+                  ? 'Choose two readings below to see how the air changed between them.'
+                  : 'Choose one more reading to compare.'}
+              </Text>
+            ) : (
+              <View testID="comparison">
                 <Text
-                  style={[styles.helpText, { color: colors.text.secondary }]}
-                  testID="compare-prompt"
+                  style={[styles.comparisonHeadline, { color: colors.text.primary }]}
+                  testID="comparison-summary"
                 >
-                  {selected.length === 0
-                    ? 'Choose two readings below to see how the air changed between them.'
-                    : 'Choose one more reading to compare.'}
+                  {describeEnvironmentDelta(comparison.change)}
                 </Text>
-              ) : (
-                <View testID="comparison">
+                <Text style={[styles.helpText, { color: colors.text.secondary }]}>
+                  {`${recordedAt(comparison.earlier.timestamp)} → ${recordedAt(
+                    comparison.later.timestamp
+                  )}`}
+                </Text>
+                {comparison.change.significant && (
                   <Text
-                    style={[styles.comparisonHeadline, { color: colors.text.primary }]}
-                    testID="comparison-summary"
+                    style={[styles.significantNote, { color: colors.warningText }]}
+                    testID="comparison-significant"
                   >
-                    {describeEnvironmentDelta(comparison.change)}
+                    Enough to matter to a solution — expect your DOPE from the earlier day to need
+                    adjusting.
                   </Text>
-                  <Text style={[styles.helpText, { color: colors.text.secondary }]}>
-                    {`${recordedAt(comparison.earlier.timestamp)} → ${recordedAt(
-                      comparison.later.timestamp
-                    )}`}
-                  </Text>
-                  {comparison.change.significant && (
-                    <Text
-                      style={[styles.significantNote, { color: colors.warningText }]}
-                      testID="comparison-significant"
-                    >
-                      Enough to matter to a solution — expect your DOPE from the earlier day to need
-                      adjusting.
-                    </Text>
-                  )}
-                  <View style={styles.deltaGrid}>
-                    {[
-                      {
-                        label: 'Density altitude',
-                        value: comparison.change.densityAltitudeDelta,
-                        unit: 'ft',
-                        places: 0,
-                      },
-                      {
-                        label: 'Temperature',
-                        value: comparison.change.temperatureDelta,
-                        unit: '°F',
-                        places: 1,
-                      },
-                      {
-                        label: 'Pressure',
-                        value: comparison.change.pressureDelta,
-                        unit: 'inHg',
-                        places: 2,
-                      },
-                      {
-                        label: 'Wind',
-                        value: comparison.change.windSpeedDelta,
-                        unit: 'mph',
-                        places: 1,
-                      },
-                    ].map((row) => (
-                      <View key={row.label} style={styles.deltaRow}>
-                        <Text style={[styles.deltaLabel, { color: colors.text.secondary }]}>
-                          {row.label}
-                        </Text>
-                        <Text style={[styles.deltaValue, { color: colors.text.primary }]}>
-                          {row.value === undefined
-                            ? '—'
-                            : `${row.value >= 0 ? '+' : ''}${row.value.toFixed(row.places)} ${row.unit}`}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Button
-                    title="Clear Selection"
-                    onPress={() => setSelected([])}
-                    variant="secondary"
-                    size="small"
-                  />
+                )}
+                <View style={styles.deltaGrid}>
+                  {[
+                    {
+                      label: 'Density altitude',
+                      value: comparison.change.densityAltitudeDelta,
+                      unit: 'ft',
+                      places: 0,
+                    },
+                    {
+                      label: 'Temperature',
+                      value: comparison.change.temperatureDelta,
+                      unit: '°F',
+                      places: 1,
+                    },
+                    {
+                      label: 'Pressure',
+                      value: comparison.change.pressureDelta,
+                      unit: 'inHg',
+                      places: 2,
+                    },
+                    {
+                      label: 'Wind',
+                      value: comparison.change.windSpeedDelta,
+                      unit: 'mph',
+                      places: 1,
+                    },
+                  ].map((row) => (
+                    <View key={row.label} style={styles.deltaRow}>
+                      <Text style={[styles.deltaLabel, { color: colors.text.secondary }]}>
+                        {row.label}
+                      </Text>
+                      <Text style={[styles.deltaValue, { color: colors.text.primary }]}>
+                        {row.value === undefined
+                          ? '—'
+                          : `${row.value >= 0 ? '+' : ''}${row.value.toFixed(row.places)} ${row.unit}`}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              )}
-            </Card>
-          </>
+                <Button
+                  title="Clear Selection"
+                  onPress={() => setSelected([])}
+                  variant="secondary"
+                  size="small"
+                />
+              </View>
+            )}
+          </Card>
         }
       />
     </View>
