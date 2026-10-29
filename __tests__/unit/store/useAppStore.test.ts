@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { caliberDiameter, setCustomCalibers } from '../../../src/constants/calibers';
-import { DEFAULT_DISTANCE_PRESETS, useAppStore } from '../../../src/store/useAppStore';
+import {
+  DEFAULT_DISTANCE_PRESETS,
+  DEFAULT_SETTINGS,
+  useAppStore,
+} from '../../../src/store/useAppStore';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
@@ -164,6 +168,54 @@ describe('useAppStore', () => {
         expect(store().settings.barometerOffsetInHg).toBe(0);
       }
     );
+  });
+
+  describe('DOPE-assisted aiming settings on load (#167)', () => {
+    it('restores stored values inside their ranges', async () => {
+      mockStorage.getItem.mockResolvedValueOnce(
+        JSON.stringify({
+          dopeAdjustmentEnabled: false,
+          dopeDistanceDeltaYards: 75,
+          dopeConfidenceThreshold: 0.6,
+          coldBoreModellingEnabled: false,
+          heatShiftModellingEnabled: false,
+        })
+      );
+
+      await store().loadSettings();
+
+      expect(store().settings).toMatchObject({
+        dopeAdjustmentEnabled: false,
+        dopeDistanceDeltaYards: 75,
+        dopeConfidenceThreshold: 0.6,
+        coldBoreModellingEnabled: false,
+        heatShiftModellingEnabled: false,
+      });
+    });
+
+    it('drops values that would silently switch the feature off', async () => {
+      // A window of 0 matches no log and a threshold above 1 can never be
+      // cleared; neither reports anything, so neither may survive a load.
+      mockStorage.getItem.mockResolvedValueOnce(
+        JSON.stringify({
+          dopeAdjustmentEnabled: 'yes',
+          dopeDistanceDeltaYards: 0,
+          dopeConfidenceThreshold: 1.5,
+          coldBoreModellingEnabled: null,
+          heatShiftModellingEnabled: 1,
+        })
+      );
+
+      await store().loadSettings();
+
+      expect(store().settings).toMatchObject({
+        dopeAdjustmentEnabled: DEFAULT_SETTINGS.dopeAdjustmentEnabled,
+        dopeDistanceDeltaYards: DEFAULT_SETTINGS.dopeDistanceDeltaYards,
+        dopeConfidenceThreshold: DEFAULT_SETTINGS.dopeConfidenceThreshold,
+        coldBoreModellingEnabled: DEFAULT_SETTINGS.coldBoreModellingEnabled,
+        heatShiftModellingEnabled: DEFAULT_SETTINGS.heatShiftModellingEnabled,
+      });
+    });
   });
 
   describe('resetSettings', () => {

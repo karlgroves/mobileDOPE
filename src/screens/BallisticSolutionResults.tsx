@@ -23,6 +23,7 @@ import {
 } from '../utils/advancedCorrections';
 import { toSolverYards } from '../utils/distanceUnits';
 import { SOLVER_ONLY_REASON } from '../utils/dopeAdjustment';
+import { calculateCrosswindComponent } from '../utils/windTable';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { CalculatorStackScreenProps } from '../navigation/types';
@@ -30,7 +31,16 @@ import type { CalculatorStackScreenProps } from '../navigation/types';
 type Props = CalculatorStackScreenProps<'BallisticSolutionResults'>;
 
 export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation }) => {
-  const { solution, rifleId, ammoId, distance, distanceUnit, angularUnit } = route.params;
+  const {
+    solution,
+    rifleId,
+    ammoId,
+    distance,
+    distanceUnit,
+    angularUnit,
+    windSpeed: solvedWindSpeed,
+    windDirection: solvedWindDirection,
+  } = route.params;
   const { settings } = useAppStore();
 
   /**
@@ -66,7 +76,7 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
    * range session mode shares (#166). The solver's own figure is always on
    * screen, whatever the switch says.
    */
-  const [adjustByDope, setAdjustByDope] = useState(true);
+  const [adjustByDope, setAdjustByDope] = useState(settings.dopeAdjustmentEnabled);
 
   const {
     relevantDope,
@@ -77,6 +87,10 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     shownConfidence,
     adjustmentApplies,
     shownElevation,
+    windage: windageAdjustment,
+    windageCaption: windageBasis,
+    windageApplies,
+    shownWindage,
   } = useDopeAdjustment({
     rifleId,
     ammoId,
@@ -85,6 +99,19 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
     solverElevation: elevation,
     unit: angularUnit,
     enabled: adjustByDope,
+    // #163: the windage half, normalised by the crosswind each log was shot in.
+    // Today's crosswind comes from the same `calculateCrosswindComponent` the
+    // wind table and the solver use, from the wind the solution was solved in.
+    // That is the calculator's own input, not the environment store's: scaling
+    // by the store's wind would correct a calm solution for a wind it was never
+    // solved in. The store is only the fallback for a caller that omits it.
+    solverWindage: windage,
+    crosswindMph:
+      solvedWindSpeed !== undefined && solvedWindDirection !== undefined
+        ? calculateCrosswindComponent(solvedWindSpeed, solvedWindDirection)
+        : currentEnv === null
+          ? 0
+          : calculateCrosswindComponent(currentEnv.windSpeed, currentEnv.windDirection),
   });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -226,12 +253,14 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.primaryColumn}>
-              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>WINDAGE</Text>
+              <Text style={[styles.primaryLabel, { color: colors.text.secondary }]}>
+                {windageApplies ? 'WINDAGE (ADJUSTED)' : 'WINDAGE'}
+              </Text>
               <Text
                 style={[styles.primaryValue, { color: colors.primaryText }]}
                 testID="windage-value"
               >
-                {windage.toFixed(2)}
+                {(windageApplies ? (shownWindage ?? windage) : windage).toFixed(2)}
               </Text>
               <Text style={[styles.primaryUnit, { color: colors.text.secondary }]}>
                 {angularUnit}
@@ -345,6 +374,52 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             </Text>
           )}
 
+          {/* The windage half (#163). Separate from the elevation summary above
+              because it can succeed or fail for its own reasons -- there may be
+              plenty of logs to rank and not one of them shot in a crosswind --
+              and a shooter dialling wind needs to know which. */}
+          {adjustByDope && windageAdjustment !== undefined && (
+            <View style={styles.windageBlock} testID="dope-windage">
+              {windageApplies ? (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                      Solver windage:
+                    </Text>
+                    <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                      {windageAdjustment.solverWindage.toFixed(2)} {angularUnit}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>
+                      Windage offset:
+                    </Text>
+                    <Text
+                      style={[styles.infoValue, { color: colors.text.primary }]}
+                      testID="dope-windage-offset"
+                    >
+                      {windageAdjustment.offset >= 0 ? '+' : ''}
+                      {windageAdjustment.offset.toFixed(2)} {angularUnit}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                    testID="dope-windage-caption"
+                  >
+                    {windageBasis}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                  testID="dope-windage-caption"
+                >
+                  {windageAdjustment.reason}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Confidence in the adjustment itself (#161), as distinct from the
               per-log confidence `RelevantDopeList` shows against each entry.
               Rendered whenever there are logs to judge -- including when the
@@ -440,15 +515,29 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
             style={styles.button}
             disabled={isSaving}
           />
-          {/* Only when the two differ. With the adjustment off or unapplied the
-              headline already *is* the stored figure, and a note drawing a
-              distinction would be describing one that is not there (#185). */}
-          {adjustmentApplies && (
+          {/* Only when a headline figure differs from the stored one. With the
+              adjustment off or unapplied the headline already *is* what gets
+              stored, and a note drawing a distinction would be describing one
+              that is not there (#185). Covers windage as well as elevation:
+              #163 made the windage headline adjustable too, and a figure shown
+              as adjusted while a different one is saved is the exact condition
+              #185 was filed over. */}
+          {(adjustmentApplies || windageApplies) && (
             <Text
               style={[styles.saveNote, { color: colors.text.secondary }]}
               testID="save-records-note"
             >
-              {`Saves the solver's ${elevation.toFixed(2)} ${angularUnit}, not the adjusted ${shownElevation.toFixed(2)}. Your logs are measured against the solver, so storing the adjusted figure would fold the offset in twice.`}
+              {[
+                adjustmentApplies
+                  ? `Saves the solver's ${elevation.toFixed(2)} ${angularUnit} elevation, not the adjusted ${shownElevation.toFixed(2)}.`
+                  : undefined,
+                windageApplies
+                  ? `Saves the solver's ${windage.toFixed(2)} ${angularUnit} windage, not the adjusted ${(shownWindage ?? windage).toFixed(2)}.`
+                  : undefined,
+                'Your logs are measured against the solver, so storing an adjusted figure would fold the offset in twice.',
+              ]
+                .filter((part) => part !== undefined)
+                .join(' ')}
             </Text>
           )}
           <Button
@@ -524,6 +613,12 @@ const styles = StyleSheet.create({
   matchesCaption: {
     fontSize: 12,
     marginBottom: 8,
+  },
+  windageBlock: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   extrapolatedWarning: {
     fontSize: 13,
