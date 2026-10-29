@@ -18,7 +18,7 @@ What currently says no:
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PRIVACY.md:8`     | _"Mobile DOPE has no network layer. It does not contain an analytics SDK, a **crash reporter**, a telemetry client, an advertising identifier, or any code that sends a network request to a remote host."_ |
 | `PRIVACY.md:146`   | _"No analytics, telemetry, crash reporting, or usage measurement."_                                                                                                                                         |
-| `app/CLAUDE.md`    | _"No analytics, telemetry, crash reporting or advertising identifiers. The app has no network layer."_                                                                                                      |
+| `CLAUDE.md:225`    | _"No analytics, telemetry, crash reporting or advertising identifiers. The app has no network layer: there is no `fetch` to any remote host anywhere in `src/`."_                                           |
 | `app.config.ts:48` | `usesNonExemptEncryption: false`, _"The app has no network layer, collects no identifiers and does no tracking."_                                                                                           |
 
 And two tests that fail the build rather than merely disagreeing:
@@ -79,7 +79,7 @@ In scope, in this order:
 
 1. An ADR superseding this one.
 2. `PRIVACY.md` updated **before** the SDK lands, not after.
-3. `app/CLAUDE.md`'s Data Privacy section brought into step.
+3. `CLAUDE.md`'s Data Privacy section brought into step.
 4. `app.config.ts` — recheck `usesNonExemptEncryption`. An SDK using TLS may
    change the answer, and that declaration is made to Apple.
 5. Opt-in, not opt-out, surfaced in Settings.
@@ -96,9 +96,11 @@ In scope, in this order:
 ### Option B — decline it
 
 Strike the monitoring section from #61, record the decision, and name the
-honest fallback: users tell us, and the local gate (lint, types, tests,
-semgrep, trufflehog on every commit, per ADR-011) is where defects are meant to
-be caught instead.
+honest fallback: users tell us, and the local Husky gate of ADR-011 is where
+defects are meant to be caught instead — lint, staged type-check and a
+trufflehog secret scan on every commit; lint, types, duplication, knip,
+`npm audit`, semgrep (when installed) and trufflehog on every push. The test
+suite is not in either hook; it runs in `npm run check:all`.
 
 **Real cost:** when a shooter says "it crashed", there is nothing to look at.
 That is the gap, and it is a real one.
@@ -119,10 +121,11 @@ uses — so a shooter can attach it to an email **if they choose to**.
 - It closes the actual gap. The problem to solve is that a shooter reporting a
   crash has nothing to attach, and this solves exactly that.
 - The pieces already exist: `ErrorBoundary`, `expo-file-system`,
-  `expo-sharing`, and a Settings screen with a Data Management section. This is
-  a small amount of new code rather than a dependency and a posture change.
-- The egress model is the one already recorded for exports --
-  _"User-initiated exports are the only egress."_ (`app/CLAUDE.md:248`), which
+  `expo-sharing`, and a Settings screen with a Data Management section. It is
+  more code than installing an SDK, but far less total work than Option A's
+  nine items, and it needs no new dependency and no posture change.
+- The egress model is the one already recorded for exports —
+  _"User-initiated exports are the only egress."_ (`CLAUDE.md:248`), which
   `PRIVACY.md:11` states as "the only way data leaves your device is when you
   deliberately export or share a file". A crash log the user chooses
   to send is the same shape as a backup the user chooses to send, so the
@@ -130,7 +133,11 @@ uses — so a shooter can attach it to an email **if they choose to**.
 
 **What it does not do**, stated plainly so the ruling is informed: it does not
 aggregate. There is no dashboard, no crash-free-sessions figure, and no way to
-learn about a crash nobody reports. It is strictly worse than Option A at
+learn about a crash nobody reports. Nor does it see every crash: an error
+boundary catches only errors thrown while rendering. Errors in event handlers
+and async code would need a global JS handler (`ErrorUtils.setGlobalHandler`)
+writing to the same log, and a native crash that kills the process is not
+captured at all. It is strictly worse than Option A at
 knowing what is breaking in the field, and strictly better at everything else.
 
 **Performance monitoring** (launch time, calculation speed, key metrics) is
@@ -166,7 +173,7 @@ actionable or removed, so they stop being rediscovered.
 
 ### Negative
 
-- Option C is more work than adding an SDK, and does less. Someone has to
+- Option C is more code than adding an SDK, and does less. Someone has to
   write the file handling, the cap, the viewer and the share action.
 - Under Option C, a crash that nobody reports is a crash nobody learns about.
   There is no honest way to describe that as equivalent to telemetry.
@@ -182,7 +189,7 @@ actionable or removed, so they stop being rediscovered.
   in nothing automatically, and the share action must say what it contains
   before it is sent.
 - **Documentation drift.** `PRIVACY.md` is the canonical statement and
-  `app/CLAUDE.md` mirrors it. Whichever option is chosen, both move in the same
+  `CLAUDE.md` mirrors it. Whichever option is chosen, both move in the same
   commit as the code, per #44.
 
 ## References
@@ -192,6 +199,6 @@ actionable or removed, so they stop being rediscovered.
 - Issue #44 — why an inaccurate privacy claim is treated here as a defect
 - ADR-011 — local-gate-first, and why defects are caught before a release
   rather than after one
-- `PRIVACY.md`, `app/CLAUDE.md`, `app.config.ts`,
+- `PRIVACY.md`, `CLAUDE.md`, `app.config.ts`,
   `security/docs/security-exceptions.md` — the four statements that have to
   agree with whatever is decided
