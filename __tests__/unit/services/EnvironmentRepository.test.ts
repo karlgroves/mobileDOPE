@@ -262,6 +262,29 @@ describe('EnvironmentRepository', () => {
       expect(reloaded?.windSpeed).toBe(18);
     });
 
+    it('recomputes density altitude from the edited readings (#62)', async () => {
+      const created = await environmentRepository.create(validEnvironment({ temperature: 40 }));
+      const fresh = await environmentRepository.create(validEnvironment({ temperature: 100 }));
+
+      const updated = await environmentRepository.update(created.id as number, {
+        temperature: 100,
+      });
+
+      expect(updated?.densityAltitude).not.toBe(created.densityAltitude);
+      expect(updated?.densityAltitude).toBe(fresh.densityAltitude);
+    });
+
+    it('keeps a density altitude the caller supplies', async () => {
+      const created = await environmentRepository.create(validEnvironment());
+
+      const updated = await environmentRepository.update(created.id as number, {
+        temperature: 100,
+        densityAltitude: 1234,
+      });
+
+      expect(updated?.densityAltitude).toBe(1234);
+    });
+
     it('returns null when the id does not exist', async () => {
       expect(await environmentRepository.update(4242, { windSpeed: 1 })).toBeNull();
     });

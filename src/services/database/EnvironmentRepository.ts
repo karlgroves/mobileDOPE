@@ -91,7 +91,13 @@ export class EnvironmentRepository {
       return null;
     }
 
-    const updated = new EnvironmentSnapshot({ ...existing.toJSON(), ...data, id });
+    // Density altitude is derived from temperature, pressure and altitude, and the
+    // constructor keeps any figure it is handed. Carried over from the stored row,
+    // an edited reading would keep the density altitude of the air it no longer
+    // describes, so it is recomputed unless the caller supplies one (#62).
+    const previous = existing.toJSON();
+    delete previous.densityAltitude;
+    const updated = new EnvironmentSnapshot({ ...previous, ...data, id });
     const db = databaseService.getDatabase();
 
     await db.runAsync(
