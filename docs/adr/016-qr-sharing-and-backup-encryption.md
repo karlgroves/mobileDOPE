@@ -98,12 +98,11 @@ rather than in mechanism:
   `JSON.stringify`, and a profile with long names must fail with a message
   rather than produce an unscannable code.
 - **A new import route.** `src/navigation/linking.ts` has no import route
-  today, and the obvious path, `rifles/import`, would be swallowed by the
-  existing `rifles/:rifleId` pattern and open `RifleProfileDetail` with an
-  unparseable id. The route needs a path that cannot collide, and its payload
-  is untrusted input — `linking.ts` already says deep links are an input
-  surface — so it must pass the same guards as file import (`importGuards.ts`)
-  before anything reaches the database.
+  today, so one has to be added to the route table and its resolution tests. A
+  static path beside `rifles/:rifleId` is fine — `rifles/new` already resolves
+  ahead of it — but the payload is untrusted input (`linking.ts` already says
+  deep links are an input surface), so it must pass the same guards as file
+  import (`importGuards.ts`) before anything reaches the database.
 
 **Two things to weigh before ruling, both arguments against:**
 
@@ -165,7 +164,8 @@ same boundary from the other side.
 - The DOPE-card QR is separable and nearly free, so a partial ruling still
   ships something.
 - Ruling 2 closes the gap that bounds what ADR-015's proposed app lock can be
-  worth: at present a backup file beside a locked app contains everything the lock hid.
+  worth: at present a backup file beside a locked app contains everything the
+  lock hid.
 
 ### Negative
 
