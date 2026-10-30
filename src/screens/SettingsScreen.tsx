@@ -17,6 +17,7 @@ import {
 
 import { Card, Button, SegmentedControl } from '../components';
 import { NumberInput } from '../components/NumberInput';
+import { NumberPicker } from '../components/NumberPicker';
 import { useTheme } from '../contexts/ThemeContext';
 import { environmentRepository } from '../services/database/EnvironmentRepository';
 import { isBarometerAvailable } from '../services/deviceBarometer';
@@ -31,12 +32,20 @@ import {
 } from '../services/ExportService';
 import { importFullBackup, importRifleProfiles, importDOPELogs } from '../services/ImportService';
 import { useAmmoStore } from '../store/useAmmoStore';
-import { useAppStore, DEFAULT_DISTANCE_PRESETS } from '../store/useAppStore';
+import { useAppStore, DEFAULT_DISTANCE_PRESETS, DEFAULT_SETTINGS } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { AUTOMATIC_BACKUPS_KEPT, type BackupSchedule } from '../utils/backupSchedule';
 import { MAX_BAROMETER_OFFSET_INHG, isValidBarometerOffset } from '../utils/barometer';
+import {
+  MAX_CONFIDENCE_THRESHOLD,
+  MAX_DISTANCE_DELTA_YARDS,
+  MIN_CONFIDENCE_THRESHOLD,
+  MIN_DISTANCE_DELTA_YARDS,
+  percentToThreshold,
+  thresholdPercent,
+} from '../utils/dopeSettings';
 import { formatDateTime } from '../utils/formatting';
 import { MergeStrategy } from '../utils/importMerge';
 
@@ -114,6 +123,39 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     }
     const newPresets = settings.distancePresets.filter((p) => p !== value);
     await updateSettings({ distancePresets: newPresets });
+  };
+
+  /**
+   * Puts the DOPE-assisted settings back where they started (#167 and
+   * #70 §10's "reset to defaults").
+   *
+   * Scoped to this section rather than reusing `resetSettings`, which clears
+   * the theme, the units, the custom calibers and the barometer calibration
+   * too. A shooter who wants their matching window back has not asked to lose
+   * a measured sensor offset.
+   */
+  const handleResetDopeSettings = () => {
+    Alert.alert(
+      'Reset DOPE-Assisted Aiming',
+      `Put the matching window back to ${DEFAULT_SETTINGS.dopeDistanceDeltaYards} yards, ` +
+        `the confidence threshold to ${thresholdPercent(DEFAULT_SETTINGS.dopeConfidenceThreshold)}%, ` +
+        'and the adjustment, cold-bore and heat-shift modelling back on? Nothing else changes.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            await updateSettings({
+              dopeAdjustmentEnabled: DEFAULT_SETTINGS.dopeAdjustmentEnabled,
+              dopeDistanceDeltaYards: DEFAULT_SETTINGS.dopeDistanceDeltaYards,
+              dopeConfidenceThreshold: DEFAULT_SETTINGS.dopeConfidenceThreshold,
+              coldBoreModellingEnabled: DEFAULT_SETTINGS.coldBoreModellingEnabled,
+              heatShiftModellingEnabled: DEFAULT_SETTINGS.heatShiftModellingEnabled,
+            });
+          },
+        },
+      ]
+    );
   };
 
   const handleResetPresets = () => {
@@ -696,6 +738,140 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               thumbColor={settings.advancedBallisticsEnabled ? '#ffffff' : '#f4f3f4'}
               accessibilityLabel="Apply spin drift and Coriolis corrections"
               accessibilityHint="Includes spin drift and Coriolis in the elevation and windage the calculator tells you to dial"
+            />
+          </View>
+        </Card>
+
+        {/* DOPE-assisted aiming (#167). Every control says what it changes, not
+            what it is called: a "distance delta" means nothing to a shooter,
+            and the number it governs is which of their logs get a say. */}
+        <Card style={styles.card}>
+          <View style={styles.presetHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              DOPE-Assisted Aiming
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Reset DOPE-assisted aiming settings"
+              accessibilityHint="Puts the matching window, confidence threshold, adjustment default and barrel-state modelling back to their shipped values"
+              onPress={handleResetDopeSettings}
+            >
+              <Text style={[styles.resetLink, { color: colors.primaryText }]}>Reset</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Adjust by My DOPE
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Where the switch starts in the calculator and in a range session. On, it corrects
+                the solver&apos;s elevation and windage by what your own logs say it gets wrong in
+                conditions like today&apos;s. Off, you get the solver alone until you turn it on for
+                a shot. The solver&apos;s own figure is on screen either way.
+              </Text>
+            </View>
+            <Switch
+              value={settings.dopeAdjustmentEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ dopeAdjustmentEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.dopeAdjustmentEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Adjust by my DOPE"
+              accessibilityHint="Sets whether the calculator and range sessions start with the DOPE adjustment on"
+              testID="dope-adjustment-default"
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <NumberPicker
+              label="Matching Window"
+              value={settings.dopeDistanceDeltaYards}
+              onValueChange={async (value) => {
+                await updateSettings({ dopeDistanceDeltaYards: value });
+              }}
+              min={MIN_DISTANCE_DELTA_YARDS}
+              max={MAX_DISTANCE_DELTA_YARDS}
+              step={5}
+              unit="yards"
+              presets={[25, 50, 75, 100]}
+              helperText={
+                'How far from the shot a log can have been fired and still count. At 50 ' +
+                'yards, a shot at 600 is informed by logs from 550 to 650. Wider finds ' +
+                'more logs and leans on each one less, because a log at the edge of the ' +
+                'window already counts for much less than one at the exact distance.'
+              }
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <NumberPicker
+              label="Confidence Threshold"
+              value={thresholdPercent(settings.dopeConfidenceThreshold)}
+              onValueChange={async (value) => {
+                await updateSettings({ dopeConfidenceThreshold: percentToThreshold(value) });
+              }}
+              min={thresholdPercent(MIN_CONFIDENCE_THRESHOLD)}
+              max={thresholdPercent(MAX_CONFIDENCE_THRESHOLD)}
+              step={5}
+              unit="%"
+              presets={[20, 40, 60, 80]}
+              helperText={
+                'How much the app has to believe its own elevation recommendation before ' +
+                'it uses it. Below this it shows the solver alone and says why. Raise it to be ' +
+                'told less often and trust it more when you are; lower it to use thinner ' +
+                'evidence. At 0 any single log moves the figure.'
+              }
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Cold-Bore Modelling
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Whether a range session measures how far your first shot from a cold barrel lands
+                from the warm ones, and offers to dial it. Off, the session shows no cold-bore
+                figure. Either way nothing is dialled unless you turn it on for the shot.
+              </Text>
+            </View>
+            <Switch
+              value={settings.coldBoreModellingEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ coldBoreModellingEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.coldBoreModellingEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Cold-bore modelling"
+              accessibilityHint="Sets whether range sessions measure and offer a cold-bore shift"
+              testID="cold-bore-modelling"
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+                Heat-Shift Modelling
+              </Text>
+              <Text style={[styles.settingHelp, { color: colors.text.secondary }]}>
+                Whether a range session measures how your point of impact walks as a string heats
+                the barrel, and offers to dial it. Off, the session shows no heat-shift figure.
+                Either way nothing is dialled unless you turn it on.
+              </Text>
+            </View>
+            <Switch
+              value={settings.heatShiftModellingEnabled}
+              onValueChange={async (value) => {
+                await updateSettings({ heatShiftModellingEnabled: value });
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={settings.heatShiftModellingEnabled ? '#ffffff' : '#f4f3f4'}
+              accessibilityLabel="Heat-shift modelling"
+              accessibilityHint="Sets whether range sessions measure and offer a heat shift"
+              testID="heat-shift-modelling"
             />
           </View>
         </Card>

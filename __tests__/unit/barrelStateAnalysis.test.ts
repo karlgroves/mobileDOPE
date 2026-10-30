@@ -4,11 +4,15 @@ import {
   MIN_HEAT_SHIFT_SPREAD,
   WARM_SHOT_MAX,
   WARM_SHOT_MIN,
+  HEAT_SHIFT_HORIZON_SHOTS,
   analyseBarrelState,
   describeColdBoreShift,
+  describeHeatShift,
+  isSignificantHeatShift,
+  predictHeatShift,
 } from '../../src/utils/barrelStateAnalysis';
 
-import type { BarrelStateSample } from '../../src/utils/barrelStateAnalysis';
+import type { BarrelStateSample, HeatShift } from '../../src/utils/barrelStateAnalysis';
 
 /**
  * Cold-bore bias and heat shift (#165).
@@ -289,5 +293,99 @@ describe('describeColdBoreShift (#165)', () => {
     expect(describeColdBoreShift({ bias: 0.004, coldSamples: 4, warmSamples: 6 }, 'MIL')).toMatch(
       /no measurable/i
     );
+  });
+});
+
+describe('predictHeatShift (#165)', () => {
+  const slope = (perShot: number): HeatShift => ({ perShot, shots: 20 });
+
+  it('predicts no drift on the first shot of a string', () => {
+    // The slope describes how a string *moves*. Anchoring it anywhere but shot
+    // one would hand the first shot a correction for heat it has not produced.
+    expect(predictHeatShift(slope(0.02), 1)).toBe(0);
+  });
+
+  it('accumulates from shot one', () => {
+    expect(predictHeatShift(slope(0.02), 11)).toBeCloseTo(0.2, 10);
+    expect(predictHeatShift(slope(-0.015), 6)).toBeCloseTo(-0.075, 10);
+  });
+
+  it('clamps a shot number below one rather than predicting backwards', () => {
+    expect(predictHeatShift(slope(0.02), 0)).toBe(0);
+    expect(predictHeatShift(slope(0.02), -5)).toBe(0);
+  });
+});
+
+describe('isSignificantHeatShift (#165)', () => {
+  it('calls a slope significant when it prints by the horizon shot', () => {
+    // 0.002/shot over 9 shots is 0.018, which prints as 0.02.
+    expect(isSignificantHeatShift({ perShot: 0.002, shots: 20 })).toBe(true);
+  });
+
+  it('refuses a slope whose own figure rounds away by then', () => {
+    // 0.0002/shot over 9 shots is 0.0018, which prints as 0.00 -- a warning
+    // whose magnitude is zero at the precision it is shown in.
+    expect(isSignificantHeatShift({ perShot: 0.0002, shots: 20 })).toBe(false);
+    expect(isSignificantHeatShift({ perShot: 0, shots: 20 })).toBe(false);
+  });
+
+  it('is sign-blind: a barrel walking down matters as much as one walking up', () => {
+    expect(isSignificantHeatShift({ perShot: -0.002, shots: 20 })).toBe(true);
+  });
+
+  it('uses the stated horizon, not an arbitrary number of shots', () => {
+    // Pins HEAT_SHIFT_HORIZON_SHOTS to the threshold it defines: the boundary
+    // slope is exactly the one that prints 0.005 over (horizon - 1) shots.
+    const boundary = 0.005 / (HEAT_SHIFT_HORIZON_SHOTS - 1);
+    expect(isSignificantHeatShift({ perShot: boundary, shots: 20 })).toBe(true);
+    expect(isSignificantHeatShift({ perShot: boundary * 0.9, shots: 20 })).toBe(false);
+  });
+});
+
+describe('describeHeatShift (#165)', () => {
+  const walking: HeatShift = { perShot: 0.02, shots: 20 };
+
+  it('says nothing at all when the slope is not significant', () => {
+    // The caller renders nothing rather than warning about a barrel that is
+    // not measurably walking.
+    expect(describeHeatShift({ perShot: 0.0001, shots: 20 }, 12, 'MIL')).toBeUndefined();
+  });
+
+  it('names the drift expected by this shot, as a point of impact', () => {
+    // 0.02/shot by shot 11 is 0.20. Positive offset = more elevation dialled =
+    // the shot landed low, which is how a shooter reads it.
+    expect(describeHeatShift(walking, 11, 'MIL')).toBe(
+      'Barrel heating: 0.20 MIL low expected by shot 11'
+    );
+  });
+
+  it('reads a negative slope as high, not as negative-low', () => {
+    expect(describeHeatShift({ perShot: -0.02, shots: 20 }, 11, 'MIL')).toBe(
+      'Barrel heating: 0.20 MIL high expected by shot 11'
+    );
+  });
+
+  it('carries the working unit through', () => {
+    expect(describeHeatShift(walking, 11, 'MOA')).toContain('MOA');
+  });
+
+  it('states the per-shot slope rather than a magnitude that rounds to zero', () => {
+    // Significant over ten shots, but this string is two shots in, where the
+    // figure it predicts prints as 0.00. Saying "0.00 MIL low" would claim a
+    // direction the number does not support.
+    const early = describeHeatShift({ perShot: 0.002, shots: 20 }, 2, 'MIL');
+    expect(early).toBe('Barrel heating: your offset walks 0.002 MIL per shot');
+    expect(early).not.toMatch(/0\.00 MIL (low|high)/);
+  });
+
+  it('reports the slope rather than a drift on the first shot of a string', () => {
+    // Shot one has accumulated no heat, so there is no magnitude to state --
+    // the same branch as a string two shots in, reached from the other end.
+    // A shot number at or below one is clamped there rather than predicting
+    // backwards.
+    expect(describeHeatShift(walking, 1, 'MIL')).toBe(
+      'Barrel heating: your offset walks 0.020 MIL per shot'
+    );
+    expect(describeHeatShift(walking, 0, 'MIL')).toBe(describeHeatShift(walking, 1, 'MIL'));
   });
 });

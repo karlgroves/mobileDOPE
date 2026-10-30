@@ -118,6 +118,7 @@ export const linking: LinkingOptions<ReactNavigation.RootParamList> = {
             screens: {
               RangeSessionStart: 'session',
               EnvironmentInput: 'session/environment',
+              EnvironmentHistory: 'session/environment/saved',
             },
           },
           Calculator: {

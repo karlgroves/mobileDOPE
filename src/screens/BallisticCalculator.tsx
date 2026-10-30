@@ -144,6 +144,10 @@ export const BallisticCalculator: React.FC<Props> = ({ navigation }) => {
         distance,
         distanceUnit,
         angularUnit,
+        // The wind it was solved in, so the results screen scales the windage
+        // offset by this rather than the environment store's wind (#163).
+        windSpeed: environmentals.windSpeed,
+        windDirection: environmentals.windDirection,
       });
     } catch (error: unknown) {
       Alert.alert(
