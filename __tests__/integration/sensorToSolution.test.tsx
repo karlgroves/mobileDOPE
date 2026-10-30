@@ -268,8 +268,9 @@ describe('a GPS reading reaches the stored snapshot (#68)', () => {
     await waitFor(() => expect(location.getCurrentPositionAsync).toHaveBeenCalled());
 
     // 1609.344 m is a mile: 5,280 ft. Asserted to within a couple of feet
-    // (the field shows 5279) rather than exactly, because the field rounds for display and the conversion factor
-    // is not what this test is about -- that the reading reached the column is.
+    // rather than exactly, because the field shows a whole number (5279 here)
+    // and the conversion factor is not what this test is about -- that the
+    // reading reached the column is.
     await waitFor(() => expect(Number(fieldValue(view, /^Altitude/))).toBeCloseTo(5280, -0.5));
 
     fireEvent.press(view.getByText('Save to History'));
