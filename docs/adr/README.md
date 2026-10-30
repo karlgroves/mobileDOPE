@@ -62,6 +62,7 @@ What becomes easier or more difficult to do because of this change?
 13. [ADR-013: Replace jest-worker's force-exit warning rather than chase it](./013-jest-worker-force-exit.md)
 14. [ADR-014: Crash reporting — a local-only crash log, not an SDK](./014-crash-reporting-local-only.md) — **Proposed**
 15. [ADR-015: App lock — a device-authentication gate, or a recorded won't-do](./015-app-lock-device-authentication.md) — **Proposed**
+16. [ADR-016: QR profile sharing without a camera, and encrypted backups](./016-qr-sharing-and-backup-encryption.md) — **Proposed**
 
 ## Contributing
 
