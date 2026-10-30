@@ -39,10 +39,10 @@ Verified rather than assumed:
 
 Generating a QR needs an encoder and somewhere to draw it. Scanning one needs
 a **camera**, and in this repository a camera is not a dependency decision —
-it is a reversal of a recorded one. `app/CLAUDE.md` requires that any new
+it is a reversal of a recorded one. `CLAUDE.md` requires that any new
 permission have a purpose string **and** a matching `PRIVACY.md` entry, and
 `PRIVACY.md` is the canonical privacy statement that `description.md` and
-`app/CLAUDE.md` both mirror. Adding `expo-camera` means:
+`CLAUDE.md` both mirror. Adding `expo-camera` means:
 
 - unblocking `android.permission.CAMERA` and deleting the comment explaining
   why it was blocked;
@@ -64,10 +64,10 @@ either can be taken without the other.
 let the operating system's own camera do the scanning.**
 
 The app already handles `mobiledope://` links and already has a route table. A
-QR containing `mobiledope://rifles/import?...` is scanned by the stock iOS and
-Android camera apps, which offer to open it, and the existing deep-link handler
-receives it. The receiving shooter never grants this app camera access, because
-this app never opens a camera.
+QR containing a profile-import link is scanned by the stock iOS and Android
+camera apps, which offer to open it, and the app's deep-link handling receives
+it. The receiving shooter never grants this app camera access, because this app
+never opens a camera.
 
 That gives all three of the issue's boxes except the literal wording of
 "implement QR code scanning for profile import" — which is satisfied in effect
@@ -97,6 +97,13 @@ rather than in mechanism:
   across a bench. A defined short-key encoding is needed, not
   `JSON.stringify`, and a profile with long names must fail with a message
   rather than produce an unscannable code.
+- **A new import route.** `src/navigation/linking.ts` has no import route
+  today, and the obvious path, `rifles/import`, would be swallowed by the
+  existing `rifles/:rifleId` pattern and open `RifleProfileDetail` with an
+  unparseable id. The route needs a path that cannot collide, and its payload
+  is untrusted input — `linking.ts` already says deep links are an input
+  surface — so it must pass the same guards as file import (`importGuards.ts`)
+  before anything reaches the database.
 
 **Two things to weigh before ruling, both arguments against:**
 
@@ -144,7 +151,8 @@ would not be on a hot path.
 
 **Deliberately out of scope:** encrypting the database itself. That is
 SQLCipher, key management and migrating existing data, and it belongs in its
-own ADR — see ADR-015, which reaches the same boundary from the other side.
+own ADR — see ADR-015 (proposed in #211, not yet accepted), which reaches the
+same boundary from the other side.
 
 ## Consequences
 
@@ -156,8 +164,8 @@ own ADR — see ADR-015, which reaches the same boundary from the other side.
   `app.config.ts` stays true.
 - The DOPE-card QR is separable and nearly free, so a partial ruling still
   ships something.
-- Ruling 2 closes the gap that bounds what ADR-015's app lock can be worth: at
-  present a backup file beside a locked app contains everything the lock hid.
+- Ruling 2 closes the gap that bounds what ADR-015's proposed app lock can be
+  worth: at present a backup file beside a locked app contains everything the lock hid.
 
 ### Negative
 
@@ -175,7 +183,9 @@ own ADR — see ADR-015, which reaches the same boundary from the other side.
 - **An unscannable QR.** Profile data is close to QR capacity. Without a
   compact encoding and a hard check, the feature produces codes that fail
   silently on a bench at a range, which is the worst possible place.
-- **Crypto chosen on reputation rather than review.** The real risk in Ruling 2. A library that is popular and unmaintained is worse than no feature.
+- **Crypto chosen on reputation rather than review.** The real risk in
+  Ruling 2. A library that is popular and unmaintained is worse than no
+  feature.
 - **"Encrypted backup" misread as "encrypted app".** The same misreading
   ADR-015 guards against, from the other direction. Both documents need to keep
   saying which is which.
@@ -186,10 +196,11 @@ own ADR — see ADR-015, which reaches the same boundary from the other side.
 ## References
 
 - Issue #66 — the two rulings this records
-- ADR-015 — the app lock, which reaches the same database-encryption boundary
+- ADR-015 (proposed in #211) — the app lock, which reaches the same
+  database-encryption boundary
 - `app.config.ts` — the blocked `android.permission.CAMERA` and its reason
 - `plugins/withTrimmedIosPermissions.js` — why an iOS permission needs a
   deliberate purpose string
 - `src/navigation/linking.ts` — the `mobiledope://` scheme and route table the
   recommended approach relies on
-- `PRIVACY.md`, `app/CLAUDE.md` — what would have to move if a camera is added
+- `PRIVACY.md`, `CLAUDE.md` — what would have to move if a camera is added
