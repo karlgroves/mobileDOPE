@@ -81,7 +81,10 @@ describe('DOPE Log Details, marked target', () => {
     const screen = render();
 
     const view = await screen.findByTestId('log-target');
-    expect(view.props.accessibilityLabel).toBe('Marked target, 2 shots marked');
+    // The zoom level is part of the label since #63 added it: the saved target
+    // zooms here too, and a screen-reader user is owed the level, which is
+    // otherwise carried only by how big the target looks.
+    expect(view.props.accessibilityLabel).toBe('Marked target, 2 shots marked, Whole target');
     // Shots are placed once the target has a size, as on a device.
     fireEvent(view, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 300 } } });
     expect(within(view).getByText('2')).toBeTruthy();

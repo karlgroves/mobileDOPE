@@ -67,7 +67,10 @@ export type SessionStackParamList = {
   RangeSessionStart: undefined;
   RangeSessionActive: { sessionId: number };
   RangeSessionSummary: { sessionId: number };
-  EnvironmentInput: undefined;
+  /** With a `snapshotId`, edits that saved snapshot rather than capturing a new one (#62). */
+  EnvironmentInput: { snapshotId?: number } | undefined;
+  /** Saved conditions: edit one, or compare two (#62). */
+  EnvironmentHistory: undefined;
 };
 
 /**
@@ -95,6 +98,14 @@ export type CalculatorStackParamList = {
     distance: number;
     distanceUnit: 'yards' | 'meters';
     angularUnit: 'MIL' | 'MOA';
+    /**
+     * The wind the solution was solved in, mph and degrees (#163). The
+     * calculator's wind is its own input, separate from the environment store,
+     * so the windage offset has to be scaled by this one. Optional: absent, the
+     * environment store's wind is used.
+     */
+    windSpeed?: number;
+    windDirection?: number;
   };
   WindTable: { rifleId: number; ammoId: number; distance: number };
   MovingTargetCalculator: { rifleId?: number; ammoId?: number };

@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { EnvironmentHistory } from '../screens/EnvironmentHistory';
 import { EnvironmentInput } from '../screens/EnvironmentInput';
 import { RangeSessionActive } from '../screens/RangeSessionActive';
 import { RangeSessionStart } from '../screens/RangeSessionStart';
@@ -47,6 +48,11 @@ export const SessionNavigator: React.FC = () => {
         name="EnvironmentInput"
         component={EnvironmentInput}
         options={{ title: 'Environmental Data' }}
+      />
+      <Stack.Screen
+        name="EnvironmentHistory"
+        component={EnvironmentHistory}
+        options={{ title: 'Saved Conditions' }}
       />
     </Stack.Navigator>
   );
