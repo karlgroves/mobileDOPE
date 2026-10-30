@@ -14,7 +14,7 @@ Three documents in this repository say it is not happening:
 
 | where                | what it says                                                                                                                                                           |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/CLAUDE.md:263`  | _"There is **no** biometric or passcode lock. `description.md` used to promise one; it does not exist and is not planned. Do not cite it as an existing control."_     |
+| `CLAUDE.md:263`      | _"There is **no** biometric or passcode lock. `description.md` used to promise one; it does not exist and is not planned. Do not cite it as an existing control."_     |
 | `description.md:331` | _"**Passcode / biometric lock.** Not implemented and not currently planned. Earlier drafts of this document listed it as a control; it never shipped. See issue #44."_ |
 | `PRIVACY.md`         | Silent. It does not mention a lock in either direction, so it does not settle it and will need a line whichever way this goes.                                         |
 
@@ -57,7 +57,7 @@ concrete:
 So the honest claim is narrow: it stops a casual reader of an unlocked phone.
 That is a real threat and a worthwhile thing to stop. It is not "security" in
 the sense the issue's heading implies, and it must not be described as data
-protection — which is exactly the sentence `app/CLAUDE.md` is carrying.
+protection — which is exactly the sentence `CLAUDE.md` is carrying.
 
 ## Decision
 
@@ -76,7 +76,7 @@ Build a lock, and build **less** than the issue asks for:
   do in the words above.
 - **One new permission**, `NSFaceIDUsageDescription`, with a real purpose
   string in `app.config.ts` and a matching `PRIVACY.md` entry — which is what
-  `app/CLAUDE.md` already requires of any new permission, and
+  `CLAUDE.md` already requires of any new permission, and
   `plugins/withTrimmedIosPermissions.js` will strip a placeholder.
 
 **Two items from the issue's list should be dropped**, and the reasoning is
@@ -99,7 +99,7 @@ cryptography; and it resolves the contradiction in the direction the open
 issue asks for. The alternative leaves an `enhancement` and three documents
 disagreeing, which is the condition this ADR exists to end.
 
-**What must move in the same change**, per #44: `app/CLAUDE.md:263`,
+**What must move in the same change**, per #44: `CLAUDE.md:263`,
 `description.md:331` out of "Not built", and a new `PRIVACY.md` entry stating
 what the lock does and — explicitly — that it is not encryption and the
 database and exports remain unencrypted.
@@ -108,7 +108,7 @@ database and exports remain unencrypted.
 
 - Close #67's security half as a won't-do, citing the OS's own device lock and
   full-disk encryption as the control.
-- Leave `app/CLAUDE.md` and `description.md` as they are; they already say it.
+- Leave `CLAUDE.md` and `description.md` as they are; they already say it.
 - **Add the missing `PRIVACY.md` line** saying no app lock exists, so the
   canonical statement answers the question rather than being silent on it.
 - Keep #67 open only for the three non-security preferences below, or split
@@ -190,5 +190,5 @@ triaging and would otherwise be lost.
 - Issue #44 — why a documented control that does not exist is treated here as a
   defect
 - Issue #66 — backup encryption, which bounds what any lock is worth
-- `app/CLAUDE.md:263`, `description.md:331`, `PRIVACY.md` — the three documents
+- `CLAUDE.md:263`, `description.md:331`, `PRIVACY.md` — the three documents
   that must agree with whatever is decided
