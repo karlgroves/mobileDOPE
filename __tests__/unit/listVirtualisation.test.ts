@@ -77,20 +77,49 @@ const mapsToElements = (source: string, index: number): boolean => {
   return after.startsWith('<');
 };
 
-/** Unbounded collections a source maps into elements. */
-const rendersUnbounded = (source: string): string[] => {
-  const found = new Set<string>();
-  for (const name of UNBOUNDED) {
-    const pattern = new RegExp(
-      `\\b${name}\\b(?:\\s*\\.\\s*(?:filter|slice|sort)\\([^)]*\\))*\\s*\\.\\s*map\\s*\\(`,
-      'g'
-    );
-    for (const match of source.matchAll(pattern)) {
-      if (match.index !== undefined && mapsToElements(source, match.index)) found.add(name);
+/**
+ * The index just past the `)` that closes the `(` at `open`, or -1.
+ *
+ * A regex cannot do this: `\([^)]*\)` stops at the first `)`, so
+ * `dopeLogs.filter((l) => l.ok).map(...)` -- the usual shape of a filter --
+ * escaped the sweep entirely.
+ */
+const pastClosingParen = (source: string, open: number): number => {
+  let depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '(') depth += 1;
+    else if (source[i] === ')' && --depth === 0) return i + 1;
+  }
+  return -1;
+};
+
+/**
+ * Where a `.map(` on `name` begins, following any `.filter(...)`, `.slice(...)`
+ * or `.sort(...)` chained before it, however their arguments nest.
+ */
+const mapCallsOn = (source: string, name: string): number[] => {
+  const found: number[] = [];
+  const link = /^\s*\.\s*(filter|slice|sort|map)\s*\(/;
+  for (const match of source.matchAll(new RegExp(`\\b${name}\\b`, 'g'))) {
+    let at = (match.index ?? 0) + name.length;
+    for (;;) {
+      const step = link.exec(source.slice(at));
+      if (!step) break;
+      const open = at + step[0].length - 1;
+      if (step[1] === 'map') {
+        found.push(open);
+        break;
+      }
+      at = pastClosingParen(source, open);
+      if (at < 0) break;
     }
   }
-  return [...found];
+  return found;
 };
+
+/** Unbounded collections a source maps into elements. */
+const rendersUnbounded = (source: string): string[] =>
+  UNBOUNDED.filter((name) => mapCallsOn(source, name).some((at) => mapsToElements(source, at)));
 
 describe('unbounded lists are virtualised (#68)', () => {
   it('finds the sources, so a broken sweep cannot pass vacuously', () => {
@@ -105,6 +134,19 @@ describe('unbounded lists are virtualised (#68)', () => {
     for (const name of UNBOUNDED) {
       expect(all).toContain(name);
     }
+  });
+
+  it('sees a mapping through chained calls, however their arguments nest', () => {
+    // Positive controls for the sweep itself, so a matcher that silently stops
+    // matching fails here rather than passing every screen.
+    expect(rendersUnbounded('dopeLogs.map((l) => <Row key={l.id} />)')).toEqual(['dopeLogs']);
+    expect(
+      rendersUnbounded('dopeLogs.filter((l) => l.ok).map((l) => (\n  <Row key={l.id} />\n))')
+    ).toEqual(['dopeLogs']);
+    expect(
+      rendersUnbounded('shotStrings.sort((a, b) => a.t - b.t).slice(0, 5).map((s) => <Row />)')
+    ).toEqual(['shotStrings']);
+    expect(rendersUnbounded('dopeLogs.filter((l) => l.ok).map((l) => ({ id: l.id }))')).toEqual([]);
   });
 
   it('maps no unbounded collection into elements, which is what a ScrollView row is', () => {

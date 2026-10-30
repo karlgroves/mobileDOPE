@@ -163,12 +163,11 @@ describe('the curve draws per distance, not per log (#68)', () => {
     expect(distances).toEqual([...distances].sort((a, b) => a - b));
   });
 
-  it('is linear in the log count, not quadratic', () => {
-    // A cheap structural check on the grouping: a bucketed reduce visits each
-    // log once. Asserted as output size against input size rather than as time,
-    // for the reasons at the top of this file -- but it does pin that a nested
-    // pass over the buckets has not crept in by making the point count
-    // independent of the history's length.
+  it('draws as many points for a short history as for a long one', () => {
+    // What reaches the chart depends on the distances shot, not on how long
+    // the history is. This pins the output size only; it says nothing about
+    // how the grouping scales, which is a timing question this file does not
+    // answer.
     expect(buildDropCurve(history(60), 'MIL')).toHaveLength(12);
     expect(buildDropCurve(history(600), 'MIL')).toHaveLength(12);
   });
@@ -191,14 +190,21 @@ describe('the curve draws per distance, not per log (#68)', () => {
     expect(rows).toHaveLength(12);
   });
 
-  it('finds outliers in one pass over a long history', () => {
-    // Deliberately a smoke test on size rather than on content: the outlier
-    // maths is covered in `dopeAnalysis.test.ts`. What is checked here is that
-    // the chart's third pipeline survives 600 logs and returns a bounded list a
-    // screen can render.
-    const outliers = detectOutliers(history(600), 'MIL');
+  it('picks the one bad log out of a long history, and nothing else', () => {
+    // The outlier maths is covered in `dopeAnalysis.test.ts`. What is checked
+    // here is that the chart's third pipeline still discriminates at 600 logs:
+    // a clean history flags nothing, and one wild entry is the only one flagged.
+    // A little deterministic scatter, as real logs have: a history that sits
+    // exactly on a line leaves only floating-point residuals to score.
+    const logs = history(600).map((log, i) => ({
+      ...log,
+      elevationCorrection: log.elevationCorrection + (((i * 7) % 5) - 2) * 0.02,
+    }));
+    expect(detectOutliers(logs, 'MIL')).toEqual([]);
 
-    expect(outliers.length).toBeLessThanOrEqual(600);
-    expect(Array.isArray(outliers)).toBe(true);
+    const wild = { ...logs[0], elevationCorrection: logs[0].elevationCorrection + 6 };
+    const outliers = detectOutliers([wild, ...logs.slice(1)], 'MIL');
+
+    expect(outliers.map((outlier) => outlier.log.id)).toEqual([wild.id]);
   });
 });

@@ -6,6 +6,7 @@ import { AccessibilityInfo, Alert } from 'react-native';
 
 import { EnvironmentInput } from '../../src/screens/EnvironmentInput';
 import { environmentRepository } from '../../src/services/database';
+import { BAROMETER_SAMPLE_COUNT, BAROMETER_TIMEOUT_MS } from '../../src/services/deviceBarometer';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useEnvironmentStore } from '../../src/store/useEnvironmentStore';
 import { calculateBallisticSolution } from '../../src/utils/ballistics';
@@ -82,9 +83,7 @@ const emit = (hpa: number) =>
 
 /** Delivers enough readings for the one-shot read to settle. */
 const emitEnough = (hpa: number) => {
-  emit(hpa);
-  emit(hpa);
-  emit(hpa);
+  for (let i = 0; i < BAROMETER_SAMPLE_COUNT; i += 1) emit(hpa);
 };
 
 const fieldValue = (
@@ -227,14 +226,30 @@ describe('a barometer reading reaches the solver (#68)', () => {
 
   it('says so rather than storing a reading the sensor never sent', async () => {
     // The iOS case the service was written for: Motion & Fitness declined, so
-    // subscribing succeeds and no event ever arrives.
-    const view = renderWithProviders(<EnvironmentInput />);
+    // subscribing succeeds and no event ever arrives. Fake timers so the test
+    // reaches the service's timeout instead of ending with it still pending;
+    // promises stay real, because the screen's work is all awaited.
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate'] });
+    try {
+      const view = renderWithProviders(<EnvironmentInput />);
 
-    fireEvent.press(await view.findByText('Read Barometer'));
-    await waitFor(() => expect(listeners).toHaveLength(1));
+      fireEvent.press(await view.findByText('Read Barometer'));
+      await waitFor(() => expect(listeners).toHaveLength(1));
 
-    // Nothing emitted: the field keeps the figure it had.
-    expect(fieldValue(view, /^Station Pressure/)).toBe('29.92');
+      // Nothing emitted, and the timeout passes.
+      await act(async () => {
+        jest.advanceTimersByTime(BAROMETER_TIMEOUT_MS);
+      });
+
+      await waitFor(() =>
+        expect(Alert.alert).toHaveBeenCalledWith('No Barometer Reading', expect.any(String))
+      );
+      expect(listeners).toHaveLength(0);
+      expect(fieldValue(view, /^Station Pressure/)).toBe('29.92');
+      expect(useEnvironmentStore.getState().snapshots).toHaveLength(0);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -252,8 +267,8 @@ describe('a GPS reading reaches the stored snapshot (#68)', () => {
     fireEvent.press(await view.findByText('Update from GPS'));
     await waitFor(() => expect(location.getCurrentPositionAsync).toHaveBeenCalled());
 
-    // 1609.344 m is a mile: 5,280 ft. Asserted within a foot rather than
-    // exactly, because the field rounds for display and the conversion factor
+    // 1609.344 m is a mile: 5,280 ft. Asserted to within a couple of feet
+    // (the field shows 5279) rather than exactly, because the field rounds for display and the conversion factor
     // is not what this test is about -- that the reading reached the column is.
     await waitFor(() => expect(Number(fieldValue(view, /^Altitude/))).toBeCloseTo(5280, -0.5));
 
