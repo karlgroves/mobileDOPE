@@ -28,6 +28,34 @@ describe('EnvironmentRepository', () => {
   };
 
   describe('create', () => {
+    it('returns the schema-default timestamp, not an undated snapshot (#192)', async () => {
+      // `create` used to set only `id`, so a snapshot that relied on the
+      // `datetime('now')` default came back with `timestamp: undefined` and went
+      // into `useEnvironmentStore.snapshots` undated. #190's ranking then
+      // reported "the latest snapshot's time is unknown" for a reading taken
+      // seconds earlier, because nothing read the default back.
+      const created = await environmentRepository.create(
+        validEnvironment({ timestamp: undefined })
+      );
+
+      expect(created.timestamp).toBeDefined();
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(created.timestamp).toBe(fetched?.timestamp);
+    });
+
+    it('still prefers a supplied capture time over the default (#192)', async () => {
+      const measuredAt = daysAgo(30);
+
+      const created = await environmentRepository.create(
+        validEnvironment({ timestamp: measuredAt })
+      );
+
+      expect(created.timestamp).toBe(measuredAt);
+      expect((await environmentRepository.getById(created.id as number))?.timestamp).toBe(
+        measuredAt
+      );
+    });
+
     it('persists the snapshot and returns the assigned id', async () => {
       const created = await environmentRepository.create(validEnvironment());
 

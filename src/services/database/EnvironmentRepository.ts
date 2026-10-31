@@ -33,6 +33,20 @@ export class EnvironmentRepository {
     );
 
     snapshot.id = result.lastInsertRowId;
+
+    // Read the schema default back when the caller supplied no capture time
+    // (#192). Without this the returned snapshot is undated, and `createSnapshot`
+    // puts it straight into `useEnvironmentStore.snapshots` -- where #190's
+    // ranking reports "the latest snapshot's time is unknown" for a reading taken
+    // a second earlier, because nothing ever wrote the time it was given.
+    if (snapshot.timestamp === undefined) {
+      const stored = await db.getFirstAsync<{ timestamp: string }>(
+        'SELECT timestamp FROM environment_snapshots WHERE id = ?',
+        [snapshot.id]
+      );
+      snapshot.timestamp = stored?.timestamp;
+    }
+
     return snapshot;
   }
 

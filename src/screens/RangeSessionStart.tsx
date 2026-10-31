@@ -8,7 +8,9 @@ import { useAmmoStore } from '../store/useAmmoStore';
 import { useAppStore } from '../store/useAppStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { conditionsToMatch, describeSnapshotAge } from '../utils/matchConditions';
 
+import type { EnvironmentSnapshot } from '../models/EnvironmentSnapshot';
 import type { SessionStackScreenProps } from '../navigation/types';
 
 type Props = SessionStackScreenProps<'RangeSessionStart'>;
@@ -72,19 +74,63 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    // The conditions this session would be started on are only usable while
+    // they are recent, by exactly the rule the DOPE ranking applies (#192).
+    // Asking `conditionsToMatch` rather than re-deriving an age here is the
+    // point: one definition of "too old", so the warning and the ranking cannot
+    // disagree about whether today's air was compared.
+    if (conditionsToMatch(null, [latestSnapshot]).source !== 'latest-snapshot') {
+      Alert.alert(
+        'Stale Conditions',
+        `The latest conditions are ${describeSnapshotAge(latestSnapshot.timestamp)}. ` +
+          'They will not be compared against your logged DOPE, so recommendations ' +
+          'will come from the solver alone. Record current conditions first for a ' +
+          'session that uses your own DOPE.',
+        [
+          { text: 'Update Conditions', onPress: () => navigation.navigate('EnvironmentInput') },
+          { text: 'Start Anyway', onPress: () => void startWith(latestSnapshot) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
+    await startWith(latestSnapshot);
+  };
+
+  /**
+   * Creates the session's own copy of `source` and opens the session.
+   *
+   * The copy carries `source.timestamp` -- when the conditions were actually
+   * measured -- rather than the time of the copy (#192). Stamping it `now`
+   * made air recorded weeks ago look minutes old, which defeated the 24-hour
+   * limit #190 put on ranking against the latest snapshot: a re-stamped copy
+   * is always under a day old, so stale conditions were always compared.
+   *
+   * @param source - The snapshot the session's conditions are taken from.
+   */
+  async function startWith(source: EnvironmentSnapshot): Promise<void> {
+    if (!selectedRifleId || !selectedAmmoId) {
+      // Unreachable: both callers check first, and the alert's onPress closes
+      // over this render's selection. The guard narrows the ids for the calls
+      // below; if it ever fires, say so rather than dismissing to nothing.
+      Alert.alert('Missing Selection', 'Please select both a rifle and ammunition profile.');
+      return;
+    }
+
     setIsStarting(true);
 
     try {
       // Create a new environment snapshot for this session
       const newEnv = await createSnapshot({
-        temperature: latestSnapshot.temperature,
-        humidity: latestSnapshot.humidity,
-        pressure: latestSnapshot.pressure,
-        altitude: latestSnapshot.altitude,
-        windSpeed: latestSnapshot.windSpeed,
-        windDirection: latestSnapshot.windDirection,
-        densityAltitude: latestSnapshot.densityAltitude,
-        timestamp: new Date().toISOString(),
+        temperature: source.temperature,
+        humidity: source.humidity,
+        pressure: source.pressure,
+        altitude: source.altitude,
+        windSpeed: source.windSpeed,
+        windDirection: source.windDirection,
+        densityAltitude: source.densityAltitude,
+        timestamp: source.timestamp,
       });
 
       // Create the range session
@@ -107,7 +153,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
     } finally {
       setIsStarting(false);
     }
-  };
+  }
 
   const handleAddWeather = () => {
     navigation.navigate('EnvironmentInput');
