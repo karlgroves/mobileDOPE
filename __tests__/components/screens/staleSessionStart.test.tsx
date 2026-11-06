@@ -143,6 +143,8 @@ describe('RangeSessionStart with stale conditions (#192)', () => {
     expect(title).toBe('Stale Conditions');
     expect(message).toContain('30 days old');
     expect(message).toContain('will not be compared');
+    // Only the conditions factor goes neutral; the logs themselves still count.
+    expect(message).toContain('logged DOPE will still be used');
   });
 
   it('offers the Environment screen', async () => {

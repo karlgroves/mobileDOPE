@@ -83,9 +83,9 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
       Alert.alert(
         'Stale Conditions',
         `The latest conditions are ${describeSnapshotAge(latestSnapshot.timestamp)}. ` +
-          'They will not be compared against your logged DOPE, so recommendations ' +
-          'will come from the solver alone. Record current conditions first for a ' +
-          'session that uses your own DOPE.',
+          'Your logged DOPE will still be used, but conditions will not be compared, ' +
+          'so logs shot in different air count the same as logs shot in similar air. ' +
+          'Record current conditions first to favor logs from similar conditions.',
         [
           { text: 'Update Conditions', onPress: () => navigation.navigate('EnvironmentInput') },
           { text: 'Start Anyway', onPress: () => void startWith(latestSnapshot) },
