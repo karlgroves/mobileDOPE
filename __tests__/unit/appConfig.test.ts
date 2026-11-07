@@ -128,6 +128,40 @@ describe('barometer permission declarations (#62)', () => {
   });
 });
 
+describe('app lock permission declarations (#67, ADR-015)', () => {
+  // The opt-in app lock unlocks with the device's own authentication through
+  // expo-local-authentication. On iOS, asking for Face ID without
+  // NSFaceIDUsageDescription fails the prompt, and the plugin's default string
+  // is a placeholder.
+  const config = resolve('production');
+  const localAuthPlugin = () =>
+    (config.plugins ?? []).find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-local-authentication'
+    ) as [string, { faceIDPermission?: unknown }] | undefined;
+
+  it('registers the expo-local-authentication plugin with a purpose string of its own', () => {
+    const description = localAuthPlugin()?.[1].faceIDPermission;
+    expect(typeof description).toBe('string');
+    expect(description).not.toContain('$(PRODUCT_NAME)');
+  });
+
+  it('says it is optional and that nothing biometric is stored', () => {
+    const description = (localAuthPlugin()?.[1].faceIDPermission as string).toLowerCase();
+
+    expect(description).toContain('app lock');
+    expect(description).toMatch(/if you turn (it|the app lock) on/);
+    expect(description).toMatch(/no face data/);
+  });
+
+  it('runs before the plugin that trims unearned usage descriptions', () => {
+    const names = pluginNames(config);
+    expect(names.indexOf('expo-local-authentication')).toBeGreaterThan(-1);
+    expect(names.indexOf('expo-local-authentication')).toBeLessThan(
+      names.indexOf('./plugins/withTrimmedIosPermissions')
+    );
+  });
+});
+
 describe('permissions the app has no code to use', () => {
   const config = resolve('production');
 

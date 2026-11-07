@@ -79,6 +79,36 @@ export const conditionsToMatch = (
 };
 
 /**
+ * How old a snapshot is, in the words a warning uses (#192).
+ *
+ * Deliberately refuses to name an age it cannot establish: an unparseable or
+ * future-dated timestamp returns "of unknown age" rather than a number, for the
+ * same reason `conditionsToMatch` returns `undated-snapshot` for both -- a
+ * figure the reader would trust is worse than an admission.
+ *
+ * @param timestamp - The stored timestamp, if any.
+ * @param now - The time to measure from.
+ * @returns A phrase that completes "the conditions are ...".
+ */
+export const describeSnapshotAge = (
+  timestamp: string | undefined,
+  now: Date = new Date()
+): string => {
+  const taken = snapshotTime(timestamp);
+  if (taken === undefined) return 'of unknown age';
+
+  const age = now.getTime() - taken;
+  if (age < 0) return 'of unknown age';
+  if (age < 3_600_000) return 'under an hour old';
+
+  const hours = Math.floor(age / 3_600_000);
+  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} old`;
+
+  const days = Math.floor(age / 86_400_000);
+  return `${days} ${days === 1 ? 'day' : 'days'} old`;
+};
+
+/**
  * The line under the adjustment, saying what the logs were compared with.
  *
  * @param count - Logs that contributed.

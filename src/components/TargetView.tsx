@@ -25,6 +25,11 @@
  * multipoint or path-based gesture, and a shooter wearing gloves in the cold
  * has a practical claim on one too. The DOPE Curve took the same decision for
  * the same reason (`chartZoom`).
+ *
+ * ## Export
+ *
+ * `exportRef` marks the part worth putting in an image: the target and its
+ * `caption`, without the zoom controls, which are no use in a photo (#63).
  */
 
 import React, { useState } from 'react';
@@ -56,6 +61,12 @@ interface TargetViewProps {
   markers: POIMarker[];
   /** Makes the target a marking surface; called with the tapped position. */
   onMark?: (point: { x: number; y: number }) => void;
+  /** Drawn under the target, inside the area `exportRef` captures. */
+  caption?: React.ReactNode;
+  /** The target and its caption, for capture as an image. */
+  exportRef?: React.Ref<View>;
+  /** Test ID of the area `exportRef` captures. */
+  exportTestID?: string;
   testID?: string;
 }
 
@@ -69,7 +80,15 @@ const CONTROL_SIZE = 44;
 const shotsLabel = (count: number): string =>
   count === 1 ? '1 shot marked' : `${count} shots marked`;
 
-export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onMark, testID }) => {
+export const TargetView: React.FC<TargetViewProps> = ({
+  background,
+  markers,
+  onMark,
+  caption,
+  exportRef,
+  exportTestID,
+  testID,
+}) => {
   const { colors } = useTheme().theme;
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [window, setWindow] = useState<TargetWindow>(FULL_VIEW);
@@ -269,7 +288,16 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
 
   return (
     <View>
-      <GestureDetector gesture={Gesture.Simultaneous(pinch, drag)}>{surface}</GestureDetector>
+      {/* Not collapsable, so the native view a capture needs is always there. */}
+      <View
+        ref={exportRef}
+        collapsable={false}
+        style={[styles.exported, { backgroundColor: colors.surface }]}
+        testID={exportTestID}
+      >
+        <GestureDetector gesture={Gesture.Simultaneous(pinch, drag)}>{surface}</GestureDetector>
+        {caption}
+      </View>
 
       {/* The single-pointer alternative WCAG 2.5.1 requires, and what a shooter
           in gloves will actually use. The zoom is stated in words as well, so
@@ -343,6 +371,9 @@ export const TargetView: React.FC<TargetViewProps> = ({ background, markers, onM
 };
 
 const styles = StyleSheet.create({
+  exported: {
+    gap: 12,
+  },
   frame: {
     width: '100%',
     borderWidth: 1,

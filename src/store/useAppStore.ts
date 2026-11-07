@@ -85,6 +85,15 @@ interface AppSettings {
   coldBoreModellingEnabled: boolean;
   /** The same for the heat shift. */
   heatShiftModellingEnabled: boolean;
+  /**
+   * Whether the app asks for the device's own authentication at launch and on
+   * return to the foreground (#67, ADR-015). Off by default: it is opt-in.
+   *
+   * Nothing reads this yet and Settings does not offer it. The gate is the next
+   * slice of #67, and the switch ships with it -- a switch that locked nothing
+   * would be a control the app does not have (#44).
+   */
+  appLockEnabled: boolean;
   lastSelectedRifleId?: number;
   lastSelectedAmmoId?: number;
   distancePresets: number[];
@@ -134,6 +143,7 @@ const defaultSettings: AppSettings = {
   dopeConfidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
   coldBoreModellingEnabled: true,
   heatShiftModellingEnabled: true,
+  appLockEnabled: false,
   distancePresets: DEFAULT_DISTANCE_PRESETS,
 };
 
@@ -149,6 +159,14 @@ export { DEFAULT_DISTANCE_PRESETS };
 export const DEFAULT_SETTINGS: Readonly<AppSettings> = defaultSettings;
 
 const SETTINGS_STORAGE_KEY = '@mobileDOPE:settings';
+
+/** Switches whose stored value is replaced by the default unless it is a boolean. */
+const VALIDATED_SWITCHES = [
+  'dopeAdjustmentEnabled',
+  'coldBoreModellingEnabled',
+  'heatShiftModellingEnabled',
+  'appLockEnabled',
+] as const satisfies readonly (keyof AppSettings)[];
 
 /**
  * Save settings to AsyncStorage
@@ -188,14 +206,8 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
       if (!isValidConfidenceThreshold(merged.dopeConfidenceThreshold)) {
         merged.dopeConfidenceThreshold = defaultSettings.dopeConfidenceThreshold;
       }
-      if (typeof merged.dopeAdjustmentEnabled !== 'boolean') {
-        merged.dopeAdjustmentEnabled = defaultSettings.dopeAdjustmentEnabled;
-      }
-      if (typeof merged.coldBoreModellingEnabled !== 'boolean') {
-        merged.coldBoreModellingEnabled = defaultSettings.coldBoreModellingEnabled;
-      }
-      if (typeof merged.heatShiftModellingEnabled !== 'boolean') {
-        merged.heatShiftModellingEnabled = defaultSettings.heatShiftModellingEnabled;
+      for (const key of VALIDATED_SWITCHES) {
+        if (typeof merged[key] !== 'boolean') merged[key] = defaultSettings[key];
       }
       return merged;
     }

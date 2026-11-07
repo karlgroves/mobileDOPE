@@ -218,6 +218,34 @@ describe('useAppStore', () => {
     });
   });
 
+  describe('app lock (#67, ADR-015)', () => {
+    it('is off by default, including for settings saved before it existed', async () => {
+      expect(DEFAULT_SETTINGS.appLockEnabled).toBe(false);
+      mockStorage.getItem.mockResolvedValueOnce(JSON.stringify({ themeMode: 'light' }));
+      await store().loadSettings();
+      expect(store().settings.appLockEnabled).toBe(false);
+    });
+
+    it('persists and restores the opt-in', async () => {
+      await store().updateSettings({ appLockEnabled: true });
+      const [, payload] = mockStorage.setItem.mock.calls[0] as [string, string];
+      expect(JSON.parse(payload)).toMatchObject({ appLockEnabled: true });
+
+      mockStorage.getItem.mockResolvedValueOnce(payload);
+      await store().loadSettings();
+      expect(store().settings.appLockEnabled).toBe(true);
+    });
+
+    it.each([['yes'], [1], [null]])(
+      'drops a stored value of %p rather than guessing',
+      async (v) => {
+        mockStorage.getItem.mockResolvedValueOnce(JSON.stringify({ appLockEnabled: v }));
+        await store().loadSettings();
+        expect(store().settings.appLockEnabled).toBe(false);
+      }
+    );
+  });
+
   describe('resetSettings', () => {
     it('restores defaults and clears storage', async () => {
       await store().updateSettings({ themeMode: 'light' });
