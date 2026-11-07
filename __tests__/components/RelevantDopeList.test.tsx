@@ -54,6 +54,12 @@ describe('daysAgo', () => {
     expect(daysAgo(undefined, NOW)).toBeUndefined();
     expect(daysAgo('not a date', NOW)).toBeUndefined();
   });
+
+  it('reads a zone-less SQLite timestamp as UTC (#228)', () => {
+    // 13 hours before NOW, as `datetime('now')` stores it: rounds to one day.
+    // Read as local time in New York it is 9 hours, and would round to today.
+    expect(daysAgo('2026-09-16 23:00:00', NOW)).toBe(1);
+  });
 });
 
 describe('describeAge', () => {

@@ -23,6 +23,7 @@
  */
 
 import { calculateDensityAltitude } from './atmospheric';
+import { parseDbTimestamp } from './dbTimestamp';
 import { logDistanceInYards } from './distanceUnits';
 
 /** Distance window around the shot, in yards. The default the issue specifies. */
@@ -238,7 +239,8 @@ export const recencyFactor = (
   if (!Number.isFinite(halfLifeDays) || halfLifeDays <= 0) return 1;
   if (timestamp === undefined) return 1;
 
-  const then = Date.parse(timestamp);
+  // Stored by SQLite's `datetime('now')`: UTC with no zone marker (#228).
+  const then = parseDbTimestamp(timestamp).getTime();
   // An unusable timestamp is missing data, not old data. Treating it as ancient
   // would bury the entries logged before this app kept timestamps at all.
   if (Number.isNaN(then)) return 1;

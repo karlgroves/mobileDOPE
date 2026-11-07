@@ -133,3 +133,29 @@ describe('describeColdBoreSuggestion (#164)', () => {
     }
   });
 });
+
+/**
+ * The last fired timestamp is stored by SQLite's `datetime('now')`: UTC with
+ * no zone marker (#228). `new Date()` read it as *local* time, so east of UTC
+ * a shot logged minutes ago read as hours in the future -- "could not be read"
+ * -- and west of UTC as hours old; only UTC+0 got the right suggestion.
+ */
+describe('suggestColdBore (#228, zone-less SQLite timestamps)', () => {
+  // One shot, as the database stores it, six minutes before NOW.
+  const LOGGED_AT = '2026-11-06 19:35:00';
+
+  it('reads a zone-less SQLite timestamp as UTC when judging the gap', () => {
+    expect(suggestColdBore(LOGGED_AT, new Date('2026-11-06T19:41:00.000Z'))).toBe(false);
+  });
+
+  it('reads it as cold once the gap has passed', () => {
+    expect(suggestColdBore(LOGGED_AT, new Date('2026-11-06T19:51:00.000Z'))).toBe(true);
+  });
+
+  it('describes the real gap for a zone-less SQLite timestamp', () => {
+    expect(describeColdBoreSuggestion(LOGGED_AT, new Date('2026-11-06T19:41:00.000Z'))).toBe(
+      'Suggested because this rifle fired 6 minutes ago, inside the 10-minute cold-bore gap. ' +
+        'Change it if that is wrong.'
+    );
+  });
+});

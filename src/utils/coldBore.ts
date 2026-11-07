@@ -1,3 +1,5 @@
+import { parseDbTimestamp } from './dbTimestamp';
+
 /**
  * Minutes of rest after which the next shot is taken to be a cold bore (#164,
  * and #70 §6, which named ten).
@@ -31,7 +33,7 @@ export const suggestColdBore = (
 ): boolean => {
   if (lastFiredAt === undefined) return true;
 
-  const at = new Date(lastFiredAt).getTime();
+  const at = parseDbTimestamp(lastFiredAt).getTime();
 
   // Neither comparison can be satisfied by NaN, so an unparseable timestamp
   // falls through to "cold" rather than being read as a recent shot -- which
@@ -85,7 +87,7 @@ export const describeColdBoreSuggestion = (
     return `Suggested because this rifle has no earlier logs, so this is its first recorded shot. ${tail}`;
   }
 
-  const at = new Date(lastFiredAt).getTime();
+  const at = parseDbTimestamp(lastFiredAt).getTime();
   const elapsed = now.getTime() - at;
 
   // Unparseable, or dated in the future by a skewed clock. `suggestColdBore`

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { parseDbTimestamp } from '../utils/dbTimestamp';
 
 import type { DOPELogData } from '../models/DOPELog';
 import type { Match } from '../utils/dopeMatching';
@@ -37,7 +38,8 @@ export const daysAgo = (
   now: Date = new Date()
 ): number | undefined => {
   if (timestamp === undefined) return undefined;
-  const then = Date.parse(timestamp);
+  // Stored by SQLite's `datetime('now')`: UTC with no zone marker (#228).
+  const then = parseDbTimestamp(timestamp).getTime();
   if (Number.isNaN(then)) return undefined;
   return Math.max(0, Math.round((now.getTime() - then) / 86_400_000));
 };

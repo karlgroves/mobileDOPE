@@ -20,6 +20,7 @@ import { deleteTargetPhoto } from '../services/TargetPhotoService';
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { parseDbTimestamp } from '../utils/dbTimestamp';
 import { logDistanceInYards } from '../utils/distanceUnits';
 import { calculateConfidence } from '../utils/dopeAnalysis';
 import { backgroundOf, measureGroup } from '../utils/targetMarking';
@@ -258,7 +259,7 @@ export function DOPELogDetail({ route, navigation }: Props) {
         {/* Timestamp */}
         {log.timestamp && (
           <Text style={[styles.timestamp, { color: colors.text.secondary }]}>
-            Logged: {new Date(log.timestamp).toLocaleString()}
+            Logged: {parseDbTimestamp(log.timestamp).toLocaleString()}
           </Text>
         )}
 

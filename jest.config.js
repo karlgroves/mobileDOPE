@@ -110,6 +110,14 @@ const components = {
   setupFilesAfterEnv: ['<rootDir>/jest.timeout.js'],
 };
 
+// Every test runs in one fixed, non-UTC time zone (#228). SQLite stores
+// `datetime('now')` as UTC with no zone marker, and reading it as local time is
+// invisible in UTC -- which is where CI runs -- so a suite left in the machine's
+// zone could not catch that defect on CI, and could pass or fail by who ran it.
+// Set here, before Jest forks its workers, because `process.env` inside a test
+// is a copy and changing `TZ` there does not reach `Date`.
+process.env.TZ = 'America/New_York';
+
 module.exports = {
   projects: [unit, components],
   // Coverage is configured at the root so `jest --coverage` reports across both projects.
