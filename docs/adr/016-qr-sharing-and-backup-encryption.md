@@ -1,8 +1,8 @@
 # ADR-016: QR profile sharing without a camera, and encrypted backups
 
-**Status:** Proposed
+**Status:** Accepted
 
-**Date:** 2026-10-28
+**Date:** 2026-10-28 (proposed); accepted 2026-11-06
 
 ## Context
 
@@ -55,8 +55,22 @@ two feet away.
 
 ## Decision
 
-**This ADR is Proposed and requests two rulings.** They are independent —
-either can be taken without the other.
+**Accepted 2026-11-06, both rulings as recommended below.** The owner's ruling
+also settled what this ADR left open:
+
+- **QR encoder:** `qrcode-generator` (MIT, pure JavaScript, no dependencies, no
+  install scripts, no native code, ships its own TypeScript types). The
+  printed DOPE-card code needs only the encoder: it is drawn as an inline
+  `<svg>` in the `expo-print` HTML. `react-native-svg` is added only when the
+  on-screen code is built.
+- **Backup encryption:** `@noble/ciphers` and `@noble/hashes`. AES-GCM, with
+  the key derived by scrypt from a passphrase entered at export and never
+  stored.
+- **Scanning:** the operating system's camera. No `expo-camera`; CAMERA stays
+  blocked.
+
+The two rulings, as proposed, follow. They are independent — either could
+have been taken without the other.
 
 ### Ruling 1 — QR profile sharing
 

@@ -43,6 +43,7 @@ const snapshot = (
     altitude: number;
     windSpeed: number;
     windDirection: number;
+    lightCondition: 'day' | 'low_light' | 'night';
     timestamp: string;
   }> = {}
 ) => ({
@@ -373,6 +374,52 @@ describe('the capture screen in edit mode (#62)', () => {
 
     await waitFor(() => expect(view.getByText(/could not be found/)).toBeTruthy());
     expect(loadSnapshots).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the light the reading was taken in and saves a change to it', async () => {
+    seed([snapshot(7, { lightCondition: 'low_light' })]);
+    const view = renderEdit(7);
+
+    await waitFor(() =>
+      expect(view.getByLabelText('Low Light').props.accessibilityState.selected).toBe(true)
+    );
+    fireEvent.press(view.getByLabelText('Night'));
+    expect(view.getByLabelText('Night').props.accessibilityState.selected).toBe(true);
+    fireEvent.press(view.getByText('Save Changes'));
+
+    await waitFor(() => expect(updateSnapshot).toHaveBeenCalled());
+    expect(updateSnapshot.mock.calls[0][1]).toMatchObject({ lightCondition: 'night' });
+  });
+
+  it('clears a chosen light back to not recorded', async () => {
+    // Without a way back, a mis-tap writes a light onto a reading nobody described.
+    seed([snapshot(7, { lightCondition: 'day' })]);
+    const view = renderEdit(7);
+
+    await waitFor(() => expect(view.getByText('Clear Light')).toBeTruthy());
+    fireEvent.press(view.getByText('Clear Light'));
+    expect(view.getByLabelText('Day').props.accessibilityState.selected).toBe(false);
+    expect(view.queryByText('Clear Light')).toBeNull();
+    fireEvent.press(view.getByText('Save Changes'));
+
+    await waitFor(() => expect(updateSnapshot).toHaveBeenCalled());
+    expect(updateSnapshot.mock.calls[0][1].lightCondition).toBeUndefined();
+  });
+
+  it('selects no light for a reading saved before the field existed', async () => {
+    // A preselected "Day" would quietly write daylight onto a reading nobody
+    // described the moment it was saved for an unrelated edit.
+    seed([snapshot(7)]);
+    const view = renderEdit(7);
+
+    await waitFor(() => expect(view.getByText('Save Changes')).toBeTruthy());
+    for (const label of ['Day', 'Low Light', 'Night']) {
+      expect(view.getByLabelText(label).props.accessibilityState.selected).toBe(false);
+    }
+    fireEvent.press(view.getByText('Save Changes'));
+
+    await waitFor(() => expect(updateSnapshot).toHaveBeenCalled());
+    expect(updateSnapshot.mock.calls[0][1].lightCondition).toBeUndefined();
   });
 
   it('still captures a new reading when no id is given', async () => {

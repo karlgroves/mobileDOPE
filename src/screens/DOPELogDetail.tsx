@@ -14,6 +14,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { TargetView } from '../components/TargetView';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDopeLog } from '../hooks/useDopeLog';
+import { useShareTargetImage } from '../hooks/useShareTargetImage';
 import { useTargetImages } from '../hooks/useTargetImages';
 import { deleteTargetPhoto } from '../services/TargetPhotoService';
 import { useAmmoStore } from '../store/useAmmoStore';
@@ -55,6 +56,8 @@ export function DOPELogDetail({ route, navigation }: Props) {
     [navigation]
   );
   const [target] = useTargetImages(logId, targetsVersion);
+
+  const shareTarget = useShareTargetImage();
 
   // Set when this screen deletes the log: it is then missing on purpose, and
   // the screen is already on its way back.
@@ -211,14 +214,28 @@ export function DOPELogDetail({ route, navigation }: Props) {
                 background={backgroundOf(target)}
                 markers={target.poiMarkers}
                 testID="log-target"
+                exportRef={shareTarget.ref}
+                exportTestID="log-target-export"
+                caption={
+                  // An MOA figure means nothing in a shared image without the
+                  // distance it was measured at.
+                  <GroupStatistics
+                    distance={`${log.distance} ${log.distanceUnit}`}
+                    group={measureGroup(
+                      target.poiMarkers,
+                      { widthInches: target.targetWidthInches, aspectRatio: target.aspectRatio },
+                      logDistanceInYards(log)
+                    )}
+                    testID="log-target-statistics"
+                  />
+                }
               />
-              <GroupStatistics
-                group={measureGroup(
-                  target.poiMarkers,
-                  { widthInches: target.targetWidthInches, aspectRatio: target.aspectRatio },
-                  logDistanceInYards(log)
-                )}
-                testID="log-target-statistics"
+              <Button
+                title="Share Target Image"
+                onPress={shareTarget.share}
+                variant="secondary"
+                loading={shareTarget.sharing}
+                accessibilityHint="Shares the marked target and its measurements as a PNG image"
               />
             </View>
           )}

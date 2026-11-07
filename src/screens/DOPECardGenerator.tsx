@@ -19,6 +19,7 @@ import { calculateBallisticSolution } from '../utils/ballistics';
 import { toSolverYards } from '../utils/distanceUnits';
 import { buildComparison, renderComparisonHtml } from '../utils/dopeCardComparison';
 import { escapeHtml } from '../utils/formatting';
+import { renderProfileQrSection } from '../utils/profileQr';
 
 import type { ProfilesStackScreenProps } from '../navigation/types';
 
@@ -47,6 +48,9 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>('yards');
   const [cardFormat, setCardFormat] = useState<'detailed' | 'condensed' | 'comparison'>('detailed');
   const [colorMode, setColorMode] = useState<'light' | 'nightVision'>('light');
+  // Off by default: the code carries load data, so sharing it is the
+  // shooter's choice. (#66, ADR-016.)
+  const [includeQr, setIncludeQr] = useState(false);
   const [minDistance] = useState(100);
   const [maxDistance] = useState(1000);
   const [increment] = useState(100);
@@ -271,6 +275,10 @@ export function DOPECardGenerator({ route, navigation }: Props) {
           cellBorder: '#666666',
         };
 
+    const qrSection = includeQr
+      ? renderProfileQrSection(rifle, ammo, { dark: colors.text, light: colors.background })
+      : '';
+
     // Generate condensed format (distance + elevation only)
     if (isCondensed) {
       return `
@@ -359,6 +367,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   <div class="footer">
     ${angularUnit} | ${today}
   </div>
+  ${qrSection}
 </body>
 </html>
       `;
@@ -467,6 +476,7 @@ export function DOPECardGenerator({ route, navigation }: Props) {
   <div class="footer">
     Env: ${environment?.temperature || 59}°F | ${environment?.pressure || 29.92}"Hg | ${environment?.altitude || 0}ft
   </div>
+  ${qrSection}
 </body>
 </html>
     `;
@@ -609,6 +619,23 @@ export function DOPECardGenerator({ route, navigation }: Props) {
               onValueChange={(value) => setColorMode(value as 'light' | 'nightVision')}
             />
           </View>
+
+          {/* The comparison card holds several loads, and one code holds one. */}
+          {cardFormat !== 'comparison' && (
+            <View style={styles.setting}>
+              <Text style={[styles.settingLabel, { color: colors.text.secondary }]}>
+                Profile QR Code
+              </Text>
+              <SegmentedControl
+                options={[
+                  { label: 'Off', value: 'off' },
+                  { label: 'On Back', value: 'on' },
+                ]}
+                selectedValue={includeQr ? 'on' : 'off'}
+                onValueChange={(value) => setIncludeQr(value === 'on')}
+              />
+            </View>
+          )}
         </Card>
 
         {/* Preview Card */}

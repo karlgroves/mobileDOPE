@@ -28,6 +28,34 @@ describe('EnvironmentRepository', () => {
   };
 
   describe('create', () => {
+    it('returns the schema-default timestamp, not an undated snapshot (#192)', async () => {
+      // `create` used to set only `id`, so a snapshot that relied on the
+      // `datetime('now')` default came back with `timestamp: undefined` and went
+      // into `useEnvironmentStore.snapshots` undated. #190's ranking then
+      // reported "the latest snapshot's time is unknown" for a reading taken
+      // seconds earlier, because nothing read the default back.
+      const created = await environmentRepository.create(
+        validEnvironment({ timestamp: undefined })
+      );
+
+      expect(created.timestamp).toBeDefined();
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(created.timestamp).toBe(fetched?.timestamp);
+    });
+
+    it('still prefers a supplied capture time over the default (#192)', async () => {
+      const measuredAt = daysAgo(30);
+
+      const created = await environmentRepository.create(
+        validEnvironment({ timestamp: measuredAt })
+      );
+
+      expect(created.timestamp).toBe(measuredAt);
+      expect((await environmentRepository.getById(created.id as number))?.timestamp).toBe(
+        measuredAt
+      );
+    });
+
     it('persists the snapshot and returns the assigned id', async () => {
       const created = await environmentRepository.create(validEnvironment());
 
@@ -244,6 +272,38 @@ describe('EnvironmentRepository', () => {
 
     it('returns null when there are no snapshots', async () => {
       expect(await environmentRepository.getCurrent()).toBeNull();
+    });
+  });
+
+  describe('light condition (#62)', () => {
+    it('round-trips the recorded light', async () => {
+      const created = await environmentRepository.create(
+        validEnvironment({ lightCondition: 'night' })
+      );
+
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(fetched?.lightCondition).toBe('night');
+    });
+
+    it('stores nothing when the light was not recorded', async () => {
+      const created = await environmentRepository.create(validEnvironment());
+
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(fetched?.lightCondition).toBeUndefined();
+    });
+
+    it('changes the light on an edit and keeps it on an unrelated one', async () => {
+      const created = await environmentRepository.create(
+        validEnvironment({ lightCondition: 'day' })
+      );
+
+      const relit = await environmentRepository.update(created.id as number, {
+        lightCondition: 'low_light',
+      });
+      expect(relit?.lightCondition).toBe('low_light');
+
+      const rewound = await environmentRepository.update(created.id as number, { windSpeed: 9 });
+      expect(rewound?.lightCondition).toBe('low_light');
     });
   });
 

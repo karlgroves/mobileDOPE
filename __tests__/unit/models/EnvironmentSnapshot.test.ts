@@ -91,3 +91,57 @@ describe('EnvironmentSnapshot serialisation', () => {
     expect(row).not.toHaveProperty('longitude');
   });
 });
+
+describe('EnvironmentSnapshot light condition (#62)', () => {
+  it('keeps the light the shooter recorded', () => {
+    const snapshot = new EnvironmentSnapshot({ ...base, lightCondition: 'low_light' });
+    expect(snapshot.lightCondition).toBe('low_light');
+    expect(snapshot.toJSON().lightCondition).toBe('low_light');
+    expect(snapshot.toRow().light_condition).toBe('low_light');
+  });
+
+  it('leaves an unrecorded light absent rather than assuming daylight', () => {
+    const snapshot = new EnvironmentSnapshot(base);
+    expect(snapshot.lightCondition).toBeUndefined();
+  });
+
+  it('treats a NULL column as unrecorded', () => {
+    const row = {
+      id: 1,
+      temperature: 59,
+      humidity: 50,
+      pressure: 29.92,
+      altitude: 1000,
+      density_altitude: 1200,
+      wind_speed: 5,
+      wind_direction: 90,
+      light_condition: null,
+      timestamp: '2026-01-01T00:00:00.000Z',
+    } as unknown as EnvironmentSnapshotRow;
+
+    expect(EnvironmentSnapshot.fromRow(row).lightCondition).toBeUndefined();
+  });
+
+  it('reads the recorded light back from a row', () => {
+    const row = {
+      id: 1,
+      temperature: 59,
+      humidity: 50,
+      pressure: 29.92,
+      altitude: 1000,
+      density_altitude: 1200,
+      wind_speed: 5,
+      wind_direction: 90,
+      light_condition: 'night',
+      timestamp: '2026-01-01T00:00:00.000Z',
+    } as EnvironmentSnapshotRow;
+
+    expect(EnvironmentSnapshot.fromRow(row).lightCondition).toBe('night');
+  });
+
+  it('rejects a light condition it does not know', () => {
+    expect(() => new EnvironmentSnapshot({ ...base, lightCondition: 'dusk' as never })).toThrow(
+      /Light condition/
+    );
+  });
+});

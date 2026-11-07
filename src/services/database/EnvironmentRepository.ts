@@ -17,8 +17,8 @@ export class EnvironmentRepository {
       // stamped every snapshot with the import time, losing when the reading was taken.
       `INSERT INTO environment_snapshots (
         temperature, humidity, pressure, altitude, density_altitude,
-        wind_speed, wind_direction, latitude, timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
+        wind_speed, wind_direction, latitude, light_condition, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
       [
         snapshot.temperature,
         snapshot.humidity,
@@ -28,11 +28,26 @@ export class EnvironmentRepository {
         snapshot.windSpeed,
         snapshot.windDirection,
         snapshot.latitude ?? null,
+        snapshot.lightCondition ?? null,
         snapshot.timestamp ?? null,
       ]
     );
 
     snapshot.id = result.lastInsertRowId;
+
+    // Read the schema default back when the caller supplied no capture time
+    // (#192). Without this the returned snapshot is undated, and `createSnapshot`
+    // puts it straight into `useEnvironmentStore.snapshots` -- where #190's
+    // ranking reports "the latest snapshot's time is unknown" for a reading taken
+    // a second earlier, because nothing ever wrote the time it was given.
+    if (snapshot.timestamp === undefined) {
+      const stored = await db.getFirstAsync<{ timestamp: string }>(
+        'SELECT timestamp FROM environment_snapshots WHERE id = ?',
+        [snapshot.id]
+      );
+      snapshot.timestamp = stored?.timestamp;
+    }
+
     return snapshot;
   }
 
@@ -104,7 +119,7 @@ export class EnvironmentRepository {
       `UPDATE environment_snapshots SET
         temperature = ?, humidity = ?, pressure = ?, altitude = ?,
         density_altitude = ?, wind_speed = ?, wind_direction = ?,
-        latitude = ?
+        latitude = ?, light_condition = ?
       WHERE id = ?`,
       [
         updated.temperature,
@@ -115,6 +130,7 @@ export class EnvironmentRepository {
         updated.windSpeed,
         updated.windDirection,
         updated.latitude ?? null,
+        updated.lightCondition ?? null,
         id,
       ]
     );

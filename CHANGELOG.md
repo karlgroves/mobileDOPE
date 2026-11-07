@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gusting wind in the ballistic calculator: an optional Gust Speed beside Wind
   Speed (which is then the lull). The solution shows a windage bracket, the
   hold for the lull to the hold for the gust.
+- An optional profile QR code on the DOPE card. Card Settings → Profile QR Code
+  → On Back prints the rifle and load as a QR code on a second page, the back
+  of the card. The code is a mobiledope:// link that a phone's own camera
+  scans, so the app still never asks for camera access. Importing from the
+  link is not built yet. A profile whose names make the link too long for a
+  code that scans reliably gets a note on the back instead of the code. The
+  comparison card has no code, since it holds several loads.
+- Share Target Image on DOPE Log Details sends a marked target to the share
+  sheet as a PNG: the target as shown, with the distance it was shot at and the
+  group's measurements under it, and without the zoom buttons. The distance is
+  also shown above the measurements on the screen itself.
+- The Environment screen records the light a reading was taken in — Day, Low
+  Light or Night — with the reading, and it can be changed when a saved reading
+  is edited. It is optional and starts unselected; readings saved before it
+  existed show no light rather than an assumed Day. It travels in full backups.
 - Custom calibers. Settings → Manage Calibers adds calibers that are not in the
   built-in list, each with its bullet diameter so spin drift uses the real
   figure rather than a guess from the name. They appear in the rifle and ammo

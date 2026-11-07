@@ -1,6 +1,6 @@
 # Privacy Policy — Mobile DOPE
 
-**Last updated:** 2026-10-26
+**Last updated:** 2026-11-06
 **Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
@@ -177,6 +177,17 @@ anyone, of any age.
 | ---------------------- | ------------ | ----------------------------------------------------- |
 | Location, while in use | iOS, Android | Altitude and approximate latitude, as described above |
 | Motion & Fitness       | iOS only     | Reading the barometer, as described above             |
+| Face ID                | iOS only     | The optional app lock, as described below             |
+
+The app lock is not finished (#67). The app declares its Face ID purpose string
+so the lock can ask for Face ID once it ships, but in this version the lock
+cannot be turned on and Face ID is never invoked. On Android the lock will use
+the system biometric prompt, which needs no runtime permission. When it ships
+it will be off until you turn it on, will use your device's own Face ID, Touch
+ID or fingerprint with your device passcode as the fallback, and will store no
+passcode or biometric data of its own. It will hide the app's screens from
+someone holding your unlocked phone. It is not encryption: the database on the
+device and the files you export stay unencrypted.
 
 No other runtime permission is requested. Camera, photo library and shared
 storage, microphone, and Android's physical activity permissions are explicitly

@@ -259,6 +259,19 @@ describe('Export/Import round trip', () => {
       expect(after.ammos).toEqual(before.ammos);
     });
 
+    it('restores the light a reading was taken in (#62)', async () => {
+      await environmentRepository.create(validEnvironment({ lightCondition: 'night' }));
+      const exported = await exportEverything();
+
+      await installTestDatabase();
+      await stageImportFile(exported.uri as string);
+      const result = await importFullBackup();
+
+      expect(result.success).toBe(true);
+      const restored = await environmentRepository.getAll();
+      expect(restored.map((e) => e.lightCondition)).toEqual(['night']);
+    });
+
     it('does not duplicate everything when the same backup is imported twice', async () => {
       // #66: import used to always create new rows, so restoring a backup twice
       // left two of every rifle, load and log with no way to tell them apart.

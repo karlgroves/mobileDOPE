@@ -1,4 +1,4 @@
-import { EnvironmentSnapshotRow } from '../types/database.types';
+import { EnvironmentSnapshotRow, LightCondition } from '../types/database.types';
 import { coarsenLatitude } from '../utils/geoPrecision';
 
 export interface EnvironmentSnapshotData {
@@ -12,8 +12,12 @@ export interface EnvironmentSnapshotData {
   windDirection: number;
   /** Degrees. Coarsened to one decimal place on construction -- see `geoPrecision`. */
   latitude?: number;
+  /** As the shooter described it. Absent when not recorded -- never assumed to be day. */
+  lightCondition?: LightCondition;
   timestamp?: string;
 }
+
+const LIGHT_CONDITIONS: readonly LightCondition[] = ['day', 'low_light', 'night'];
 
 export class EnvironmentSnapshot {
   id?: number;
@@ -26,6 +30,7 @@ export class EnvironmentSnapshot {
   windDirection: number;
   /** Degrees, at one decimal place. Never full GPS precision. */
   latitude?: number;
+  lightCondition?: LightCondition;
   timestamp?: string;
 
   constructor(data: EnvironmentSnapshotData) {
@@ -45,6 +50,8 @@ export class EnvironmentSnapshot {
     // returns. Coarsening NULL would yield 0 -- a fabricated coordinate on the
     // equator, which is worse than storing nothing.
     this.latitude = data.latitude == null ? undefined : coarsenLatitude(data.latitude);
+    // `?? undefined` for the NULL an unrecorded column returns.
+    this.lightCondition = data.lightCondition ?? undefined;
     this.timestamp = data.timestamp;
   }
 
@@ -69,6 +76,9 @@ export class EnvironmentSnapshot {
     }
     if (data.latitude !== undefined && (data.latitude < -90 || data.latitude > 90)) {
       throw new Error('Latitude must be between -90 and 90 degrees');
+    }
+    if (data.lightCondition != null && !LIGHT_CONDITIONS.includes(data.lightCondition)) {
+      throw new Error('Light condition must be day, low_light or night');
     }
   }
 
@@ -99,6 +109,7 @@ export class EnvironmentSnapshot {
       wind_speed: this.windSpeed,
       wind_direction: this.windDirection,
       latitude: this.latitude,
+      light_condition: this.lightCondition ?? null,
     };
   }
 
@@ -116,6 +127,7 @@ export class EnvironmentSnapshot {
       windSpeed: row.wind_speed,
       windDirection: row.wind_direction,
       latitude: row.latitude,
+      lightCondition: row.light_condition ?? undefined,
       timestamp: row.timestamp,
     });
   }
@@ -134,6 +146,7 @@ export class EnvironmentSnapshot {
       windSpeed: this.windSpeed,
       windDirection: this.windDirection,
       latitude: this.latitude,
+      lightCondition: this.lightCondition,
       timestamp: this.timestamp,
     };
   }
