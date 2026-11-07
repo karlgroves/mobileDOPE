@@ -267,3 +267,9 @@ because this section said the app collected nothing while it was storing precise
   does not show it, so do not cite a lock as an existing control. Once it ships it
   gates the UI only: it is not encryption, and the database and exports stay
   unencrypted. Every description of it must say so.
+- The app lock's permissions are the **one deliberate exception** to "no permission
+  without code that uses it". `NSFaceIDUsageDescription` (set by the
+  `expo-local-authentication` plugin in `app.config.ts`) and the Android
+  `USE_BIOMETRIC` / `USE_FINGERPRINT` permissions it adds are declared ahead of the
+  gate, and `PRIVACY.md` says so. Do not trim them. Delete this bullet when the gate
+  ships.

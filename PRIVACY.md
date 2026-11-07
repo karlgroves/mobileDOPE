@@ -182,9 +182,9 @@ anyone, of any age.
 The app lock is not finished (#67). The app declares its Face ID purpose string
 so the lock can ask for Face ID once it ships, but in this version the lock
 cannot be turned on and Face ID is never invoked. On Android the lock will use
-the system biometric prompt, which needs no runtime permission. When it ships it will be off
-until you turn it on, will use your device's own Face ID, Touch ID or
-fingerprint with your device passcode as the fallback, and will store no
+the system biometric prompt, which needs no runtime permission. When it ships
+it will be off until you turn it on, will use your device's own Face ID, Touch
+ID or fingerprint with your device passcode as the fallback, and will store no
 passcode or biometric data of its own. It will hide the app's screens from
 someone holding your unlocked phone. It is not encryption: the database on the
 device and the files you export stay unencrypted.

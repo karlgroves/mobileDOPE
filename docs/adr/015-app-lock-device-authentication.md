@@ -157,14 +157,15 @@ triaging and would otherwise be lost.
   govern nothing. The real question is
   whether the app should have sounds at all, which is a feature request rather
   than a preference, and `hapticFeedbackEnabled` may already cover the
-  intent.
+  intent. **Ruled 2026-11-06: won't-do** — haptic feedback covers it.
 - **Data storage location preference — needs a question answered first.**
   Everything is written to `Paths.document`, the app's own sandbox. On iOS
   there is no alternative a user can choose. On Android a real version of this
   would mean the Storage Access Framework for **exports and backups**, so that
   a backup survives uninstalling the app — which matters in an app with no
   cloud copy. That is worth doing, is Android-only, and is a different feature
-  from a preference row.
+  from a preference row. **Ruled 2026-11-06: moved to #215** as an
+  Android-only feature.
 
 ## Consequences
 
