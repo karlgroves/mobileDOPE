@@ -15,6 +15,8 @@ import type { GroupFigures, MeasuredGroup } from '../utils/targetMarking';
 
 interface GroupStatisticsProps {
   group: MeasuredGroup;
+  /** The distance the group was shot at, shown first when given. */
+  distance?: string;
   testID?: string;
 }
 
@@ -27,19 +29,24 @@ const ROWS: { key: keyof GroupFigures; label: string }[] = [
   { key: 'circularErrorProbable', label: 'CEP (50%)' },
 ];
 
-export const GroupStatistics: React.FC<GroupStatisticsProps> = ({ group, testID }) => {
+export const GroupStatistics: React.FC<GroupStatisticsProps> = ({ group, distance, testID }) => {
   const { colors } = useTheme().theme;
   const { inches, moa } = group;
 
   // Each row is read as one item -- "Extreme spread, 1.20 inches, 1.15 MOA" --
   // rather than a label and a number a screen reader announces separately.
-  const row = (label: string, value: string, spoken = value) => (
+  const row = (
+    label: string,
+    value: string,
+    spoken = value,
+    hint = 'Measured from the shots marked on the target'
+  ) => (
     <View
       key={label}
       style={styles.row}
       accessible
       accessibilityLabel={`${label}, ${spoken}`}
-      accessibilityHint="Measured from the shots marked on the target"
+      accessibilityHint={hint}
     >
       <Text style={[styles.label, { color: colors.text.secondary }]}>{label}</Text>
       <Text style={[styles.value, { color: colors.text.primary }]}>{value}</Text>
@@ -62,6 +69,7 @@ export const GroupStatistics: React.FC<GroupStatisticsProps> = ({ group, testID 
 
   return (
     <View testID={testID}>
+      {distance ? row('Distance', distance, distance, 'The distance this group was shot at') : null}
       {row('Shots', String(group.shotCount))}
       {ROWS.map(({ key, label }) => {
         const value = figure(key);

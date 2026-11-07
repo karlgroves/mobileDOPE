@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Share Target Image on DOPE Log Details sends a marked target to the share
+  sheet as a PNG: the target as shown, with the distance it was shot at and the
+  group's measurements under it, and without the zoom buttons. The distance is
+  also shown above the measurements on the screen itself.
 - The Environment screen records the light a reading was taken in — Day, Low
   Light or Night — with the reading, and it can be changed when a saved reading
   is edited. It is optional and starts unselected; readings saved before it
