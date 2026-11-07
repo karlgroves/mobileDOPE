@@ -601,7 +601,7 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
           />
           {/* A segment cannot be unselected, so a mis-tap needs a way back to "not recorded". */}
           {lightCondition !== undefined && (
-            <View style={styles.gpsButtonContainer}>
+            <View style={styles.clearLightContainer}>
               <Button
                 title="Clear Light"
                 onPress={() => setLightCondition(undefined)}
@@ -712,6 +712,9 @@ const styles = StyleSheet.create({
   },
   sensorButtonContainer: {
     marginBottom: 16,
+  },
+  clearLightContainer: {
+    marginTop: 8,
   },
   gpsButtonContainer: {
     marginTop: 8,
