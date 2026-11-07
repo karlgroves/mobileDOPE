@@ -287,7 +287,8 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
           </View>
           {/* Gusting wind (#220): the hold for the lull and the hold for the
               gust, not one averaged figure. Both are the solver's; a DOPE
-              windage offset above is not applied to them. */}
+              windage offset above is not applied to them, so when the headline
+              is adjusted the caption says whose holds these are. */}
           {gustWindage !== undefined && gustSpeed !== undefined && (
             <View style={styles.windageBlock}>
               <View style={styles.infoRow}>
@@ -301,8 +302,13 @@ export const BallisticSolutionResults: React.FC<Props> = ({ route, navigation })
                   {`${windage.toFixed(2)} to ${gustWindage.toFixed(2)} ${angularUnit}`}
                 </Text>
               </View>
-              <Text style={[styles.matchesCaption, { color: colors.text.secondary }]}>
-                {`${solvedWindSpeed ?? 0} mph lull, ${gustSpeed} mph gust`}
+              <Text
+                style={[styles.matchesCaption, { color: colors.text.secondary }]}
+                testID="windage-bracket-caption"
+              >
+                {`${solvedWindSpeed ?? 0} mph lull, ${gustSpeed} mph gust${
+                  windageApplies ? '. Solver holds, without the DOPE offset' : ''
+                }`}
               </Text>
             </View>
           )}

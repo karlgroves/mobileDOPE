@@ -126,19 +126,23 @@ const windySnapshot = {
 /** The same air, dead calm. */
 const calmSnapshot = { ...windySnapshot, windSpeed: 0 };
 
-const solution = calculateBallisticSolution(
-  {
-    zeroDistance: 100,
-    sightHeight: 1.5,
-    twistRate: '1:10',
-    barrelLength: 24,
-    caliber: '.308 Winchester',
-  },
-  { bulletWeight: 168, ballisticCoefficient: 0.462, dragModel: 'G1', muzzleVelocity: 2650 },
-  { distance: 500, angle: 0, windSpeed: 10, windDirection: 90 },
-  { temperature: 59, pressure: 29.92, humidity: 50, altitude: 0, densityAltitude: 0 },
-  false
-);
+/** The 500 yd shot in a full-value crosswind of `windSpeed` mph. */
+const solveIn = (windSpeed: number) =>
+  calculateBallisticSolution(
+    {
+      zeroDistance: 100,
+      sightHeight: 1.5,
+      twistRate: '1:10',
+      barrelLength: 24,
+      caliber: '.308 Winchester',
+    },
+    { bulletWeight: 168, ballisticCoefficient: 0.462, dragModel: 'G1', muzzleVelocity: 2650 },
+    { distance: 500, angle: 0, windSpeed, windDirection: 90 },
+    { temperature: 59, pressure: 29.92, humidity: 50, altitude: 0, densityAltitude: 0 },
+    false
+  );
+
+const solution = solveIn(10);
 
 /** The solver's windage per mph at 500 yd in this air -- what the logs beat. */
 const PER_MPH_500 = predictWindagePerMph(rifle, ammo, 500, windySnapshot, 'MIL');
@@ -360,6 +364,37 @@ describe('the solution screen’s windage (#163)', () => {
       expect(view.getByTestId('dope-windage-caption').props.children).toMatch(
         /None of your logs were shot in a crosswind/
       )
+    );
+  });
+
+  it('says the gust bracket is the solver’s holds when the headline is adjusted (#220)', async () => {
+    // The bracket's lull end is the solver's windage, so with the headline
+    // adjusted the two figures differ, and the caption has to say why.
+    seed(windyLogs(6, 0.01));
+    const view = renderWithProviders(
+      <BallisticSolutionResults
+        route={
+          {
+            ...solutionRoute,
+            params: {
+              ...solutionRoute.params,
+              windSpeed: 10,
+              windDirection: 90,
+              gustSpeed: 15,
+              gustSolution: solveIn(15),
+            },
+          } as never
+        }
+        navigation={navigation as never}
+      />
+    );
+
+    await waitFor(() => expect(view.getByText('WINDAGE (ADJUSTED)')).toBeTruthy());
+    // The lull end is the solver's figure, not the adjusted headline.
+    const bracket = view.getByTestId('windage-bracket').props.children as string;
+    expect(bracket.startsWith(`${solution.windageMIL.toFixed(2)} to `)).toBe(true);
+    expect(view.getByTestId('windage-bracket-caption').props.children).toBe(
+      '10 mph lull, 15 mph gust. Solver holds, without the DOPE offset'
     );
   });
 
