@@ -599,6 +599,15 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
             selectedValue={lightCondition ?? ''}
             onValueChange={(value) => setLightCondition(value as LightCondition)}
           />
+          {/* A segment cannot be unselected, so a mis-tap needs a way back to "not recorded". */}
+          {lightCondition !== undefined && (
+            <Button
+              title="Clear Light"
+              onPress={() => setLightCondition(undefined)}
+              variant="secondary"
+              size="small"
+            />
+          )}
         </View>
 
         {/* GPS Coordinates (Optional) */}

@@ -130,6 +130,7 @@ export const RangeSessionStart: React.FC<Props> = ({ navigation }) => {
         windSpeed: source.windSpeed,
         windDirection: source.windDirection,
         densityAltitude: source.densityAltitude,
+        lightCondition: source.lightCondition,
         timestamp: source.timestamp,
       });
 
