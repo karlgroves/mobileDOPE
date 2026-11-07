@@ -203,6 +203,21 @@ describe('DOPE Log Details, sharing the marked target as an image (#63)', () => 
     expect(alert).toHaveBeenCalledWith('Error', 'Sharing is not available on this device');
   });
 
+  it('reports a failed capture and lets the button be pressed again', async () => {
+    (captureRef as jest.Mock).mockRejectedValue(new Error('View not found'));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const screen = render();
+    await screen.findByTestId('log-target');
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Share Target Image' }));
+    });
+
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Share Failed', 'View not found');
+    expect(screen.getByRole('button', { name: 'Share Target Image' })).not.toBeDisabled();
+  });
+
   it('offers no image to share when the log has no target', async () => {
     jest.spyOn(targetImageRepository, 'getByDopeLogId').mockResolvedValue([]);
     const screen = render();

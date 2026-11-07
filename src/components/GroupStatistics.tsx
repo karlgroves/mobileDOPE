@@ -69,7 +69,7 @@ export const GroupStatistics: React.FC<GroupStatisticsProps> = ({ group, distanc
 
   return (
     <View testID={testID}>
-      {distance && row('Distance', distance, distance, 'The distance this group was shot at')}
+      {distance ? row('Distance', distance, distance, 'The distance this group was shot at') : null}
       {row('Shots', String(group.shotCount))}
       {ROWS.map(({ key, label }) => {
         const value = figure(key);
