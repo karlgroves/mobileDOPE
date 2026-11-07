@@ -1,6 +1,8 @@
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
+import * as Sharing from 'expo-sharing';
 import React from 'react';
 import { Alert } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 
 import { AmmoProfile } from '../../../src/models/AmmoProfile';
 import { DOPELog } from '../../../src/models/DOPELog';
@@ -27,6 +29,12 @@ const mockDeleteTargetPhoto = jest.fn();
 jest.mock('../../../src/services/TargetPhotoService', () => ({
   pickTargetPhoto: jest.fn(),
   deleteTargetPhoto: (uri: string) => mockDeleteTargetPhoto(uri),
+}));
+
+jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
 }));
 
 const LOG_ID = 7;
@@ -142,5 +150,79 @@ describe('DOPE Log Details, marked target', () => {
 
     expect(deleteDopeLog).toHaveBeenCalledWith(LOG_ID);
     expect(mockDeleteTargetPhoto).toHaveBeenCalledWith('file:///documents/targets/t.jpg');
+  });
+});
+
+describe('DOPE Log Details, sharing the marked target as an image (#63)', () => {
+  beforeEach(() => {
+    jest.spyOn(targetImageRepository, 'getByDopeLogId').mockResolvedValue([target()]);
+    (captureRef as jest.Mock).mockResolvedValue('file:///tmp/target.png');
+    (Sharing.isAvailableAsync as jest.Mock).mockResolvedValue(true);
+    (Sharing.shareAsync as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  it('captures the target with its distance and statistics, not the zoom controls', async () => {
+    // The PNG is read away from the app: an MOA figure means nothing without the
+    // distance it was measured at, and a row of zoom buttons is no use in a photo.
+    const screen = render();
+    await screen.findByTestId('log-target');
+
+    const exported = within(screen.getByTestId('log-target-export'));
+    expect(exported.getByTestId('log-target')).toBeTruthy();
+    expect(exported.getByLabelText('Distance, 100 yards')).toBeTruthy();
+    expect(exported.getByLabelText('Extreme spread, 1.00 inches, 0.95 MOA')).toBeTruthy();
+    expect(exported.queryByTestId('target-zoom-in')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Share Target Image' }));
+    });
+
+    const [ref, options] = (captureRef as jest.Mock).mock.calls[0] as [
+      { current: { props: { testID?: string } } },
+      { format: string },
+    ];
+    expect(ref.current.props.testID).toBe('log-target-export');
+    expect(options.format).toBe('png');
+    expect(Sharing.shareAsync).toHaveBeenCalledWith(
+      'file:///tmp/target.png',
+      expect.objectContaining({ mimeType: 'image/png', UTI: 'public.png' })
+    );
+  });
+
+  it('says so when the device cannot share', async () => {
+    (Sharing.isAvailableAsync as jest.Mock).mockResolvedValue(false);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const screen = render();
+    await screen.findByTestId('log-target');
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Share Target Image' }));
+    });
+
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Error', 'Sharing is not available on this device');
+  });
+
+  it('reports a failed capture and lets the button be pressed again', async () => {
+    (captureRef as jest.Mock).mockRejectedValue(new Error('View not found'));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const screen = render();
+    await screen.findByTestId('log-target');
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Share Target Image' }));
+    });
+
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Share Failed', 'View not found');
+    expect(screen.getByRole('button', { name: 'Share Target Image' })).not.toBeDisabled();
+  });
+
+  it('offers no image to share when the log has no target', async () => {
+    jest.spyOn(targetImageRepository, 'getByDopeLogId').mockResolvedValue([]);
+    const screen = render();
+    await waitFor(() => expect(targetImageRepository.getByDopeLogId).toHaveBeenCalled());
+
+    expect(screen.queryByRole('button', { name: 'Share Target Image' })).toBeNull();
   });
 });
