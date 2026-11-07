@@ -18,12 +18,14 @@ import {
 import { Button } from '../components/Button';
 import { NumberInput } from '../components/NumberInput';
 import { Picker } from '../components/Picker';
+import { SegmentedControl } from '../components/SegmentedControl';
 import { STATION_PRESSURE_HELP } from '../constants/fieldHelp';
 import { useTheme } from '../contexts/ThemeContext';
 import { EnvironmentSnapshotData } from '../models/EnvironmentSnapshot';
 import { isBarometerAvailable, readBarometerHpa } from '../services/deviceBarometer';
 import { useAppStore } from '../store/useAppStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
+import { LightCondition } from '../types/database.types';
 import { stationPressureFromSensor } from '../utils/barometer';
 import { coarsenLatitude } from '../utils/geoPrecision';
 
@@ -39,6 +41,14 @@ const WIND_DIRECTION_OPTIONS = [
   { label: '225°', value: '225' },
   { label: '270° (Left)', value: '270' },
   { label: '315°', value: '315' },
+];
+
+// The light a reading was taken in (#62). A closed set rather than a slider:
+// there is no meaningful point between these to slide to.
+const LIGHT_CONDITION_OPTIONS: { label: string; value: LightCondition }[] = [
+  { label: 'Day', value: 'day' },
+  { label: 'Low Light', value: 'low_light' },
+  { label: 'Night', value: 'night' },
 ];
 
 // Environmental presets for common conditions
@@ -117,6 +127,11 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
     current?.windDirection || 0
   );
   const [latitude, setLatitude] = useState<number | undefined>(current?.latitude);
+  // Starts unselected for a new reading: preselecting "Day" would record
+  // daylight for every reading the shooter did not stop to describe.
+  const [lightCondition, setLightCondition] = useState<LightCondition | undefined>(
+    current?.lightCondition
+  );
 
   // Sensor availability
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -329,6 +344,7 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
     setWindSpeed(snapshot.windSpeed);
     setWindDirection(snapshot.windDirection);
     setLatitude(snapshot.latitude);
+    setLightCondition(snapshot.lightCondition);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId, snapshots]);
 
@@ -383,6 +399,7 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
         windSpeed,
         windDirection,
         latitude,
+        lightCondition,
       };
 
       if (editing) {
@@ -428,6 +445,7 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
       windSpeed,
       windDirection,
       latitude,
+      lightCondition,
     };
 
     setCurrent(data);
@@ -570,6 +588,29 @@ export function EnvironmentInput({ route, navigation }: Props = {}) {
           />
         </View>
 
+        {/* Light (Optional) */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            Light (Optional)
+          </Text>
+          <SegmentedControl
+            options={LIGHT_CONDITION_OPTIONS}
+            // '' matches no option, so nothing shows as chosen until one is.
+            selectedValue={lightCondition ?? ''}
+            onValueChange={(value) => setLightCondition(value as LightCondition)}
+          />
+          {/* A segment cannot be unselected, so a mis-tap needs a way back to "not recorded". */}
+          {lightCondition !== undefined && (
+            <View style={styles.clearLightContainer}>
+              <Button
+                title="Clear Light"
+                onPress={() => setLightCondition(undefined)}
+                variant="secondary"
+              />
+            </View>
+          )}
+        </View>
+
         {/* GPS Coordinates (Optional) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
@@ -671,6 +712,9 @@ const styles = StyleSheet.create({
   },
   sensorButtonContainer: {
     marginBottom: 16,
+  },
+  clearLightContainer: {
+    marginTop: 8,
   },
   gpsButtonContainer: {
     marginTop: 8,

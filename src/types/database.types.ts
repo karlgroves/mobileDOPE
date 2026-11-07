@@ -38,6 +38,9 @@ export interface AmmoProfileRow {
   updated_at: string;
 }
 
+/** The light a reading was taken in, as the shooter described it (#62). */
+export type LightCondition = 'day' | 'low_light' | 'night';
+
 export interface EnvironmentSnapshotRow {
   id: number;
   temperature: number; // Fahrenheit
@@ -48,6 +51,7 @@ export interface EnvironmentSnapshotRow {
   wind_speed: number; // mph
   wind_direction: number; // degrees (0-360)
   latitude?: number; // degrees, one decimal place -- see src/utils/geoPrecision.ts
+  light_condition?: LightCondition | null; // NULL when the shooter did not record it
   timestamp: string; // ISO date string
 }
 
@@ -176,6 +180,8 @@ export const DB_SCHEMA = {
       wind_direction REAL NOT NULL,
       -- Coarsened to one decimal place at capture; longitude is not collected. See #44.
       latitude REAL,
+      -- 'day', 'low_light' or 'night'; NULL when not recorded. See migration 009.
+      light_condition TEXT,
       timestamp TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `,

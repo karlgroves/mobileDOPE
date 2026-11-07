@@ -111,6 +111,16 @@ describe('RangeSessionStart with fresh conditions (#192)', () => {
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 
+  it('carries the light the source reading was taken in (#62)', async () => {
+    const latest = { ...snapshotMeasured(2 * 3_600_000), lightCondition: 'night' as const };
+    const view = mount(latest);
+
+    await startSession(view);
+
+    await waitFor(() => expect(createSnapshot).toHaveBeenCalled());
+    expect(createSnapshot.mock.calls[0][0].lightCondition).toBe('night');
+  });
+
   it('starts the session and navigates to it', async () => {
     const view = mount(snapshotMeasured(60_000));
 

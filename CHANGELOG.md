@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sheet as a PNG: the target as shown, with the distance it was shot at and the
   group's measurements under it, and without the zoom buttons. The distance is
   also shown above the measurements on the screen itself.
+- The Environment screen records the light a reading was taken in — Day, Low
+  Light or Night — with the reading, and it can be changed when a saved reading
+  is edited. It is optional and starts unselected; readings saved before it
+  existed show no light rather than an assumed Day. It travels in full backups.
 - Custom calibers. Settings → Manage Calibers adds calibers that are not in the
   built-in list, each with its bullet diameter so spin drift uses the real
   figure rather than a guess from the name. They appear in the rifle and ammo

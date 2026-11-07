@@ -275,6 +275,38 @@ describe('EnvironmentRepository', () => {
     });
   });
 
+  describe('light condition (#62)', () => {
+    it('round-trips the recorded light', async () => {
+      const created = await environmentRepository.create(
+        validEnvironment({ lightCondition: 'night' })
+      );
+
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(fetched?.lightCondition).toBe('night');
+    });
+
+    it('stores nothing when the light was not recorded', async () => {
+      const created = await environmentRepository.create(validEnvironment());
+
+      const fetched = await environmentRepository.getById(created.id as number);
+      expect(fetched?.lightCondition).toBeUndefined();
+    });
+
+    it('changes the light on an edit and keeps it on an unrelated one', async () => {
+      const created = await environmentRepository.create(
+        validEnvironment({ lightCondition: 'day' })
+      );
+
+      const relit = await environmentRepository.update(created.id as number, {
+        lightCondition: 'low_light',
+      });
+      expect(relit?.lightCondition).toBe('low_light');
+
+      const rewound = await environmentRepository.update(created.id as number, { windSpeed: 9 });
+      expect(rewound?.lightCondition).toBe('low_light');
+    });
+  });
+
   describe('update', () => {
     it('changes only the supplied fields and persists them', async () => {
       const created = await environmentRepository.create(validEnvironment());
