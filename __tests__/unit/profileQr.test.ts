@@ -153,6 +153,15 @@ describe('renderProfileQrSection', () => {
     expect(html).toContain('<svg');
   });
 
+  it('sets the names beside the one-inch code, so the section fits a 1.5 inch card', () => {
+    const html = renderProfileQrSection(rifle, ammo, colours);
+
+    // Stacked above and below, the names and caption push the section past the
+    // condensed card's printable height and onto a third page.
+    expect(html).toContain('display: flex');
+    expect(html.indexOf('<svg')).toBeLessThan(html.indexOf('Tikka T3x'));
+  });
+
   it('names the load the code carries, escaped', () => {
     const html = renderProfileQrSection(
       { ...rifle, name: '<b>Rifle</b>' },

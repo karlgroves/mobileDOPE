@@ -186,9 +186,12 @@ export const renderQrSvg = (text: string, colours: QrColours): string => {
  * The QR section of a printed DOPE card.
  *
  * It starts a new page, so on a card printed double-sided the code is on the
- * back and the table on the front keeps its full size. One inch square fits
- * the condensed card's 1.5 inch page with the caption. When the profile is
- * too long for a code, the section says so instead.
+ * back and the table on the front keeps its full size. The names and caption
+ * sit beside the one-inch code rather than above and below it, so the section
+ * is one inch tall: the condensed card's 1.5 inch page leaves only about 1.1
+ * inches inside its margin and padding, and a stacked layout would spill onto
+ * a third page. When the profile is too long for a code, the section says so
+ * instead.
  *
  * @param rifle - The rifle on the card.
  * @param ammo - The load on the card.
@@ -202,14 +205,20 @@ export const renderProfileQrSection = (
   const link = buildProfileShareLink(rifle, ammo);
   const label = `${escapeHtml(rifle.name)} | ${escapeHtml(ammo.name)}`;
 
-  const body = link.ok
-    ? `<div style="width: 1in; height: 1in; margin: 0 auto;">${renderQrSvg(link.url, colours)}</div>
-    <div style="margin-top: 4px;">Scan with your phone camera to import this load</div>`
-    : `<div>${escapeHtml(link.reason)}</div>`;
-
-  return `
+  if (!link.ok) {
+    return `
   <div style="page-break-before: always; text-align: center;">
     <div style="font-weight: bold; margin-bottom: 4px;">${label}</div>
-    ${body}
+    <div>${escapeHtml(link.reason)}</div>
+  </div>`;
+  }
+
+  return `
+  <div style="page-break-before: always; display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <div style="width: 1in; height: 1in; flex: none;">${renderQrSvg(link.url, colours)}</div>
+    <div>
+      <div style="font-weight: bold; margin-bottom: 4px;">${label}</div>
+      <div>Scan with your phone camera to import this load</div>
+    </div>
   </div>`;
 };
