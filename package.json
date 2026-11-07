@@ -57,6 +57,7 @@
     "expo-haptics": "~55.0.18",
     "expo-image-picker": "~55.0.24",
     "expo-keep-awake": "~55.0.8",
+    "expo-local-authentication": "~55.0.18",
     "expo-location": "~55.1.15",
     "expo-print": "~55.0.19",
     "expo-sensors": "~55.0.19",

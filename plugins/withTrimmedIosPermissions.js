@@ -23,6 +23,10 @@ const { withInfoPlist } = require('expo/config-plugins');
  * device barometer, which iOS gates behind Motion & Fitness. Its string is set by
  * the expo-sensors plugin in `app.config.ts`, replacing the template placeholder.
  *
+ * Nor is `NSFaceIDUsageDescription`, since #67 (ADR-015): the opt-in app lock asks
+ * for Face ID through expo-local-authentication, whose plugin in `app.config.ts`
+ * sets the string. It is declared ahead of the lock gate; see CLAUDE.md.
+ *
  * @param {import('expo/config').ExpoConfig} config
  * @returns {import('expo/config').ExpoConfig}
  */

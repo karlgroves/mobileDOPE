@@ -149,6 +149,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             'under Motion & Fitness; no movement or activity data is read or stored.',
         },
       ],
+      // The opt-in app lock (#67, ADR-015) unlocks with the device's own Face ID,
+      // Touch ID or fingerprint, falling back to the device passcode. iOS needs
+      // NSFaceIDUsageDescription before it will show the Face ID prompt; the
+      // plugin's default is a placeholder, so the string is set here. On Android
+      // the plugin adds USE_BIOMETRIC and USE_FINGERPRINT, which are install-time
+      // permissions with no runtime prompt.
+      [
+        'expo-local-authentication',
+        {
+          faceIDPermission:
+            'Mobile DOPE uses Face ID only to unlock the app, and only if you turn the ' +
+            'app lock on in Settings. No face data is seen or stored by the app.',
+        },
+      ],
       // Deletes the placeholder usage descriptions Expo's iOS template seeds for
       // camera, photo library, microphone and background location -- none of which
       // this app has code to use. Must run last so it applies after the merge.

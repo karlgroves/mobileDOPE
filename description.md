@@ -328,8 +328,12 @@ Roadmap, not here. The published statement is `PRIVACY.md`.
 ### Not built
 
 - **Cloud sync and its end-to-end encryption.** Roadmap Phase 2; no code exists.
-- **Passcode / biometric lock.** Not implemented and not currently planned. Earlier
-  drafts of this document listed it as a control; it never shipped. See issue #44.
+- **App lock.** Accepted in ADR-015 and being built under #67, but not shipped: it
+  cannot be turned on yet. It will be opt-in, using the device's own Face ID, Touch
+  ID or fingerprint with the device passcode as the fallback -- there is no
+  app-specific passcode. It will gate the UI only; it is not encryption, and the
+  database and exports stay unencrypted. Earlier drafts of this document listed a
+  lock as a control before one existed; see issue #44.
 
 ## 7. Roadmap
 

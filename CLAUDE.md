@@ -260,5 +260,16 @@ because this section said the app collected nothing while it was storing precise
   in `PRIVACY.md`. `plugins/withTrimmedIosPermissions.js` deletes the placeholder usage
   descriptions Expo's template seeds, and `android.blockedPermissions` does the same on
   Android -- do not add a permission back without code that uses it.
-- There is **no** biometric or passcode lock. `description.md` used to promise one; it
-  does not exist and is not planned. Do not cite it as an existing control.
+- The app lock is **accepted but not yet shipped** (ADR-015, #67). It will use the
+  device's own authentication through `expo-local-authentication` -- Face ID, Touch ID
+  or fingerprint, falling back to the device passcode -- opt-in and off by default.
+  Until the gate lands, `appLockEnabled` is stored but nothing reads it and Settings
+  does not show it, so do not cite a lock as an existing control. Once it ships it
+  gates the UI only: it is not encryption, and the database and exports stay
+  unencrypted. Every description of it must say so.
+- The app lock's permissions are the **one deliberate exception** to "no permission
+  without code that uses it". `NSFaceIDUsageDescription` (set by the
+  `expo-local-authentication` plugin in `app.config.ts`) and the Android
+  `USE_BIOMETRIC` / `USE_FINGERPRINT` permissions it adds are declared ahead of the
+  gate, and `PRIVACY.md` says so. Do not trim them. Delete this bullet when the gate
+  ships.
