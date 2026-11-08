@@ -33,6 +33,10 @@ const logs = [
   new DOPELog({ ...validDopeLog({ rifleId: 1, ammoId: 2, environmentId: 3 }), id: 10 }),
 ];
 
+/** DOPE Logs subscribes to focus to reload its list (#229). */
+const listNavigation = () =>
+  ({ navigate: jest.fn(), addListener: jest.fn(() => jest.fn()) }) as never;
+
 /** Opens the export alert, then presses the named choice in it. */
 const choose = async (text: string) => {
   const alert = Alert.alert as jest.Mock;
@@ -51,7 +55,7 @@ beforeEach(() => {
 
 it('DOPE Logs exports its CSV with every snapshot', async () => {
   const { getByLabelText } = renderWithProviders(
-    <DOPELogList navigation={{ navigate: jest.fn() } as never} route={{} as never} />
+    <DOPELogList navigation={listNavigation()} route={{} as never} />
   );
 
   fireEvent.press(getByLabelText('Export DOPE logs'));
@@ -74,7 +78,7 @@ it('Settings exports its CSV with every snapshot', async () => {
 it('says so, rather than exporting empty conditions, when the snapshots cannot be read', async () => {
   jest.spyOn(environmentRepository, 'getAll').mockRejectedValue(new Error('disk I/O error'));
   const { getByLabelText } = renderWithProviders(
-    <DOPELogList navigation={{ navigate: jest.fn() } as never} route={{} as never} />
+    <DOPELogList navigation={listNavigation()} route={{} as never} />
   );
 
   fireEvent.press(getByLabelText('Export DOPE logs'));

@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caliber, and every field stays editable. The table is built into the app and
   cites each manufacturer's product page and the date it was read. It is listed
   in the rifle and ammunition setup guide.
+- Android export folder. Settings → Data Management → Choose Export Folder picks
+  a folder in the system picker; every manual export then also saves a copy
+  there, and the share sheet still opens. If the folder can no longer be
+  reached, exports go to the share sheet only and Settings says so. Automatic
+  backups stay in the app's private storage. Not offered on iOS.
 - Gusting wind in the ballistic calculator: an optional Gust Speed beside Wind
   Speed (which is then the lull). The solution shows a windage bracket, the
   hold for the lull to the hold for the gust.
@@ -97,6 +102,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Wind Table opened slowly with no sign it was working: the button stayed
+  dimmed for about 15 s on the Simulator. It now opens straight to a spinner
+  while the table is built, and builds it with one solve per distance instead
+  of one per cell, about a fifth of the work, with the same figures. Its
+  direction picker is also labelled Wind Direction once instead of twice.
+- A shot logged from a range session or the calculator now appears at the top
+  of DOPE Logs, with its date, without a pull to refresh. The new log had no
+  timestamp until it was read back from the database, so the date sort put it
+  last. DOPE Logs also reloads every log each time it comes back into view, so
+  it no longer shows the one rifle's logs another screen loaded.
+- New DOPE Log starts Dial Corrections in the selected rifle's turret unit
+  (its click value type), and follows the rifle if another is picked, rather
+  than always starting at MIL. Settings → Default Units → Angular Unit is the
+  fallback. Choosing a unit by hand still wins, and an edited log keeps the
+  unit it was saved in.
+- New DOPE Log no longer says "No environmental data captured" and disables
+  Save on a fresh launch when conditions were recorded in the last day. It
+  shows that latest snapshot, with its age, and saves the log against it, by
+  the same under-a-day rule as the DOPE ranking and Start Session. Older
+  conditions still ask for new ones. The message now names a place that
+  exists, Session → Current Conditions, instead of a Range tab the app does
+  not have. Editing an existing log no longer needs conditions recorded first.
+- The Coriolis correction is now a distance. It was computed as 2ω·v·t, which
+  has the units of a velocity, so for a .308 it overstated the deflection about
+  five times at 300 yards, two and a half times at 600 and by half at 1000,
+  and understated it past about three seconds of flight. It is now the
+  Coriolis acceleration integrated over the flight, with drag slowing the
+  sideways speed it builds up, which at constant speed is the textbook
+  ω·X·t·sin(latitude). A .308 at 1000 yards and 45° now drifts about 2.8",
+  inside the 2.5-3.0" Litz publishes for a typical 1000 yard trajectory.
+  The vertical (Eötvös) term was documented as extra drop when firing East; it
+  is a lift, and the bullet strikes high. The dialled elevation already moved
+  the right way, so only the description changed.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which

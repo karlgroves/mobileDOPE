@@ -2,9 +2,12 @@
  * Wind table generation for ballistic calculations
  */
 
-import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
-import type { AtmosphericConditions } from './atmospheric';
+import { inchesToCorrection } from '../types/ballistic.types';
+
 import { calculateBallisticSolution } from './ballistics';
+
+import type { AtmosphericConditions } from './atmospheric';
+import type { RifleConfig, AmmoConfig } from '../types/ballistic.types';
 
 /**
  * Wind table entry representing drift at a specific wind speed and direction
@@ -46,33 +49,35 @@ export function generateWindTable(
   const windSpeeds = options.windSpeeds || [0, 5, 10, 15, 20];
   const windDirection = options.windDirection;
 
-  const table: WindTableEntry[] = [];
+  // Wind does not change the trajectory here: drift is worked out afterwards
+  // from the time of flight, and it is linear in wind speed. So one solve per
+  // distance, at 1 mph, gives every column by scaling. Solving once per cell
+  // made the screen's 10 x 5 table fifty full solves, which took about 15 s in
+  // a debug build on the Simulator (#232).
+  const solution = calculateBallisticSolution(
+    rifle,
+    ammo,
+    {
+      distance,
+      angle: 0,
+      windSpeed: 1,
+      windDirection,
+    },
+    atmosphere,
+    false // Don't need trajectory data
+  );
+  const driftPerMph = solution.windage;
 
-  for (const windSpeed of windSpeeds) {
-    // Calculate ballistic solution with this wind
-    const solution = calculateBallisticSolution(
-      rifle,
-      ammo,
-      {
-        distance,
-        angle: 0,
-        windSpeed,
-        windDirection,
-      },
-      atmosphere,
-      false // Don't need trajectory data
-    );
-
-    table.push({
+  return windSpeeds.map((windSpeed) => {
+    const windDrift = driftPerMph * windSpeed;
+    return {
       distance,
       windSpeed,
       windDirection,
-      windDrift: solution.windage,
-      windageCorrection: solution.windageMIL,
-    });
-  }
-
-  return table;
+      windDrift,
+      windageCorrection: inchesToCorrection(-windDrift, distance, 'MIL'),
+    };
+  });
 }
 
 /**

@@ -218,19 +218,20 @@ describe('sign conventions', () => {
     expect(north.windageMIL - 1.5).toBeCloseTo(-(south.windageMIL - 1.5), 10);
   });
 
-  it('a positive vertical Coriolis term moves elevation the way extra drop does', () => {
-    // The field documents positive as "additional drop when firing East", and
-    // the elevation field is built from -drop. So extra drop must move the
-    // elevation figure in the same direction that a larger drop already does.
-    const extraDrop = applyAdvancedCorrections(solution({ coriolisVerticalMIL: 0.05 }), {
+  it('a positive vertical Coriolis term is a lift, so it needs LESS elevation', () => {
+    // Positive vertical Coriolis is upward, in the same sense as the solver's
+    // `drop` (firing East the bullet strikes high), and the elevation field is
+    // built from -drop. Until #222 the field was documented as "additional
+    // drop", which is the wrong physics; the arithmetic here was already right.
+    const lift = applyAdvancedCorrections(solution({ coriolisVerticalMIL: 0.05 }), {
       enabled: true,
     });
-    const lessDrop = applyAdvancedCorrections(solution({ coriolisVerticalMIL: -0.05 }), {
+    const sink = applyAdvancedCorrections(solution({ coriolisVerticalMIL: -0.05 }), {
       enabled: true,
     });
 
-    expect(extraDrop.elevationMIL).toBeLessThan(7.2);
-    expect(lessDrop.elevationMIL).toBeGreaterThan(7.2);
+    expect(lift.elevationMIL).toBeLessThan(7.2);
+    expect(sink.elevationMIL).toBeGreaterThan(7.2);
   });
 });
 
