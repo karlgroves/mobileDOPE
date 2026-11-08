@@ -47,6 +47,10 @@ export const AmmoProfileForm: React.FC = () => {
   const [lotNumber, setLotNumber] = useState(existingAmmo?.lotNumber || '');
   const [notes, setNotes] = useState(existingAmmo?.notes || '');
 
+  // The note the factory-load picker last wrote, so picking another load
+  // replaces that note but never one the shooter wrote or edited (#225).
+  const [factoryNote, setFactoryNote] = useState<string | undefined>(undefined);
+
   // Copies a factory load's published figures into the fields, once (#225).
   const applyFactoryLoad = (load: FactoryLoad) => {
     setName(load.name);
@@ -57,7 +61,9 @@ export const AmmoProfileForm: React.FC = () => {
     setBcG1(load.ballisticCoefficientG1);
     setBcG7(load.ballisticCoefficientG7);
     setMuzzleVelocity(load.muzzleVelocity);
-    setNotes((current) => current || factoryLoadNote(load));
+    const note = factoryLoadNote(load);
+    setNotes((current) => (!current || current === factoryNote ? note : current));
+    setFactoryNote(note);
   };
 
   const [errors, setErrors] = useState<Partial<Record<keyof AmmoProfileData, string>>>({});

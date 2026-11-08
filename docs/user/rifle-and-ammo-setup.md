@@ -104,7 +104,8 @@ loads for the caliber you have chosen, or every load if that caliber has none.
 It is not offered when editing a saved profile, because it would overwrite
 your figures.
 
-The published velocity is from the manufacturer's test barrel, listed below.
+The published velocity is from the manufacturer's test barrel, listed below
+where the product page states it.
 Your rifle will differ, so chronograph it and replace the figure (see
 [Muzzle velocity is worth a chronograph](#muzzle-velocity-is-worth-a-chronograph)).
 
@@ -120,8 +121,8 @@ Figures read on 2026-11-08:
 | ------------------------------------------------------- | ----- | ----- | ----- | -------------- | ----------- | ------------------------------------------------------------------------------------------ |
 | Hornady 6.5 Creedmoor 140 gr ELD Match                  | 81500 | 0.646 | 0.326 | 2710           | 24 in.      | <https://www.hornady.com/ammunition/rifle/6-5-creedmoor-140-gr-eld-match>                  |
 | Hornady 6.5 Creedmoor 143 gr ELD-X Precision Hunter     | 81499 | 0.623 | 0.314 | 2700           | 24 in.      | <https://www.hornady.com/ammunition/rifle/6-5-creedmoor-143-gr-eld-x-precision-hunter>     |
-| Berger 6.5 Creedmoor 140 gr Hybrid Target               | 31011 | 0.607 | 0.311 | 2750           | 26 in.      | <https://bergerbullets.com/product/6-5-mm-creedmoor-140gr-hybrid-target/>                  |
-| Berger 6.5 Creedmoor 144 gr Long Range Hybrid Target    | 31081 | 0.655 | 0.336 | 2830           | 26 in.      | <https://bergerbullets.com/product/6-5-mm-creedmoor-144gr-long-range-hybrid-target/>       |
+| Berger 6.5 Creedmoor 140 gr Hybrid Target               | 31011 | 0.607 | 0.311 | 2750           | Not stated  | <https://bergerbullets.com/product/6-5-mm-creedmoor-140gr-hybrid-target/>                  |
+| Berger 6.5 Creedmoor 144 gr Long Range Hybrid Target    | 31081 | 0.655 | 0.336 | 2830           | Not stated  | <https://bergerbullets.com/product/6-5-mm-creedmoor-144gr-long-range-hybrid-target/>       |
 | Hornady 308 Win 168 gr ELD Match                        | 80966 | 0.523 | 0.263 | 2700           | 24 in.      | <https://www.hornady.com/ammunition/rifle/308-win-168-gr-eld-match>                        |
 | Hornady 308 Win 178 gr ELD-X Precision Hunter           | 80994 | 0.552 | 0.278 | 2600           | 24 in.      | <https://www.hornady.com/ammunition/rifle/308-win-178-gr-eld-x-precision-hunter>           |
 | Hornady 223 Rem 73 gr ELD Match                         | 80269 | 0.398 | 0.200 | 2790           | 24 in.      | <https://www.hornady.com/ammunition/rifle/223-rem-73-gr-eld-match>                         |

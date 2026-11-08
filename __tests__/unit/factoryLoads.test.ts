@@ -104,7 +104,7 @@ describe('every entry', () => {
         cells[3] !== l.ballisticCoefficientG1.toFixed(3) ||
         cells[4] !== l.ballisticCoefficientG7.toFixed(3) ||
         cells[5] !== String(l.muzzleVelocity) ||
-        cells[6] !== `${l.testBarrelInches} in.`
+        cells[6] !== (l.testBarrelInches === undefined ? 'Not stated' : `${l.testBarrelInches} in.`)
       );
     });
     expect(offenders.map((load) => load.id)).toEqual([]);
@@ -133,9 +133,18 @@ describe('factoryLoadById', () => {
 
 describe('factoryLoadNote', () => {
   it('records the source, the date read and the test barrel', () => {
+    const note = factoryLoadNote(factoryLoadById('hornady-80966')!);
+    expect(note).toBe(
+      'Factory figures: Hornady #80966, 2700 fps from a 24 in. test barrel. ' +
+        'Source: hornady.com/ammunition/rifle/308-win-168-gr-eld-match (read 2026-11-08).'
+    );
+  });
+
+  it('says so when the page gives no test barrel, rather than naming one', () => {
+    // Berger's product pages publish the velocity without a barrel length.
     const note = factoryLoadNote(factoryLoadById('berger-31011')!);
     expect(note).toBe(
-      'Factory figures: Berger #31011, 2750 fps from a 26 in. test barrel. ' +
+      'Factory figures: Berger #31011, 2750 fps (the page does not give the test barrel length). ' +
         'Source: bergerbullets.com/product/6-5-mm-creedmoor-140gr-hybrid-target (read 2026-11-08).'
     );
   });

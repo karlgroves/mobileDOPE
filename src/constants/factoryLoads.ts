@@ -23,7 +23,8 @@
  *
  * Published velocity comes from the manufacturer's test barrel
  * (`testBarrelInches`), not the shooter's rifle. That is why the form still
- * says to chronograph, and why the pre-filled note records the barrel length.
+ * says to chronograph, and why the pre-filled note records the barrel length
+ * when the page gives one.
  *
  * Adding a load: read the figures off the manufacturer's current product page,
  * add the entry with today's date, and add the page to the user docs table.
@@ -47,8 +48,11 @@ export interface FactoryLoad {
   ballisticCoefficientG7: number;
   /** Published muzzle velocity, fps. */
   muzzleVelocity: number;
-  /** Barrel length the published velocity was measured in, inches. */
-  testBarrelInches: number;
+  /**
+   * Barrel length the published velocity was measured in, inches, when the
+   * cited page states it. Left out when it does not, rather than guessed.
+   */
+  testBarrelInches?: number;
   /** The manufacturer's item or part number. */
   productNumber: string;
   /** Product page the figures were read from, without the scheme. */
@@ -103,7 +107,6 @@ export const FACTORY_LOADS: readonly FactoryLoad[] = [
     ballisticCoefficientG1: 0.607,
     ballisticCoefficientG7: 0.311,
     muzzleVelocity: 2750,
-    testBarrelInches: 26,
     productNumber: '31011',
     sourcePage: `${BERGER}6-5-mm-creedmoor-140gr-hybrid-target`,
     accessed: ACCESSED,
@@ -118,7 +121,6 @@ export const FACTORY_LOADS: readonly FactoryLoad[] = [
     ballisticCoefficientG1: 0.655,
     ballisticCoefficientG7: 0.336,
     muzzleVelocity: 2830,
-    testBarrelInches: 26,
     productNumber: '31081',
     sourcePage: `${BERGER}6-5-mm-creedmoor-144gr-long-range-hybrid-target`,
     accessed: ACCESSED,
@@ -265,5 +267,8 @@ export const factoryLoadById = (id: string): FactoryLoad | undefined =>
  */
 export const factoryLoadNote = (load: FactoryLoad): string =>
   `Factory figures: ${load.manufacturer} #${load.productNumber}, ` +
-  `${load.muzzleVelocity} fps from a ${load.testBarrelInches} in. test barrel. ` +
+  `${load.muzzleVelocity} fps ` +
+  (load.testBarrelInches === undefined
+    ? '(the page does not give the test barrel length). '
+    : `from a ${load.testBarrelInches} in. test barrel. `) +
   `Source: ${load.sourcePage} (read ${load.accessed}).`;

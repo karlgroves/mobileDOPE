@@ -118,3 +118,67 @@ it('is not offered when editing a saved profile, which it would overwrite', () =
 
   expect(screen.queryByLabelText(PICKER)).toBeNull();
 });
+
+it('replaces its own note when a different load is picked, but not one the shooter edited', () => {
+  const screen = renderWithProviders(<AmmoProfileForm />);
+
+  pickLoad(screen, HORNADY_168);
+  // The list now narrows to .308 loads; pick the other one.
+  fireEvent.press(screen.getByLabelText(`Factory Load: ${HORNADY_168}`));
+  fireEvent.press(
+    screen.getByRole('radio', { name: 'Hornady 308 Win 178 gr ELD-X Precision Hunter' })
+  );
+
+  expect(screen.getByDisplayValue(/Factory figures: Hornady #80994, 2600 fps/)).toBeTruthy();
+  expect(screen.queryByDisplayValue(/#80966/)).toBeNull();
+
+  const notes = screen.getByLabelText('Notes about this ammunition');
+  fireEvent.changeText(notes, 'My own note');
+  fireEvent.press(
+    screen.getByLabelText('Factory Load: Hornady 308 Win 178 gr ELD-X Precision Hunter')
+  );
+  fireEvent.press(screen.getByRole('radio', { name: HORNADY_168 }));
+
+  expect(screen.getByDisplayValue('My own note')).toBeTruthy();
+});
+
+it('leaves every field it fills editable, and saves the edits', async () => {
+  const screen = renderWithProviders(<AmmoProfileForm />);
+  pickLoad(screen, HORNADY_168);
+
+  fireEvent.changeText(screen.getByLabelText('Ammunition name, required'), 'My 168s');
+  fireEvent.changeText(screen.getByLabelText('Manufacturer, required'), 'Handload');
+  fireEvent.changeText(
+    screen.getByLabelText('Bullet type, for example hollow point boat tail, required'),
+    'HPBT'
+  );
+  fireEvent.changeText(screen.getByLabelText('Notes about this ammunition'), 'Chronographed');
+  const edits: [string | RegExp, string][] = [
+    [/^168(\.0)?$/, '175'],
+    ['0.523', '0.505'],
+    ['0.263', '0.243'],
+    ['2700', '2610'],
+  ];
+  for (const [from, to] of edits) {
+    const input = screen.getByDisplayValue(from);
+    fireEvent.changeText(input, to);
+    fireEvent(input, 'blur');
+  }
+  fireEvent.press(screen.getByLabelText(/^Caliber: \.308/));
+  // The list is virtualised, so pick one near its top.
+  fireEvent.press(screen.getByRole('radio', { name: '.21 Sharp' }));
+  fireEvent.press(screen.getByText('Create'));
+
+  await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+  expect(create.mock.calls[0][0]).toMatchObject({
+    name: 'My 168s',
+    manufacturer: 'Handload',
+    caliber: '.21 Sharp',
+    bulletWeight: 175,
+    bulletType: 'HPBT',
+    ballisticCoefficientG1: 0.505,
+    ballisticCoefficientG7: 0.243,
+    muzzleVelocity: 2610,
+    notes: 'Chronographed',
+  });
+});
