@@ -91,6 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A shot logged from a range session or the calculator now appears at the top
+  of DOPE Logs, with its date, without a pull to refresh. The new log had no
+  timestamp until it was read back from the database, so the date sort put it
+  last. DOPE Logs also reloads every log each time it comes back into view, so
+  it no longer shows the one rifle's logs another screen loaded.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which
