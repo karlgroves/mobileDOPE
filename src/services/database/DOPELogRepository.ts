@@ -47,7 +47,26 @@ export class DOPELogRepository {
     );
 
     log.id = result.lastInsertRowId;
+    // Read back the INSERT's `datetime('now')` when no timestamp was supplied
+    // (#229): the store adds this log to the list as returned, and the list
+    // sorts by date, so a log without one sank to the bottom, undated, until a
+    // reload.
+    log.timestamp = await this.resolveTimestamp(log.id, log.timestamp);
     return log;
+  }
+
+  /**
+   * The timestamp a log was stored with: the one supplied, or else the
+   * `datetime('now')` the INSERT's COALESCE fell back to.
+   */
+  private async resolveTimestamp(id: number, supplied?: string): Promise<string | undefined> {
+    if (supplied !== undefined) return supplied;
+    const db = databaseService.getDatabase();
+    const row = await db.getFirstAsync<{ timestamp: string }>(
+      'SELECT timestamp FROM dope_logs WHERE id = ?',
+      [id]
+    );
+    return row?.timestamp;
   }
 
   /**
