@@ -35,8 +35,14 @@ describe('NumberPicker (#227)', () => {
     expect(open(100).UNSAFE_getByType(FlatList).props.initialScrollIndex).toBeUndefined();
   });
 
-  it('opens at the top when the value is not in the list', () => {
-    expect(open(333).UNSAFE_getByType(FlatList).props.initialScrollIndex).toBeUndefined();
+  it('opens at the nearest row when the value is not in the list', () => {
+    expect(open(333).UNSAFE_getByType(FlatList).props.initialScrollIndex).toBe(
+      DEFAULT_DISTANCE_PRESETS.indexOf(325)
+    );
+    expect(open(1200).UNSAFE_getByType(FlatList).props.initialScrollIndex).toBe(
+      DEFAULT_DISTANCE_PRESETS.length - 1
+    );
+    expect(open(50).UNSAFE_getByType(FlatList).props.initialScrollIndex).toBeUndefined();
   });
 
   it('offers 25-yard steps from the shipped presets', () => {

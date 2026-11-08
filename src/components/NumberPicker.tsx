@@ -21,12 +21,17 @@ export interface NumberPickerProps {
 /**
  * Where to open the list: at the current value, so a selection below the fold
  * of a long list (#227's 25-yard distances run to dozens of rows) is in view.
- * Undefined, which opens at the top, when there is no value, it is the first
- * row, or it is not in the list.
+ * A value that is not in the list (a session at 330 from a preset since
+ * removed) opens at the nearest row instead of the top. Undefined, which opens
+ * at the top, when there is no value or the row to open at is the first.
  */
 const initialIndexFor = (values: number[], value: number | undefined): number | undefined => {
-  const index = value === undefined ? -1 : values.indexOf(value);
-  return index > 0 ? index : undefined;
+  if (value === undefined) return undefined;
+  const nearest = values.reduce(
+    (best, v, i) => (Math.abs(v - value) < Math.abs(values[best] - value) ? i : best),
+    0
+  );
+  return nearest > 0 ? nearest : undefined;
 };
 
 /**
