@@ -2,8 +2,8 @@
  * Ballistic calculation types and interfaces
  */
 
-import type { DragModel } from '../utils/dragModels';
 import type { AtmosphericConditions } from '../utils/atmospheric';
+import type { DragModel } from '../utils/dragModels';
 
 /**
  * Rifle configuration for ballistic calculations
@@ -90,7 +90,7 @@ export interface BallisticSolution {
 
   // Coriolis effect (optional, requires latitude)
   coriolisHorizontal?: number; // inches (positive = right in Northern Hemisphere)
-  coriolisVertical?: number; // inches (positive = additional drop when firing East)
+  coriolisVertical?: number; // inches (positive = up, strikes high, when firing East)
   coriolisHorizontalMIL?: number; // MIL correction for horizontal Coriolis
   coriolisHorizontalMOA?: number; // MOA correction for horizontal Coriolis
   coriolisVerticalMIL?: number; // MIL correction for vertical Coriolis (Eötvös)

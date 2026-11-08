@@ -91,6 +91,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Coriolis correction is now a distance. It was computed as 2ω·v·t, which
+  has the units of a velocity, so it overstated the deflection about five times
+  at 300 yards, about twice at 600, and understated it past two seconds of
+  flight; at 1000 yards it happened to be only about 10% high. It is now
+  ω·v·t², the textbook ω·X·t·sin(latitude), and agrees within a few percent
+  with the Coriolis acceleration integrated over the solver's own trajectory.
+  The vertical (Eötvös) term was documented as extra drop when firing East; it
+  is a lift, and the bullet strikes high. The dialled elevation already moved
+  the right way, so only the description changed.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which

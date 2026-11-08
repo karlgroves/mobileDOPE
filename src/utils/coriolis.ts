@@ -12,8 +12,25 @@
  * - In the Southern Hemisphere, bullets deflect LEFT (negative)
  *
  * The vertical component (Eötvös effect) depends on direction of fire:
- * - Firing East: bullet drops more (appears lighter)
- * - Firing West: bullet drops less (appears heavier)
+ * - Firing East: the bullet is pushed UP and strikes high (it is "lighter")
+ * - Firing West: the bullet is pushed DOWN and strikes low (it is "heavier")
+ *
+ * ## The model, and how it is checked (#222)
+ *
+ * The Coriolis acceleration on a bullet moving at speed v is 2ω·v·sin(lat)
+ * sideways and 2ω·v·cos(lat)·sin(azimuth) upward. Integrating an ACCELERATION
+ * twice over the time of flight t, with v taken as the average speed, gives a
+ * DISTANCE:
+ *
+ *   deflection = ω · v_avg · t² · trig(lat, azimuth)
+ *
+ * which is the textbook flat-fire expression ω·X·t·sin(lat) (McCoy, Modern
+ * Exterior Ballistics; Litz, Applied Ballistics) with X = v_avg·t. Until #222
+ * this file used 2ω·v·t, which is a VELOCITY, not a distance: it overstated the
+ * deflection about fivefold at 300 yards and understated it past 2 seconds of
+ * flight. `__tests__/unit/advancedCorrectionsValidation.test.ts` pins the
+ * closed form and cross-checks it by integrating the acceleration over the
+ * solver's own trajectory.
  */
 
 /**
@@ -35,7 +52,7 @@ function degToRad(degrees: number): number {
  * The horizontal Coriolis deflection causes bullets to drift right in the
  * Northern Hemisphere and left in the Southern Hemisphere.
  *
- * Formula: deflection = 2 * ω * v_avg * t * sin(latitude)
+ * Formula: deflection = ω * v_avg * t² * sin(latitude)
  *
  * Where:
  * - ω = Earth's angular velocity (7.2921e-5 rad/s)
@@ -59,10 +76,9 @@ export function calculateHorizontalCoriolis(
   // Convert latitude to radians
   const latRad = degToRad(clampedLat);
 
-  // Calculate deflection in feet
-  // deflection = 2 * ω * v * t * sin(lat)
+  // Calculate deflection in feet: the integral of 2ω·v·sin(lat) over the flight
   const deflectionFeet =
-    2 * EARTH_ANGULAR_VELOCITY * averageVelocity * timeOfFlight * Math.sin(latRad);
+    EARTH_ANGULAR_VELOCITY * averageVelocity * timeOfFlight * timeOfFlight * Math.sin(latRad);
 
   // Convert to inches
   return deflectionFeet * 12;
@@ -72,17 +88,18 @@ export function calculateHorizontalCoriolis(
  * Calculate vertical Coriolis deflection (Eötvös effect)
  *
  * The vertical Coriolis effect depends on the direction of fire (azimuth):
- * - Firing East (90°): bullet experiences additional "weight", drops more
- * - Firing West (270°): bullet experiences reduced "weight", drops less
- * - Firing North (0°) or South (180°): minimal effect
+ * - Firing East (90°): the bullet is pushed up and strikes high
+ * - Firing West (270°): the bullet is pushed down and strikes low
+ * - Firing North (0°) or South (180°): no effect
  *
- * Formula: deflection = 2 * ω * v_avg * t * cos(latitude) * sin(azimuth)
+ * Formula: deflection = ω * v_avg * t² * cos(latitude) * sin(azimuth)
  *
  * @param latitude - Shooter's latitude in degrees (-90 to 90)
  * @param azimuth - Direction of fire in degrees (0 = North, 90 = East, 180 = South, 270 = West)
  * @param timeOfFlight - Time of flight in seconds
  * @param averageVelocity - Average bullet velocity in feet per second
- * @returns Vertical deflection in inches (positive = additional drop, negative = reduced drop)
+ * @returns Vertical deflection in inches, same sense as the solver's `drop`
+ *   (positive = UP, the bullet strikes high; negative = down, it strikes low)
  */
 export function calculateVerticalCoriolis(
   latitude: number,
@@ -101,12 +118,11 @@ export function calculateVerticalCoriolis(
   const latRad = degToRad(clampedLat);
   const azimuthRad = degToRad(normalizedAzimuth);
 
-  // Calculate deflection in feet
-  // deflection = 2 * ω * v * t * cos(lat) * sin(azimuth)
+  // Calculate deflection in feet: the integral of 2ω·v·cos(lat)·sin(azimuth)
   const deflectionFeet =
-    2 *
     EARTH_ANGULAR_VELOCITY *
     averageVelocity *
+    timeOfFlight *
     timeOfFlight *
     Math.cos(latRad) *
     Math.sin(azimuthRad);
@@ -131,7 +147,7 @@ export interface CoriolisParams {
  */
 export interface CoriolisResult {
   horizontalDeflection: number; // inches (positive = right)
-  verticalDeflection: number; // inches (positive = additional drop)
+  verticalDeflection: number; // inches (positive = up, strikes high)
   horizontalMIL: number; // MIL correction
   horizontalMOA: number; // MOA correction
   verticalMIL: number; // MIL correction
@@ -192,8 +208,8 @@ export function calculateCoriolisComplete(
     description = 'Coriolis effect is negligible at this range and latitude.';
   } else {
     const hDirection = horizontalDeflection > 0 ? 'right' : 'left';
-    const vDirection = verticalDeflection > 0 ? 'additional drop' : 'reduced drop';
-    description = `Bullet drifts ${Math.abs(horizontalDeflection).toFixed(2)}" ${hDirection} and ${Math.abs(verticalDeflection).toFixed(2)}" ${vDirection} due to Coriolis effect.`;
+    const vDirection = verticalDeflection > 0 ? 'high' : 'low';
+    description = `Bullet drifts ${Math.abs(horizontalDeflection).toFixed(2)}" ${hDirection} and strikes ${Math.abs(verticalDeflection).toFixed(2)}" ${vDirection} due to Coriolis effect.`;
   }
 
   return {
@@ -230,10 +246,10 @@ export function getHorizontalCoriolis(
 /**
  * Determine if Coriolis correction is significant at given parameters
  *
- * Generally, Coriolis effect becomes significant (>0.1 MIL) when:
- * - Distance > 600 yards
- * - Time of flight > 0.7 seconds
- * - Latitude > 30°
+ * Significant means the horizontal term exceeds 0.1 MIL. Since the deflection
+ * is ω·X·t·sin(lat) for a range X, its ANGLE is ω·t·sin(lat) whatever the
+ * range or velocity: about 0.08 MIL for 1.5 s of flight at 45°, so it takes
+ * roughly 2 s of flight at mid-latitudes, and is never reached at the equator.
  *
  * @param latitude - Shooter's latitude in degrees
  * @param distance - Target distance in yards
@@ -250,20 +266,9 @@ export function isCoriolisSignificant(
     return false;
   }
 
-  // At typical mid-latitudes (40°), 2500 fps average velocity
-  // 0.1 MIL threshold at 1000 yards is about 3.6 inches
-  // deflection = 2 * 7.2921e-5 * 2500 * TOF * sin(40°)
-  // For TOF = 1.5s: deflection ≈ 2 * 7.2921e-5 * 2500 * 1.5 * 0.643 ≈ 0.35 feet ≈ 4.2 inches
-
-  // Check if potentially significant
-  const potentialDeflection = Math.abs(
-    2 * EARTH_ANGULAR_VELOCITY * 2500 * timeOfFlight * Math.sin(degToRad(latitude))
-  );
-
-  // Convert to MIL at given distance
-  const deflectionInches = potentialDeflection * 12;
-  const distanceInches = distance * 36;
-  const deflectionMIL = Math.atan(deflectionInches / distanceInches) * 1000;
+  const clampedLat = Math.max(-90, Math.min(90, latitude));
+  const deflectionMIL =
+    EARTH_ANGULAR_VELOCITY * timeOfFlight * Math.sin(degToRad(clampedLat)) * 1000;
 
   // Significant if > 0.1 MIL
   return Math.abs(deflectionMIL) > 0.1;
