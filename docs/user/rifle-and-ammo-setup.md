@@ -90,6 +90,47 @@ Two things it will not account for, both worth knowing:
 - **Barrel wear.** The number drifts over a barrel's life. Re-chronograph
   occasionally rather than trusting a figure from two thousand rounds ago.
 
+### Starting from a factory load
+
+A new ammunition profile can start from a factory load. Tap **Factory Load**
+at the top of the form and choose one. The form fills in the name,
+manufacturer, caliber, bullet weight and type, both ballistic coefficients and
+the muzzle velocity, exactly as the manufacturer publishes them. If Notes is
+empty it also records where the figures came from.
+
+Every field stays editable, and nothing is linked afterwards: the profile
+saves whatever the form says when you tap **Create**. The list shows only the
+loads for the caliber you have chosen, or every load if that caliber has none.
+It is not offered when editing a saved profile, because it would overwrite
+your figures.
+
+The published velocity is from the manufacturer's test barrel, listed below.
+Your rifle will differ, so chronograph it and replace the figure (see
+[Muzzle velocity is worth a chronograph](#muzzle-velocity-is-worth-a-chronograph)).
+
+The table is built into the app. It does not go online and does not update
+itself. It is a small, hand-picked set. Each figure was copied from the
+manufacturer's own product page on the date shown, and nothing was converted
+or estimated. A load you shoot that is not listed is entered by hand from the
+box, as before.
+
+Figures read on 2026-11-08:
+
+| Load                                                    | Item  | G1    | G7    | Velocity (fps) | Test barrel | Source                                                                                     |
+| ------------------------------------------------------- | ----- | ----- | ----- | -------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| Hornady 6.5 Creedmoor 140 gr ELD Match                  | 81500 | 0.646 | 0.326 | 2710           | 24 in.      | <https://www.hornady.com/ammunition/rifle/6-5-creedmoor-140-gr-eld-match>                  |
+| Hornady 6.5 Creedmoor 143 gr ELD-X Precision Hunter     | 81499 | 0.623 | 0.314 | 2700           | 24 in.      | <https://www.hornady.com/ammunition/rifle/6-5-creedmoor-143-gr-eld-x-precision-hunter>     |
+| Berger 6.5 Creedmoor 140 gr Hybrid Target               | 31011 | 0.607 | 0.311 | 2750           | 26 in.      | <https://bergerbullets.com/product/6-5-mm-creedmoor-140gr-hybrid-target/>                  |
+| Berger 6.5 Creedmoor 144 gr Long Range Hybrid Target    | 31081 | 0.655 | 0.336 | 2830           | 26 in.      | <https://bergerbullets.com/product/6-5-mm-creedmoor-144gr-long-range-hybrid-target/>       |
+| Hornady 308 Win 168 gr ELD Match                        | 80966 | 0.523 | 0.263 | 2700           | 24 in.      | <https://www.hornady.com/ammunition/rifle/308-win-168-gr-eld-match>                        |
+| Hornady 308 Win 178 gr ELD-X Precision Hunter           | 80994 | 0.552 | 0.278 | 2600           | 24 in.      | <https://www.hornady.com/ammunition/rifle/308-win-178-gr-eld-x-precision-hunter>           |
+| Hornady 223 Rem 73 gr ELD Match                         | 80269 | 0.398 | 0.200 | 2790           | 24 in.      | <https://www.hornady.com/ammunition/rifle/223-rem-73-gr-eld-match>                         |
+| Hornady 6mm ARC 108 gr ELD Match                        | 81608 | 0.536 | 0.270 | 2750           | 24 in.      | <https://www.hornady.com/ammunition/rifle/6mm-arc-108-gr-eld-match>                        |
+| Hornady 270 Win 145 gr ELD-X Precision Hunter           | 80536 | 0.536 | 0.270 | 2970           | 24 in.      | <https://www.hornady.com/ammunition/rifle/270-win-145-gr-eld-x-precision-hunter>           |
+| Hornady 30-06 Springfield 178 gr ELD-X Precision Hunter | 81174 | 0.552 | 0.278 | 2750           | 24 in.      | <https://www.hornady.com/ammunition/rifle/30-06-springfield-178-gr-eld-x-precision-hunter> |
+| Hornady 300 Win Mag 195 gr ELD Match                    | 82180 | 0.584 | 0.292 | 2930           | 24 in.      | <https://www.hornady.com/ammunition/rifle/300-win-mag-195-gr-eld-match>                    |
+| Hornady 7mm PRC 180 gr ELD Match                        | 80711 | 0.796 | 0.401 | 2975           | 24 in.      | <https://www.hornady.com/ammunition/rifle/7mm-prc-180-gr-eld-match>                        |
+
 ## Managing profiles
 
 - **Rifle Profile Detail** and **Ammo Profile Detail** show everything recorded,

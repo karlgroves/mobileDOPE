@@ -3,6 +3,7 @@ export { Card } from './Card';
 export { ConfirmationDialog } from './ConfirmationDialog';
 export { EmptyState } from './EmptyState';
 export { ErrorBoundary } from './ErrorBoundary';
+export { FactoryLoadPicker } from './FactoryLoadPicker';
 export { IconButton } from './IconButton';
 export { ListItem } from './ListItem';
 export { LoadingSpinner } from './LoadingSpinner';

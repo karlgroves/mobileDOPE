@@ -367,6 +367,17 @@ function suggestAmmoForRifles(rifles: RifleProfile[]): AmmoSuggestion[] {
 }
 ```
 
+> **Superseded (2026-11-08, #225).** The factory ammo database is not fetched
+> from anywhere. It is a small, hand-picked table bundled in the app
+> (`src/constants/factoryLoads.ts`), so it works offline and the app keeps no
+> network layer (see `PRIVACY.md`). Each entry copies the manufacturer's
+> published G1 and G7 BC and muzzle velocity and cites the product page and the
+> date it was read. The table is keyed by caliber, as this ADR intended, but it
+> is used only to pre-fill the editable ammunition form for a new profile. It
+> creates no profile, holds no link to a saved one, and makes no
+> recommendations. A remote or community ammo database would need its own ADR
+> covering the network, privacy and data-licensing questions.
+
 ## References
 
 - Database Schema: `docs/DATABASE_SCHEMA.md`

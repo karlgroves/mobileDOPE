@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Factory loads. A new ammunition profile can start from one of 12 common
+  Hornady and Berger loads: Factory Load at the top of the form fills in the
+  published G1 and G7 ballistic coefficients, muzzle velocity, bullet and
+  caliber, and every field stays editable. The table is built into the app and
+  cites each manufacturer's product page and the date it was read. It is listed
+  in the rifle and ammunition setup guide.
 - Gusting wind in the ballistic calculator: an optional Gust Speed beside Wind
   Speed (which is then the lull). The solution shows a windage bracket, the
   hold for the lull to the hold for the gust.

@@ -3,7 +3,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 
-import { TextInput, NumberInput, Button, Picker } from '../components';
+import { TextInput, NumberInput, Button, Picker, FactoryLoadPicker } from '../components';
+import { FactoryLoad, factoryLoadNote } from '../constants/factoryLoads';
 import { useTheme } from '../contexts/ThemeContext';
 import { useCaliberOptions } from '../hooks/useCaliberOptions';
 import { AmmoProfileData } from '../models/AmmoProfile';
@@ -45,6 +46,19 @@ export const AmmoProfileForm: React.FC = () => {
   const [powderWeight, setPowderWeight] = useState<number | undefined>(existingAmmo?.powderWeight);
   const [lotNumber, setLotNumber] = useState(existingAmmo?.lotNumber || '');
   const [notes, setNotes] = useState(existingAmmo?.notes || '');
+
+  // Copies a factory load's published figures into the fields, once (#225).
+  const applyFactoryLoad = (load: FactoryLoad) => {
+    setName(load.name);
+    setManufacturer(load.manufacturer);
+    setCaliber(load.caliber);
+    setBulletWeight(load.bulletWeight);
+    setBulletType(load.bulletType);
+    setBcG1(load.ballisticCoefficientG1);
+    setBcG7(load.ballisticCoefficientG7);
+    setMuzzleVelocity(load.muzzleVelocity);
+    setNotes((current) => current || factoryLoadNote(load));
+  };
 
   const [errors, setErrors] = useState<Partial<Record<keyof AmmoProfileData, string>>>({});
 
@@ -117,6 +131,8 @@ export const AmmoProfileForm: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {!isEditing && <FactoryLoadPicker caliber={caliber} onSelect={applyFactoryLoad} />}
+
         <TextInput
           label="Ammo Name"
           accessibilityLabel="Ammunition name"

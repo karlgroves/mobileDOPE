@@ -3,6 +3,7 @@
  */
 
 export * from './calibers';
+export * from './factoryLoads';
 export * from './fieldHelp';
 export * from './manufacturers';
 export * from './bulletTypes';
