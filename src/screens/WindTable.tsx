@@ -68,7 +68,9 @@ export function WindTable({ route }: Props) {
   const [angularUnit, setAngularUnit] = useState<'MIL' | 'MOA'>('MIL');
   const [windDirection, setWindDirection] = useState(90); // Default: full right-to-left
   const [windTable, setWindTable] = useState<WindTableEntry[]>([]);
-  const [loading, setLoading] = useState(false);
+  // True from the first render: the table is not there yet, and the screen
+  // should say so rather than show an empty grid (#232).
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [isExporting, setIsExporting] = useState(false);
   /**
@@ -119,19 +121,23 @@ export function WindTable({ route }: Props) {
   };
 
   useEffect(() => {
-    if (rifle && ammo) {
-      generateTable();
-    }
+    if (!rifle || !ammo) return undefined;
+    setLoading(true);
+    // The solve is synchronous and blocks the JS thread. Starting it in the
+    // same tick as the render that sets `loading` meant the spinner was never
+    // painted, and on first open the navigation push waited behind it with the
+    // button still dimmed (#232). Yield once so the screen and its spinner are
+    // on the display first.
+    const timer = setTimeout(generateTable, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rifle, ammo, windDirection, currentEnv]);
 
-  const generateTable = async () => {
+  const generateTable = () => {
     if (!rifle || !ammo) {
       Alert.alert('Error', 'Rifle or ammunition profile not found');
       return;
     }
-
-    setLoading(true);
 
     try {
       // Build rifle config
@@ -292,7 +298,7 @@ export function WindTable({ route }: Props) {
         </View>
 
         <View style={styles.controlRow}>
-          <Text style={[styles.label, { color: colors.text.secondary }]}>Wind Direction</Text>
+          {/* NumberPicker draws its own label; a second one here repeated it (#232). */}
           <NumberPicker
             label="Wind Direction"
             value={windDirection}
@@ -575,10 +581,6 @@ const styles = StyleSheet.create({
   },
   controlRow: {
     gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   envCard: {
     padding: 12,

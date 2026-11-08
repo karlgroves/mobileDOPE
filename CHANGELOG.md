@@ -91,6 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Wind Table opened slowly with no sign it was working: the button stayed
+  dimmed for about 15 s on the Simulator. It now opens straight to a spinner
+  while the table is built, and builds it with one solve per distance instead
+  of one per cell, about a fifth of the work, with the same figures. Its
+  direction picker is also labelled Wind Direction once instead of twice.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which
