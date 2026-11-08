@@ -250,6 +250,19 @@ describe('DOPELogRepository', () => {
       expect(Number.isNaN(Date.parse(row?.timestamp as string))).toBe(false);
     });
 
+    it('returns the stored timestamp when none is given (#229)', async () => {
+      // The store adds what create returns straight to the list, which sorts by
+      // timestamp: without it a shot logged from a session sank to the bottom
+      // of the DOPE Logs list, undated, until a pull-to-refresh read it back.
+      const created = await dopeLogRepository.create(validDopeLog(ids()));
+
+      const row = await db.getFirstAsync<{ timestamp: string }>(
+        'SELECT timestamp FROM dope_logs WHERE id = ?',
+        [created.id]
+      );
+      expect(created.timestamp).toBe(row?.timestamp);
+    });
+
     it('orders history by the supplied timestamps, newest first', async () => {
       await dopeLogRepository.create(
         validDopeLog(ids(), { distance: 100, timestamp: '2026-01-01T00:00:00.000Z' })
