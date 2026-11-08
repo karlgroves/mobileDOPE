@@ -22,6 +22,7 @@ import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
 import { describeColdBoreSuggestion, suggestColdBore } from '../utils/coldBore';
+import { conditionsToMatch, describeSnapshotAge } from '../utils/matchConditions';
 
 import type { DOPELogData, DOPELog } from '../models/DOPELog';
 import type { LogsStackScreenProps } from '../navigation/types';
@@ -73,7 +74,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
 
   const { rifles, loadRifles } = useRifleStore();
   const { ammoProfiles, loadAmmoProfiles } = useAmmoStore();
-  const { current: currentEnv, saveCurrent } = useEnvironmentStore();
+  const { current: currentEnv, saveCurrent, snapshots, loadSnapshots } = useEnvironmentStore();
   const { createDopeLog, updateDopeLog, loading } = useDOPEStore();
 
   // Load the profiles this screen needs rather than rely on another screen
@@ -149,6 +150,22 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   const [environmentId, setEnvironmentId] = useState<number | undefined>(
     existingLog?.environmentId
   );
+
+  // The conditions a new log is recorded against (#231). `current` is null on
+  // a cold launch until the Environmental Data screen is opened, so the latest
+  // snapshot stands in for it -- by the same under-a-day rule the DOPE ranking
+  // and Start Session apply (#190, #192), so the three cannot disagree about
+  // whether today's air is known. The snapshot is linked as it is, not copied
+  // under a fresh timestamp, which would make old air look newly measured.
+  useEffect(() => {
+    loadSnapshots(1).catch(() => {
+      // Without snapshots the form asks for conditions, as it did before.
+    });
+  }, [loadSnapshots]);
+  const conditions = conditionsToMatch(currentEnv, snapshots);
+  const latestSnapshot = snapshots[0];
+  const recentSnapshot = conditions.source === 'latest-snapshot' ? latestSnapshot : undefined;
+  const logEnv = conditions.source === 'current' ? currentEnv : recentSnapshot;
 
   // Auto-select compatible ammo when rifle changes
   const handleRifleChange = (newRifleId: number | undefined) => {
@@ -238,7 +255,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
 
     try {
       // Save or update current environment if exists
-      let envId = environmentId;
+      let envId = environmentId ?? recentSnapshot?.id;
       if (currentEnv && !environmentId) {
         const savedEnv = await saveCurrent();
         envId = savedEnv.id;
@@ -498,25 +515,30 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
         </Card>
 
         {/* Environmental Snapshot */}
-        {currentEnv && (
+        {logEnv && (
           <Card style={[styles.card, { backgroundColor: colors.surface }]}>
             <Text style={[styles.envTitle, { color: colors.text.secondary }]}>
-              Current Environment
+              {recentSnapshot
+                ? `Latest Conditions (${describeSnapshotAge(recentSnapshot.timestamp)})`
+                : 'Current Environment'}
             </Text>
             <Text style={[styles.envText, { color: colors.text.primary }]}>
-              {`${currentEnv.temperature}°F • ${currentEnv.pressure}" Hg • ${currentEnv.altitude}' MSL`}
+              {`${logEnv.temperature}°F • ${logEnv.pressure}" Hg • ${logEnv.altitude}' MSL`}
             </Text>
             <Text style={[styles.envText, { color: colors.text.primary }]}>
-              Wind: {currentEnv.windSpeed} mph @ {currentEnv.windDirection}°
+              Wind: {logEnv.windSpeed} mph @ {logEnv.windDirection}°
             </Text>
           </Card>
         )}
 
-        {!currentEnv && (
+        {!logEnv && !environmentId && (
           <Card style={[styles.card, { backgroundColor: colors.error + '20' }]}>
             <Text style={[styles.warningText, { color: colors.errorText }]}>
-              ⚠️ No environmental data captured. Go to Range → Environmental Conditions to record
-              conditions.
+              {latestSnapshot
+                ? `⚠️ The latest conditions are ${describeSnapshotAge(latestSnapshot.timestamp)}. ` +
+                  'Record current conditions on the Session tab: Current Conditions → Update.'
+                : '⚠️ No environmental data captured. Record conditions on the Session tab: ' +
+                  'Current Conditions → Add.'}
             </Text>
           </Card>
         )}
@@ -529,7 +551,7 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
             variant="primary"
             size="large"
             loading={loading}
-            disabled={!selectedRifleId || !selectedAmmoId || !currentEnv}
+            disabled={!selectedRifleId || !selectedAmmoId || (!logEnv && !environmentId)}
           />
         </View>
       </ScrollView>

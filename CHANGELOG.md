@@ -91,6 +91,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- New DOPE Log no longer says "No environmental data captured" and disables
+  Save on a fresh launch when conditions were recorded in the last day. It
+  shows that latest snapshot, with its age, and saves the log against it, by
+  the same under-a-day rule as the DOPE ranking and Start Session. Older
+  conditions still ask for new ones. The message now names a place that
+  exists, Session → Current Conditions, instead of a Range tab the app does
+  not have. Editing an existing log no longer needs conditions recorded first.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which
