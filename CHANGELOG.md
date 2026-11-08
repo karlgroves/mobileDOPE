@@ -91,6 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- New DOPE Log starts Dial Corrections in the selected rifle's turret unit
+  (its click value type), and follows the rifle if another is picked, rather
+  than always starting at MIL. Settings → Default Units → Angular Unit is the
+  fallback. Choosing a unit by hand still wins, and an edited log keeps the
+  unit it was saved in.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which
