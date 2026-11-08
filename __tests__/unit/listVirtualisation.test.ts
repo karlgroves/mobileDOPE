@@ -43,7 +43,7 @@ const sources = sourcesUnder(srcDir);
  * and captures the weather every time they go out: those three grow without
  * limit. `rifles` and `ammoProfiles` grow too, but to tens rather than
  * thousands, and in this app they are mostly Picker options rather than scrolled
- * rows -- `distancePresets` is ten, `customCalibers` a handful, a wind table
+ * rows -- `distancePresets` is under forty, `customCalibers` a handful, a wind table
  * fifty cells.
  *
  * Drawing the line here is a judgement, and this is where it is recorded. It is

@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caliber, and every field stays editable. The table is built into the app and
   cites each manufacturer's product page and the date it was read. It is listed
   in the rifle and ammunition setup guide.
+- The distance selectors on Start Session, the active session and the
+  Ballistic Calculator now offer 100 to 1000 in 25-yard steps instead of
+  100-yard steps, and open their list at the current distance (or the nearest
+  one, for a distance not in the list). In meters the calculator offers the
+  same figures, so 25-meter steps. A preset list that is still the old default
+  moves to the new one; a list you edited in Settings → Distance Presets is
+  kept.
 - Android export folder. Settings → Data Management → Choose Export Folder picks
   a folder in the system picker; every manual export then also saves a copy
   there, and the share sheet still opens. If the folder can no longer be

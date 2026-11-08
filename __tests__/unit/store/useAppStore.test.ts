@@ -69,8 +69,26 @@ describe('useAppStore', () => {
       expect(store().settings.lastAutomaticBackupAt).toBeUndefined();
     });
 
-    it('exposes ten distance presets from 100 to 1000', () => {
-      expect(DEFAULT_DISTANCE_PRESETS).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]);
+    it('exposes distance presets from 100 to 1000 in 25-yard steps (#227)', () => {
+      expect(DEFAULT_DISTANCE_PRESETS).toHaveLength(37);
+      expect(DEFAULT_DISTANCE_PRESETS.slice(0, 4)).toEqual([100, 125, 150, 175]);
+      expect(DEFAULT_DISTANCE_PRESETS[DEFAULT_DISTANCE_PRESETS.length - 1]).toBe(1000);
+    });
+
+    it('moves an untouched old 100-yard preset list to the 25-yard default (#227)', async () => {
+      // updateSettings writes the whole object, so the old default is stored by
+      // anyone who changed any setting, without ever choosing it.
+      mockStorage.getItem.mockResolvedValue(
+        JSON.stringify({ distancePresets: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] })
+      );
+      await store().loadSettings();
+      expect(store().settings.distancePresets).toEqual(DEFAULT_DISTANCE_PRESETS);
+    });
+
+    it('keeps a preset list the shooter customised (#227)', async () => {
+      mockStorage.getItem.mockResolvedValue(JSON.stringify({ distancePresets: [100, 300, 650] }));
+      await store().loadSettings();
+      expect(store().settings.distancePresets).toEqual([100, 300, 650]);
     });
   });
 

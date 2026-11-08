@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { setCustomCalibers, type CustomCaliber } from '../constants/calibers';
 import { DEFAULT_CONFIDENCE_THRESHOLD } from '../utils/adjustmentConfidence';
 import { isValidBarometerOffset } from '../utils/barometer';
+import { DEFAULT_DISTANCE_PRESETS, upgradeDistancePresets } from '../utils/distancePresets';
 import { DEFAULT_DISTANCE_DELTA } from '../utils/dopeMatching';
 import { isValidConfidenceThreshold, isValidDistanceDelta } from '../utils/dopeSettings';
 
@@ -124,8 +125,6 @@ interface AppState {
   clearError: () => void;
 }
 
-const DEFAULT_DISTANCE_PRESETS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
-
 const defaultSettings: AppSettings = {
   defaultDistanceUnit: 'yards',
   defaultCorrectionUnit: 'MIL',
@@ -206,6 +205,7 @@ async function loadSettingsFromStorage(): Promise<AppSettings> {
       if (!isValidConfidenceThreshold(merged.dopeConfidenceThreshold)) {
         merged.dopeConfidenceThreshold = defaultSettings.dopeConfidenceThreshold;
       }
+      merged.distancePresets = upgradeDistancePresets(merged.distancePresets);
       for (const key of VALIDATED_SWITCHES) {
         if (typeof merged[key] !== 'boolean') merged[key] = defaultSettings[key];
       }

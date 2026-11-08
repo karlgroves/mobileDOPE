@@ -162,7 +162,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const handleResetPresets = () => {
     Alert.alert(
       'Reset Distance Presets',
-      'Reset to default presets (100-1000 in 100-yard increments)?',
+      'Reset to default presets (100-1000 in 25-yard increments)?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
