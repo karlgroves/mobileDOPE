@@ -96,7 +96,8 @@ A new ammunition profile can start from a factory load. Tap **Factory Load**
 at the top of the form and choose one. The form fills in the name,
 manufacturer, caliber, bullet weight and type, both ballistic coefficients and
 the muzzle velocity, exactly as the manufacturer publishes them. If Notes is
-empty it also records where the figures came from.
+empty it also records where the figures came from. Choosing another load
+replaces that note, but never a note you wrote or changed.
 
 Every field stays editable, and nothing is linked afterwards: the profile
 saves whatever the form says when you tap **Create**. The list shows only the
