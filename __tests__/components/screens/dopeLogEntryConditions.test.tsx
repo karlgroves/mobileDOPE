@@ -161,4 +161,29 @@ describe('New DOPE Log conditions on a cold launch (#231)', () => {
     expect(screen.queryByText(/No environmental data captured/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Update DOPE Log' })).not.toBeDisabled();
   });
+
+  it('does not show another snapshot as the conditions of a log being edited', async () => {
+    // The edited log keeps its own environmentId, so a recent snapshot is not
+    // the air it was shot in and must not be presented as such.
+    coldLaunchWith([snapshot(2 * HOUR)]);
+    jest.spyOn(dopeLogRepository, 'getById').mockResolvedValue(
+      new DOPELog({
+        ...validDopeLog({ rifleId: 1, ammoId: 1, environmentId: 5 }, { distance: 700 }),
+        id: 7,
+      })
+    );
+
+    const screen = renderWithProviders(
+      <DOPELogEntry
+        navigation={navigation() as never}
+        route={{ params: { logId: 7 }, key: 'k', name: 'DOPELogEdit' } as never}
+      />
+    );
+
+    expect(await screen.findByDisplayValue('700')).toBeTruthy();
+    await act(async () => {});
+    expect(useEnvironmentStore.getState().snapshots).toHaveLength(1);
+    expect(screen.queryByText(/Latest Conditions/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Update DOPE Log' })).not.toBeDisabled();
+  });
 });

@@ -174,7 +174,10 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   }, [loadSnapshots]);
   const conditions = conditionsToMatch(currentEnv, snapshots);
   const latestSnapshot = snapshots[0];
-  const recentSnapshot = conditions.source === 'latest-snapshot' ? latestSnapshot : undefined;
+  // An edited log keeps the conditions it was shot in, so another snapshot is
+  // not offered as its air.
+  const recentSnapshot =
+    !existingLog && conditions.source === 'latest-snapshot' ? latestSnapshot : undefined;
   const logEnv = conditions.source === 'current' ? currentEnv : recentSnapshot;
 
   // Auto-select compatible ammo when rifle changes
