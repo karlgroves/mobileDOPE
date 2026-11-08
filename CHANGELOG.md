@@ -96,6 +96,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Wind Table opened slowly with no sign it was working: the button stayed
+  dimmed for about 15 s on the Simulator. It now opens straight to a spinner
+  while the table is built, and builds it with one solve per distance instead
+  of one per cell, about a fifth of the work, with the same figures. Its
+  direction picker is also labelled Wind Direction once instead of twice.
+- A shot logged from a range session or the calculator now appears at the top
+  of DOPE Logs, with its date, without a pull to refresh. The new log had no
+  timestamp until it was read back from the database, so the date sort put it
+  last. DOPE Logs also reloads every log each time it comes back into view, so
+  it no longer shows the one rifle's logs another screen loaded.
+- New DOPE Log starts Dial Corrections in the selected rifle's turret unit
+  (its click value type), and follows the rifle if another is picked, rather
+  than always starting at MIL. Settings → Default Units → Angular Unit is the
+  fallback. Choosing a unit by hand still wins, and an edited log keeps the
+  unit it was saved in.
+- New DOPE Log no longer says "No environmental data captured" and disables
+  Save on a fresh launch when conditions were recorded in the last day. It
+  shows that latest snapshot, with its age, and saves the log against it, by
+  the same under-a-day rule as the DOPE ranking and Start Session. Older
+  conditions still ask for new ones. The message now names a place that
+  exists, Session → Current Conditions, instead of a Range tab the app does
+  not have. Editing an existing log no longer needs conditions recorded first.
 - The pre-push secret scan works from a git worktree. trufflehog could not open
   a worktree's `.git` file, so the hook failed and no branch could be pushed
   from one. It now scans a temporary shared clone of the worktree instead, which

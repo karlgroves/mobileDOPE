@@ -1,6 +1,8 @@
-import { generateWindTable } from '../../src/utils/windTable';
-import type { RifleConfig, AmmoConfig } from '../../src/types/ballistic.types';
 import { standardAtmosphere } from '../../src/utils/atmospheric';
+import * as ballistics from '../../src/utils/ballistics';
+import { generateComprehensiveWindTable, generateWindTable } from '../../src/utils/windTable';
+
+import type { RifleConfig, AmmoConfig } from '../../src/types/ballistic.types';
 
 describe('Wind Table Generation', () => {
   // Common test configuration - .308 Winchester 168gr BTHP
@@ -169,6 +171,76 @@ describe('Wind Table Generation', () => {
       // Should default to reasonable range (e.g., 0-20 mph in 5 mph increments)
       expect(table.length).toBeGreaterThan(0);
       expect(table[0].windSpeed).toBe(0);
+    });
+  });
+
+  /**
+   * The table used to run one full solve per cell, fifty for the screen's
+   * 10 x 5 grid, which took about 15 s to open in a debug build (#232). Drift is
+   * linear in wind speed, so one solve per distance is enough -- as long as the
+   * figures are the ones a per-cell solve gives.
+   */
+  describe('one solve per distance (#232)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('solves once for a whole row of wind speeds', () => {
+      const spy = jest.spyOn(ballistics, 'calculateBallisticSolution');
+      generateWindTable(rifle, ammo, 600, standardAtmosphere, {
+        windSpeeds: [0, 5, 10, 15, 20],
+        windDirection: 90,
+      });
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([30, 90, 270, 330])(
+      'matches a full solve in every cell at %i degrees',
+      (windDirection) => {
+        const table = generateWindTable(rifle, ammo, 600, standardAtmosphere, {
+          windSpeeds: [0, 5, 10, 15, 20],
+          windDirection,
+        });
+        for (const entry of table) {
+          const solved = ballistics.calculateBallisticSolution(
+            rifle,
+            ammo,
+            { distance: 600, angle: 0, windSpeed: entry.windSpeed, windDirection },
+            standardAtmosphere,
+            false
+          );
+          expect(entry.windDrift).toBeCloseTo(solved.windage, 9);
+          expect(entry.windageCorrection).toBeCloseTo(solved.windageMIL, 9);
+        }
+      }
+    );
+
+    it('solves once per distance for the screen’s whole 10 x 5 table', () => {
+      // The Wind Table screen calls the comprehensive table, not one row.
+      const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+      const windSpeeds = [0, 5, 10, 15, 20];
+      const spy = jest.spyOn(ballistics, 'calculateBallisticSolution');
+      const table = generateComprehensiveWindTable(
+        rifle,
+        ammo,
+        distances,
+        standardAtmosphere,
+        windSpeeds,
+        90
+      );
+      expect(spy).toHaveBeenCalledTimes(distances.length);
+      spy.mockRestore();
+
+      expect(table).toHaveLength(distances.length * windSpeeds.length);
+      for (const entry of table) {
+        const solved = ballistics.calculateBallisticSolution(
+          rifle,
+          ammo,
+          { distance: entry.distance, angle: 0, windSpeed: entry.windSpeed, windDirection: 90 },
+          standardAtmosphere,
+          false
+        );
+        expect(entry.windDrift).toBeCloseTo(solved.windage, 9);
+        expect(entry.windageCorrection).toBeCloseTo(solved.windageMIL, 9);
+      }
     });
   });
 });

@@ -407,6 +407,28 @@ describe('the solution screen’s windage (#163)', () => {
   });
 });
 
+describe('opening the wind table (#232)', () => {
+  it('shows its loading state before the table is built, not after', async () => {
+    // The solve used to start in the same tick as the render that set
+    // `loading`, so the spinner was never painted and the push waited. This
+    // pins the deferred solve. It cannot pin `useState(true)` itself: render()
+    // flushes the effect, whose own setLoading(true) shows the spinner either way.
+    seed([]);
+    const view = renderWindTable();
+
+    expect(view.getByText('Generating wind table...')).toBeTruthy();
+    await waitFor(() => expect(view.queryByText('Generating wind table...')).toBeNull());
+  });
+
+  it('labels the direction picker once', async () => {
+    seed([]);
+    const view = renderWindTable();
+
+    await waitFor(() => expect(view.queryByText('Generating wind table...')).toBeNull());
+    expect(view.getAllByText('Wind Direction')).toHaveLength(1);
+  });
+});
+
 describe('the wind table’s source toggle (#163)', () => {
   it('offers no toggle when there is no offset to apply', async () => {
     seed([]);
