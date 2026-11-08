@@ -89,6 +89,11 @@ const SECTIONS: Section[] = [
         'coordinates out. A backup without coordinates still restores completely.',
       'Once you send a file to another app, a cloud drive or a person, this policy no ' +
         'longer governs what happens to it.',
+      'On Android you can choose an export folder in Settings › Data Management. Each ' +
+        "export you make then also saves a copy there, outside the app's private " +
+        'storage, where other apps with access to that folder can read it. The folder ' +
+        'is picked in the system folder picker, which needs no storage permission. ' +
+        'Automatic backups are never saved there.',
     ],
   },
   {
@@ -143,7 +148,7 @@ export const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>
         accessibilityHint="Scroll to read how Mobile DOPE handles your data"
       >
         <Text style={[styles.updated, { color: colors.text.secondary }]}>
-          Last updated 26 October 2026 · applies to this release
+          Last updated 7 November 2026 · applies to this release
         </Text>
 
         {SECTIONS.map((section) => (

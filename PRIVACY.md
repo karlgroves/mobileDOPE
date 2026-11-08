@@ -1,6 +1,6 @@
 # Privacy Policy — Mobile DOPE
 
-**Last updated:** 2026-11-06
+**Last updated:** 2026-11-07
 **Applies to:** Mobile DOPE for iOS and Android, current release.
 
 ## The short version
@@ -109,6 +109,13 @@ bug; the app never reads that data. Android needs no permission for the baromete
 You can export your data as JSON, CSV, Markdown or PDF, and share it through the
 system share sheet.
 
+On Android you can also choose a folder (Settings → Data Management → Choose
+Export Folder) where each export you make saves a copy before the share sheet
+opens. The folder is picked in the system's own folder picker, which grants the app
+access to that one folder and needs no storage permission. A file saved there is
+outside the app's private storage, where other apps with access to that folder can
+read it. Automatic backups are never saved there.
+
 **Exported files are outside the app's control.** Once you send a backup to another
 app, a cloud drive, or a person, this policy no longer governs what happens to it.
 
@@ -194,7 +201,8 @@ storage, microphone, and Android's physical activity permissions are explicitly
 blocked in the app's build configuration so that autolinked libraries cannot
 introduce them. Choosing a target photo uses the system photo picker, which needs
 none of them. Files you export are written to the app's own storage and handed
-to the system share sheet, which needs no storage permission.
+to the system share sheet, which needs no storage permission. An Android export
+folder is granted through the system folder picker, which needs none either.
 
 ## Changes to this policy
 

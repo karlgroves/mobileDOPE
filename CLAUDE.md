@@ -246,7 +246,11 @@ because this section said the app collected nothing while it was storing precise
   pressure value; no movement or activity data is read. Android needs no permission
   for it, and `ACTIVITY_RECOGNITION` stays blocked. (#62)
 - **User-initiated exports are the only egress.** A full JSON backup includes the
-  coarsened latitude, and the export flow warns and offers to omit it.
+  coarsened latitude, and the export flow warns and offers to omit it. On Android
+  the user may pick an export folder (SAF, `src/services/exportFolder.ts`, #215);
+  manual exports then also save a copy there before the share sheet opens. Only
+  manual exports go through `deliverExport` -- never an automatic backup or Share
+  Latest Backup.
 - **Automatic backups (#66) stay on the device** in `backups/` under the app's
   documents directory, newest seven kept, and never contain latitude (so deleting
   stored location data leaves no copy behind). They leave only via the user's own
