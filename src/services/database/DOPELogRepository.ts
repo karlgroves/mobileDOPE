@@ -47,16 +47,17 @@ export class DOPELogRepository {
     );
 
     log.id = result.lastInsertRowId;
-    // Read back the schema default when no timestamp was supplied (#229): the
-    // store adds this log to the list as returned, and the list sorts by date,
-    // so a log without one sank to the bottom, undated, until a reload.
+    // Read back the INSERT's `datetime('now')` when no timestamp was supplied
+    // (#229): the store adds this log to the list as returned, and the list
+    // sorts by date, so a log without one sank to the bottom, undated, until a
+    // reload.
     log.timestamp = await this.resolveTimestamp(log.id, log.timestamp);
     return log;
   }
 
   /**
-   * The timestamp a log was stored with: the one supplied, or else the schema
-   * default the INSERT fell back to.
+   * The timestamp a log was stored with: the one supplied, or else the
+   * `datetime('now')` the INSERT's COALESCE fell back to.
    */
   private async resolveTimestamp(id: number, supplied?: string): Promise<string | undefined> {
     if (supplied !== undefined) return supplied;
