@@ -1,6 +1,6 @@
 import { standardAtmosphere } from '../../src/utils/atmospheric';
 import * as ballistics from '../../src/utils/ballistics';
-import { generateWindTable } from '../../src/utils/windTable';
+import { generateComprehensiveWindTable, generateWindTable } from '../../src/utils/windTable';
 
 import type { RifleConfig, AmmoConfig } from '../../src/types/ballistic.types';
 
@@ -212,5 +212,35 @@ describe('Wind Table Generation', () => {
         }
       }
     );
+
+    it('solves once per distance for the screen’s whole 10 x 5 table', () => {
+      // The Wind Table screen calls the comprehensive table, not one row.
+      const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+      const windSpeeds = [0, 5, 10, 15, 20];
+      const spy = jest.spyOn(ballistics, 'calculateBallisticSolution');
+      const table = generateComprehensiveWindTable(
+        rifle,
+        ammo,
+        distances,
+        standardAtmosphere,
+        windSpeeds,
+        90
+      );
+      expect(spy).toHaveBeenCalledTimes(distances.length);
+      spy.mockRestore();
+
+      expect(table).toHaveLength(distances.length * windSpeeds.length);
+      for (const entry of table) {
+        const solved = ballistics.calculateBallisticSolution(
+          rifle,
+          ammo,
+          { distance: entry.distance, angle: 0, windSpeed: entry.windSpeed, windDirection: 90 },
+          standardAtmosphere,
+          false
+        );
+        expect(entry.windDrift).toBeCloseTo(solved.windage, 9);
+        expect(entry.windageCorrection).toBeCloseTo(solved.windageMIL, 9);
+      }
+    });
   });
 });

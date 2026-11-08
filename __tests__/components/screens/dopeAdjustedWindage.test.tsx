@@ -408,9 +408,11 @@ describe('the solution screen’s windage (#163)', () => {
 });
 
 describe('opening the wind table (#232)', () => {
-  it('shows its loading state on the first render, before the table is built', async () => {
-    // The solve used to start in the same tick as the first render, so the
-    // spinner was never painted and the screen sat blank (or the push waited).
+  it('shows its loading state before the table is built, not after', async () => {
+    // The solve used to start in the same tick as the render that set
+    // `loading`, so the spinner was never painted and the push waited. This
+    // pins the deferred solve. It cannot pin `useState(true)` itself: render()
+    // flushes the effect, whose own setLoading(true) shows the spinner either way.
     seed([]);
     const view = renderWindTable();
 
