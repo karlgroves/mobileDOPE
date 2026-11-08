@@ -175,16 +175,17 @@ describe('coriolis', () => {
       expect(result.hemisphere).toBe('Equator');
     });
 
-    it('should use average velocity for calculations', () => {
-      // Result should be between using muzzle and target velocity
-      const withFast = calculateHorizontalCoriolis(45, 1.0, 2800);
-      const withSlow = calculateHorizontalCoriolis(45, 1.0, 2200);
+    it('should use a speed between the target and muzzle speeds', () => {
+      // 1000 yd in 1.4 s, slowing from 2800 to 1600 ft/s: the drag-lagged speed
+      // (about 1938 ft/s) lies between the two.
+      const withFast = calculateHorizontalCoriolis(45, 1.4, 2800);
+      const withSlow = calculateHorizontalCoriolis(45, 1.4, 1600);
       const result = calculateCoriolisComplete(
         {
           latitude: 45,
-          timeOfFlight: 1.0,
+          timeOfFlight: 1.4,
           muzzleVelocity: 2800,
-          velocityAtTarget: 2200,
+          velocityAtTarget: 1600,
         },
         1000
       );
@@ -212,8 +213,14 @@ describe('coriolis', () => {
       expect(isCoriolisSignificant(45, 1000, 0.3)).toBe(false);
     });
 
-    it('should return true for long range at mid-latitudes', () => {
-      expect(isCoriolisSignificant(45, 1000, 1.5)).toBe(true);
+    it('should return true for a long flight at mid-latitudes', () => {
+      // 0.1 MIL needs about 2 s of flight at 45°: ω·t·sin(45°)·1000 = 0.129 at 2.5 s.
+      expect(isCoriolisSignificant(45, 1500, 2.5)).toBe(true);
+    });
+
+    it('should return false for a typical 1000 yard flight at mid-latitudes', () => {
+      // ω·1.5·sin(45°)·1000 = 0.077 MIL, under the 0.1 MIL threshold.
+      expect(isCoriolisSignificant(45, 1000, 1.5)).toBe(false);
     });
 
     it('should return false at equator even for long range', () => {
@@ -222,7 +229,8 @@ describe('coriolis', () => {
     });
 
     it('should return true at high latitudes for long range', () => {
-      expect(isCoriolisSignificant(60, 1000, 1.5)).toBe(true);
+      // ω·1.8·sin(60°)·1000 = 0.114 MIL
+      expect(isCoriolisSignificant(60, 1000, 1.8)).toBe(true);
     });
   });
 
@@ -278,10 +286,10 @@ describe('coriolis', () => {
       const firingEast = calculateCoriolisComplete({ ...params, azimuth: 90 }, 1000);
       const firingWest = calculateCoriolisComplete({ ...params, azimuth: 270 }, 1000);
 
-      // Firing East should have additional drop (positive)
+      // Firing East pushes the bullet up (positive, strikes high)
       expect(firingEast.verticalDeflection).toBeGreaterThan(0);
 
-      // Firing West should have reduced drop (negative)
+      // Firing West pushes it down (negative, strikes low)
       expect(firingWest.verticalDeflection).toBeLessThan(0);
 
       // Horizontal should be the same regardless of azimuth
