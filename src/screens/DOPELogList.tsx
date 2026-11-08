@@ -92,10 +92,15 @@ export function DOPELogList({ navigation }: Props) {
     }
   };
 
-  useEffect(() => {
-    loadData();
+  // Reloaded on every focus, not just on mount (#229): other screens write logs
+  // and can leave a rifle-filtered set in the store (Wind Table does), so what
+  // the store holds when this tab comes back is not necessarily every log.
+  // React Navigation also fires `focus` when the screen first appears.
+  useEffect(
+    () => navigation.addListener('focus', () => void loadData()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [navigation]
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
