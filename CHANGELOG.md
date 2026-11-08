@@ -116,9 +116,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Coriolis correction is now a distance. It was computed as 2ω·v·t, which
   has the units of a velocity, so it overstated the deflection about five times
   at 300 yards, about twice at 600, and understated it past two seconds of
-  flight; at 1000 yards it happened to be only about 10% high. It is now
-  ω·v·t², the textbook ω·X·t·sin(latitude), and agrees within a few percent
-  with the Coriolis acceleration integrated over the solver's own trajectory.
+  flight; at 1000 yards it happened to be only about 10% high. It is now the
+  Coriolis acceleration integrated over the flight, with drag slowing the
+  sideways speed it builds up, which at constant speed is the textbook
+  ω·X·t·sin(latitude). A .308 at 1000 yards and 45° now drifts about 2.8",
+  inside the 2.5-3.0" Litz publishes for a typical 1000 yard trajectory.
   The vertical (Eötvös) term was documented as extra drop when firing East; it
   is a lift, and the bullet strikes high. The dialled elevation already moved
   the right way, so only the description changed.

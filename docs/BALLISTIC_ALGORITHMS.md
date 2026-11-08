@@ -354,19 +354,24 @@ whether they are folded into the dialled figures (`src/utils/advancedCorrections
 - **Spin drift** (`src/utils/spinDrift.ts`): Litz's formula,
   `1.25 · (Sg + 1.2) · t^1.83` inches, with Sg from Miller's rule. Bullet length
   is estimated from weight and diameter when the profile has none.
-- **Coriolis** (`src/utils/coriolis.ts`): the Coriolis acceleration `2ω·v`
-  integrated twice over the flight with `v` the mean of muzzle and target
-  speed, giving `ω · v · t² · sin(latitude)` sideways (right in the northern
-  hemisphere) and `ω · v · t² · cos(latitude) · sin(azimuth)` vertically
-  (up when firing East). With `v · t = X` this is the flat-fire form
-  `ω · X · t · sin(latitude)`, so the horizontal angle is `ω · t · sin(latitude)`
-  whatever the range: about 0.08 MIL for 1.5 s of flight at 45°.
+- **Coriolis** (`src/utils/coriolis.ts`): the Coriolis acceleration `2ω·v`,
+  with drag slowing the sideways speed it builds up in proportion to the
+  bullet, gives `2ω · ∫t dx · sin(latitude)` sideways (right in the northern
+  hemisphere) and `2ω · ∫t dx · cos(latitude) · sin(azimuth)` vertically (up
+  when firing East). At constant speed this is the flat-fire form
+  `ω · X · t · sin(latitude)`; under drag it is smaller. The integral is
+  evaluated from the muzzle and target speeds,
+  `∫t dx = X·t/2 + X²·(1/V₀ − 1/V)/12` (`dragLaggedVelocity`). The horizontal
+  angle is at most `ω · t · sin(latitude)`, about 0.08 MIL for 1.5 s of flight
+  at 45°.
 
 `__tests__/unit/advancedCorrectionsValidation.test.ts` pins hand-worked values of
-each formula and checks Coriolis within 10% of the acceleration integrated over
-the solver's own trajectory at 300, 600 and 1000 yards (the agreement is about
-2 to 6%). Neither term has yet been compared with third-party solver output or
-range data for named loads.
+each formula, checks Coriolis within 2% of `2ω·∫t dx` over the solver's own
+trajectory at 300, 600 and 1000 yards (5% at 1500), and checks a .308 at 1000
+yards and 45° against Litz's published 2.5 to 3.0 inches for a typical 1000
+yard small-arms trajectory, right in the north, left in the south, high firing
+East and low firing West. Neither term has yet been compared with third-party
+solver output or range data for named loads.
 
 ## Validation
 

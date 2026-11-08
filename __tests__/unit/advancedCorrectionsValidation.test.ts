@@ -9,10 +9,16 @@
  *
  * - Coriolis against the textbook flat-fire expression ω·X·t·sin(lat) (McCoy,
  *   Modern Exterior Ballistics; Litz, Applied Ballistics), worked by hand.
- * - Coriolis again, independently, by integrating the Coriolis acceleration
- *   2ω·v·sin(lat) twice over the solver's own trajectory. This needs no
- *   approximation about the bullet's average speed, so it is the reference the
- *   closed form has to agree with.
+ * - Coriolis again, independently, by integrating over the solver's own
+ *   trajectory. Drag slows the sideways velocity the Coriolis acceleration
+ *   builds up in the same proportion as the bullet, so the deflection is
+ *   2ω·trig·∫t dx, not the drag-free 2ω·trig·∫x dt (which is about 30% high at
+ *   1000 yards). This needs no assumption about an average speed, so it is the
+ *   reference the closed form has to agree with.
+ * - Coriolis against Litz's published magnitudes for a typical 1000 yard
+ *   small-arms trajectory at 45° latitude: 2.5-3.0" right, and 2.5-3.0" high
+ *   firing East, low firing West (Applied Ballistics, "Gyroscopic (spin) Drift
+ *   and Coriolis Effect").
  * - Spin drift against Litz's published formula 1.25·(Sg + 1.2)·t^1.83 and
  *   Sg against Miller's rule, worked by hand.
  *
@@ -27,6 +33,7 @@ import {
   calculateCoriolisComplete,
   calculateHorizontalCoriolis,
   calculateVerticalCoriolis,
+  dragLaggedVelocity,
 } from '../../src/utils/coriolis';
 import { calculateSpinDrift, calculateStabilityFactor } from '../../src/utils/spinDrift';
 
@@ -57,15 +64,34 @@ describe('Coriolis against the textbook closed form', () => {
     expect(long / short).toBeCloseTo(4, 10);
   });
 
-  it('subtends ω·t·sin(lat) whatever the range', () => {
-    // Dividing ω·X·t·sin(lat) by X: the angle depends on time of flight alone.
-    // 1000 yd in 1.5 s, with muzzle and target speeds averaging X/t = 2000 ft/s.
+  it('subtends exactly ω·t·sin(lat) at constant speed', () => {
+    // 1000 yd in 1.5 s at a steady 2000 ft/s: ω·X·t·sin(lat) divided by X.
+    const result = calculateCoriolisComplete(
+      { latitude: 45, timeOfFlight: 1.5, muzzleVelocity: 2000, velocityAtTarget: 2000 },
+      1000
+    );
+
+    expect(result.horizontalMIL).toBeCloseTo(OMEGA * 1.5 * SIN45 * 1000, 4);
+  });
+
+  it('subtends less than ω·t·sin(lat) when drag slows the bullet', () => {
+    // Same range and time, slowing from 2600 to 1400 ft/s. The drag-lagged
+    // speed is 2·(2250 + 9e6·(1/2600 − 1/1400)/12)/1.5² = 2·2002.75/2.25
+    // = 1780.2 ft/s, below the 2000 ft/s mean of the two.
+    expect(dragLaggedVelocity(3000, 1.5, 2600, 1400)).toBeCloseTo(1780.2, 1);
+
     const result = calculateCoriolisComplete(
       { latitude: 45, timeOfFlight: 1.5, muzzleVelocity: 2600, velocityAtTarget: 1400 },
       1000
     );
 
-    expect(result.horizontalMIL).toBeCloseTo(OMEGA * 1.5 * SIN45 * 1000, 4);
+    expect(result.horizontalMIL).toBeLessThan(OMEGA * 1.5 * SIN45 * 1000);
+  });
+
+  it('falls back to the mean speed when the inputs describe no flight', () => {
+    expect(dragLaggedVelocity(0, 1.5, 2600, 1400)).toBe(2000);
+    expect(dragLaggedVelocity(3000, 0, 2600, 1400)).toBe(2000);
+    expect(dragLaggedVelocity(3000, 1.5, 2600, 0)).toBe(1300);
   });
 });
 
@@ -93,19 +119,23 @@ describe('Coriolis against the acceleration integrated over a real trajectory', 
     densityAltitude: 0,
   };
 
-  /**
-   * The deflection from a constant-direction acceleration 2ω·trig·v(t) is
-   * 2ω·trig·∫x(t)dt, where x(t) is downrange distance. The trajectory gives
-   * x at each time, so a trapezoid over it is a model-free reference.
-   */
-  const integrated = (distance: number, trig: number) => {
-    const solution = calculateBallisticSolution(
+  const solve = (distance: number, latitude = 45, azimuth = 90) =>
+    calculateBallisticSolution(
       rifle,
       ammo,
-      { distance, angle: 0, windSpeed: 0, windDirection: 0, latitude: 45, azimuth: 90 },
+      { distance, angle: 0, windSpeed: 0, windDirection: 0, latitude, azimuth },
       atmosphere,
       true
     );
+
+  /**
+   * A sideways acceleration 2ω·trig·v(t), with drag slowing the sideways speed
+   * in proportion to the bullet's, leaves a sideways speed of 2ω·trig·t·v(t),
+   * so the deflection is 2ω·trig·∫t dx over the downrange distance x. The
+   * trajectory gives t at each x, so a trapezoid over it is the reference.
+   */
+  const integrated = (distance: number, trig: number) => {
+    const solution = solve(distance);
     const points = (solution.trajectory ?? []).filter((p) => p.distance <= distance);
 
     let area = 0; // ft·s
@@ -113,7 +143,7 @@ describe('Coriolis against the acceleration integrated over a real trajectory', 
     let prevFeet = 0;
     for (const p of points) {
       const feet = p.distance * 3;
-      area += ((p.time - prevTime) * (feet + prevFeet)) / 2;
+      area += ((feet - prevFeet) * (p.time + prevTime)) / 2;
       prevTime = p.time;
       prevFeet = feet;
     }
@@ -121,19 +151,58 @@ describe('Coriolis against the acceleration integrated over a real trajectory', 
     return { solution, reference: 2 * OMEGA * trig * area * 12, points: points.length };
   };
 
-  it.each([300, 600, 1000])('agrees within 10%% horizontally at %i yards', (distance) => {
+  it.each([300, 600, 1000])('agrees within 2%% horizontally at %i yards', (distance) => {
     const { solution, reference, points } = integrated(distance, SIN45);
 
     expect(points).toBeGreaterThan(5);
-    expect(solution.coriolisHorizontal as number).toBeGreaterThan(reference * 0.9);
-    expect(solution.coriolisHorizontal as number).toBeLessThan(reference * 1.1);
+    expect(solution.coriolisHorizontal as number).toBeGreaterThan(reference * 0.98);
+    expect(solution.coriolisHorizontal as number).toBeLessThan(reference * 1.02);
   });
 
-  it('agrees within 10% vertically when firing East at 1000 yards', () => {
+  it('agrees within 5% horizontally through the transonic range at 1500 yards', () => {
+    const { solution, reference } = integrated(1500, SIN45);
+
+    expect(solution.coriolisHorizontal as number).toBeGreaterThan(reference * 0.95);
+    expect(solution.coriolisHorizontal as number).toBeLessThan(reference * 1.05);
+  });
+
+  it('agrees within 2% vertically when firing East at 1000 yards', () => {
     const { solution, reference } = integrated(1000, SIN45);
 
-    expect(solution.coriolisVertical as number).toBeGreaterThan(reference * 0.9);
-    expect(solution.coriolisVertical as number).toBeLessThan(reference * 1.1);
+    expect(solution.coriolisVertical as number).toBeGreaterThan(reference * 0.98);
+    expect(solution.coriolisVertical as number).toBeLessThan(reference * 1.02);
+  });
+
+  describe("Litz's published 2.5-3.0 inches at 1000 yards and 45°", () => {
+    it('drifts right in the northern hemisphere, whatever the azimuth', () => {
+      for (const azimuth of [0, 90, 180, 270]) {
+        const h = solve(1000, 45, azimuth).coriolisHorizontal as number;
+
+        expect(h).toBeGreaterThanOrEqual(2.5);
+        expect(h).toBeLessThanOrEqual(3.0);
+      }
+    });
+
+    it('drifts left by the same amount in the southern hemisphere', () => {
+      const north = solve(1000, 45).coriolisHorizontal as number;
+      const south = solve(1000, -45).coriolisHorizontal as number;
+
+      expect(south).toBeCloseTo(-north, 10);
+    });
+
+    it('strikes high firing East and low firing West, by the same amount', () => {
+      const east = solve(1000, 45, 90).coriolisVertical as number;
+      const west = solve(1000, 45, 270).coriolisVertical as number;
+
+      expect(east).toBeGreaterThanOrEqual(2.5);
+      expect(east).toBeLessThanOrEqual(3.0);
+      expect(west).toBeCloseTo(-east, 10);
+    });
+
+    it('has no vertical term firing North or South', () => {
+      expect(solve(1000, 45, 0).coriolisVertical as number).toBeCloseTo(0, 10);
+      expect(solve(1000, 45, 180).coriolisVertical as number).toBeCloseTo(0, 10);
+    });
   });
 });
 

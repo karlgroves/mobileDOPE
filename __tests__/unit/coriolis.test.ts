@@ -175,16 +175,17 @@ describe('coriolis', () => {
       expect(result.hemisphere).toBe('Equator');
     });
 
-    it('should use average velocity for calculations', () => {
-      // Result should be between using muzzle and target velocity
-      const withFast = calculateHorizontalCoriolis(45, 1.0, 2800);
-      const withSlow = calculateHorizontalCoriolis(45, 1.0, 2200);
+    it('should use a speed between the target and muzzle speeds', () => {
+      // 1000 yd in 1.4 s, slowing from 2800 to 1600 ft/s: the drag-lagged speed
+      // (about 1938 ft/s) lies between the two.
+      const withFast = calculateHorizontalCoriolis(45, 1.4, 2800);
+      const withSlow = calculateHorizontalCoriolis(45, 1.4, 1600);
       const result = calculateCoriolisComplete(
         {
           latitude: 45,
-          timeOfFlight: 1.0,
+          timeOfFlight: 1.4,
           muzzleVelocity: 2800,
-          velocityAtTarget: 2200,
+          velocityAtTarget: 1600,
         },
         1000
       );

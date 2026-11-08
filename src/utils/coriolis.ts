@@ -17,20 +17,25 @@
  *
  * ## The model, and how it is checked (#222)
  *
- * The Coriolis acceleration on a bullet moving at speed v is 2ω·v·sin(lat)
- * sideways and 2ω·v·cos(lat)·sin(azimuth) upward. Integrating an ACCELERATION
- * twice over the time of flight t, with v taken as the average speed, gives a
- * DISTANCE:
+ * The Coriolis acceleration on a bullet moving downrange at speed v is
+ * 2ω·v·sin(lat) sideways and 2ω·v·cos(lat)·sin(azimuth) upward. Drag slows the
+ * sideways velocity this builds up in the same proportion as it slows the
+ * bullet, so the sideways speed at time t is 2ω·trig·t·v(t), and the deflection
+ * over a flight of range X and time T is a DISTANCE:
  *
- *   deflection = ω · v_avg · t² · trig(lat, azimuth)
+ *   deflection = 2ω · trig(lat, azimuth) · ∫₀^X t(x) dx
  *
- * which is the textbook flat-fire expression ω·X·t·sin(lat) (McCoy, Modern
- * Exterior Ballistics; Litz, Applied Ballistics) with X = v_avg·t. Until #222
- * this file used 2ω·v·t, which is a VELOCITY, not a distance: it overstated the
- * deflection about fivefold at 300 yards and understated it past 2 seconds of
- * flight. `__tests__/unit/advancedCorrectionsValidation.test.ts` pins the
- * closed form and cross-checks it by integrating the acceleration over the
- * solver's own trajectory.
+ * At constant speed v this is ω·v·T²·trig, the textbook flat-fire
+ * ω·X·T·sin(lat) (McCoy, Modern Exterior Ballistics). Under drag it is smaller:
+ * `calculateCoriolisComplete` evaluates the integral from the muzzle and target
+ * speeds (see `dragLaggedVelocity`), which puts a .308 at 1000 yards and 45° N
+ * at about 2.8", inside Litz's published 2.5-3.0" for a typical 1000 yard
+ * small-arms trajectory (Applied Ballistics, "Gyroscopic (spin) Drift and
+ * Coriolis Effect"). Until #222 this file used 2ω·v·t, which is a VELOCITY, not
+ * a distance: it overstated the deflection about fivefold at 300 yards and
+ * understated it past 2 seconds of flight.
+ * `__tests__/unit/advancedCorrectionsValidation.test.ts` pins the closed forms,
+ * the published band, and the integral over the solver's own trajectory.
  */
 
 /**
@@ -56,7 +61,8 @@ function degToRad(degrees: number): number {
  *
  * Where:
  * - ω = Earth's angular velocity (7.2921e-5 rad/s)
- * - v_avg = average bullet velocity during flight
+ * - v_avg = the constant speed with the same deflection; exact at constant
+ *   speed, and `dragLaggedVelocity` gives it for a drag-slowed flight
  * - t = time of flight
  * - latitude = shooter's latitude in degrees (positive = North, negative = South)
  *
@@ -157,6 +163,43 @@ export interface CoriolisResult {
 }
 
 /**
+ * The constant speed that gives the same Coriolis deflection as the real,
+ * slowing flight: v such that ω·v·T² = 2ω·∫₀^X t(x) dx.
+ *
+ * t(x) is convex, starting at slope 1/V₀ and ending at slope 1/V_target, so a
+ * cubic Hermite fit gives ∫₀^X t dx = X·T/2 + X²·(1/V₀ − 1/V_target)/12, within
+ * 0.3% of the integral over the solver's trajectory to 1000 yards and within
+ * about 2% through the transonic range. The arithmetic mean of muzzle and
+ * target speed, used before, overstates the deflection by about 30% at 1000
+ * yards for a .308, because it ignores the drag that slows the sideways speed.
+ *
+ * Falls back to that mean when the inputs cannot describe a flight.
+ *
+ * @param distanceFeet - Range in feet
+ * @param timeOfFlight - Time of flight in seconds
+ * @param muzzleVelocity - Muzzle velocity in fps
+ * @param velocityAtTarget - Velocity at the target in fps
+ * @returns Effective velocity in fps
+ */
+export function dragLaggedVelocity(
+  distanceFeet: number,
+  timeOfFlight: number,
+  muzzleVelocity: number,
+  velocityAtTarget: number
+): number {
+  const mean = (muzzleVelocity + velocityAtTarget) / 2;
+  if (!(distanceFeet > 0 && timeOfFlight > 0 && muzzleVelocity > 0 && velocityAtTarget > 0)) {
+    return mean;
+  }
+
+  const integral =
+    (distanceFeet * timeOfFlight) / 2 +
+    (distanceFeet * distanceFeet * (1 / muzzleVelocity - 1 / velocityAtTarget)) / 12;
+
+  return Math.max(0, (2 * integral) / (timeOfFlight * timeOfFlight));
+}
+
+/**
  * Calculate complete Coriolis effect
  *
  * @param params - Coriolis calculation parameters
@@ -169,8 +212,13 @@ export function calculateCoriolisComplete(
 ): CoriolisResult {
   const { latitude, azimuth = 0, timeOfFlight, muzzleVelocity, velocityAtTarget } = params;
 
-  // Calculate average velocity (simple average, more accurate methods exist)
-  const averageVelocity = (muzzleVelocity + velocityAtTarget) / 2;
+  // The constant speed with the same deflection as the drag-slowed flight
+  const averageVelocity = dragLaggedVelocity(
+    distance * 3,
+    timeOfFlight,
+    muzzleVelocity,
+    velocityAtTarget
+  );
 
   // Calculate deflections
   const horizontalDeflection = calculateHorizontalCoriolis(latitude, timeOfFlight, averageVelocity);
@@ -227,6 +275,10 @@ export function calculateCoriolisComplete(
 /**
  * Quick calculation for horizontal Coriolis deflection only
  *
+ * Without the range it cannot account for drag (see `dragLaggedVelocity`), so
+ * it uses the mean of muzzle and target speed and overstates the deflection
+ * at long range; `calculateCoriolisComplete` is the accurate form.
+ *
  * @param latitude - Shooter's latitude in degrees
  * @param timeOfFlight - Time of flight in seconds
  * @param muzzleVelocity - Muzzle velocity in fps
@@ -246,10 +298,11 @@ export function getHorizontalCoriolis(
 /**
  * Determine if Coriolis correction is significant at given parameters
  *
- * Significant means the horizontal term exceeds 0.1 MIL. Since the deflection
- * is ω·X·t·sin(lat) for a range X, its ANGLE is ω·t·sin(lat) whatever the
- * range or velocity: about 0.08 MIL for 1.5 s of flight at 45°, so it takes
- * roughly 2 s of flight at mid-latitudes, and is never reached at the equator.
+ * Significant means the horizontal term may exceed 0.1 MIL. The flat-fire
+ * deflection ω·X·t·sin(lat) subtends ω·t·sin(lat) whatever the range, and drag
+ * only makes the real angle smaller, so this is a conservative upper bound:
+ * about 0.08 MIL for 1.5 s of flight at 45°, so it takes roughly 2 s of flight
+ * at mid-latitudes, and is never reached at the equator.
  *
  * @param latitude - Shooter's latitude in degrees
  * @param distance - Target distance in yards
