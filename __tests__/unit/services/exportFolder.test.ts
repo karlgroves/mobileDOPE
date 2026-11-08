@@ -128,9 +128,22 @@ it('copies nothing until a folder is chosen', async () => {
 it('keeps the earlier folder when the picker is dismissed', async () => {
   pick.mockResolvedValueOnce({ uri: FOLDER });
   await chooseExportFolder();
-  pick.mockRejectedValueOnce(new Error('cancelled'));
+  pick.mockRejectedValueOnce(
+    Object.assign(new Error('The file picker was cancelled by the user'), {
+      code: 'ERR_PICKER_CANCELLED',
+    })
+  );
 
   expect(await chooseExportFolder()).toBeUndefined();
+  expect(await getExportFolderUri()).toBe(FOLDER);
+});
+
+it('reports a picker that fails for any other reason, keeping the earlier folder', async () => {
+  pick.mockResolvedValueOnce({ uri: FOLDER });
+  await chooseExportFolder();
+  pick.mockRejectedValueOnce(new Error('No activity found to handle the folder picker'));
+
+  await expect(chooseExportFolder()).rejects.toThrow('No activity found');
   expect(await getExportFolderUri()).toBe(FOLDER);
 });
 

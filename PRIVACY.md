@@ -110,11 +110,13 @@ You can export your data as JSON, CSV, Markdown or PDF, and share it through the
 system share sheet.
 
 On Android you can also choose a folder (Settings → Data Management → Choose
-Export Folder) where each export you make saves a copy before the share sheet
-opens. The folder is picked in the system's own folder picker, which grants the app
-access to that one folder and needs no storage permission. A file saved there is
-outside the app's private storage, where other apps with access to that folder can
-read it. Automatic backups are never saved there.
+Export Folder) where each data export you make (profiles, DOPE logs, session
+reports, ballistic solutions and full backups) saves a copy before the share sheet
+opens. Chart images, the DOPE card and target images are not copied there. The
+folder is picked in the system's own folder picker, which grants the app access to
+that one folder and needs no storage permission. A file saved there is outside the
+app's private storage, where other apps with access to that folder can read it.
+Automatic backups are never saved there.
 
 **Exported files are outside the app's control.** Once you send a backup to another
 app, a cloud drive, or a person, this policy no longer governs what happens to it.

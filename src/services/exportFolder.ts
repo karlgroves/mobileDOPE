@@ -49,23 +49,34 @@ export async function getExportFolderUri(): Promise<string | undefined> {
   }
 }
 
+/** The code expo-file-system rejects with when the picker is dismissed. */
+const PICKER_CANCELLED = 'ERR_PICKER_CANCELLED';
+
 /**
  * Open the system folder picker and remember the folder chosen. Resolves to
- * its uri, or undefined if the user cancelled.
+ * its uri, or undefined if the user cancelled. Any other failure (no app to
+ * pick a folder with, a provider that refuses a lasting grant) is thrown, so
+ * the caller can say so instead of doing nothing.
  */
 export async function chooseExportFolder(): Promise<string | undefined> {
   let directory: Directory;
   try {
     directory = await Directory.pickDirectoryAsync();
-  } catch {
-    // The picker rejects when it is dismissed without a choice.
-    return undefined;
+  } catch (error) {
+    if ((error as { code?: unknown } | null)?.code === PICKER_CANCELLED) return undefined;
+    throw error;
   }
   await AsyncStorage.setItem(EXPORT_FOLDER_STORAGE_KEY, directory.uri);
   return directory.uri;
 }
 
-/** Forget the chosen folder. Files already saved there are not touched. */
+/**
+ * Forget the chosen folder. Files already saved there are not touched.
+ *
+ * The app stops writing there, but Android keeps the persisted folder grant
+ * taken by the picker: expo-file-system has no way to release it. The same
+ * holds for the old folder when another is chosen.
+ */
 export async function clearExportFolder(): Promise<void> {
   await AsyncStorage.removeItem(EXPORT_FOLDER_STORAGE_KEY);
 }

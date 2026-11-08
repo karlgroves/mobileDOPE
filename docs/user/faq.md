@@ -42,11 +42,13 @@ The export flow warns you about that and offers to leave it out.
 ## Can exports go straight to a folder?
 
 On Android, yes. **Settings → Data Management → Choose Export Folder** opens the
-system folder picker. After that, every export you make — profiles, DOPE logs,
-session reports, a ballistic solution, a full backup — also saves a copy in that
-folder, and the share sheet still opens as before. **Stop Saving to Folder**
-turns it off; files already saved there stay. If the folder is deleted or the
-app loses access to it, exports go to the share sheet only and Settings says so.
+system folder picker. After that, each data export you make — profiles, DOPE
+logs, session reports, a ballistic solution, a full backup — also saves a copy in
+that folder, and the share sheet still opens as before. Chart images, the DOPE
+card and target images are not copied; they go to the share sheet only. **Stop
+Saving to Folder** turns it off; files already saved there stay. If the folder is
+deleted or the app loses access to it, exports go to the share sheet only and
+Settings says so.
 
 Automatic backups are not affected: they stay in the app's private storage.
 iPhone has no lasting folder access, so the option is not shown there; use the

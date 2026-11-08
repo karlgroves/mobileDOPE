@@ -90,7 +90,8 @@ const SECTIONS: Section[] = [
       'Once you send a file to another app, a cloud drive or a person, this policy no ' +
         'longer governs what happens to it.',
       'On Android you can choose an export folder in Settings › Data Management. Each ' +
-        "export you make then also saves a copy there, outside the app's private " +
+        'data export you make (profiles, DOPE logs, session reports, ballistic solutions ' +
+        "and full backups) then also saves a copy there, outside the app's private " +
         'storage, where other apps with access to that folder can read it. The folder ' +
         'is picked in the system folder picker, which needs no storage permission. ' +
         'Automatic backups are never saved there.',
