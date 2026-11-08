@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,9 +19,20 @@ export interface NumberPickerProps {
 }
 
 /**
+ * Where to open the list: at the current value, so a selection below the fold
+ * of a long list (#227's 25-yard distances run to dozens of rows) is in view.
+ * Undefined, which opens at the top, when there is no value, it is the first
+ * row, or it is not in the list.
+ */
+const initialIndexFor = (values: number[], value: number | undefined): number | undefined => {
+  const index = value === undefined ? -1 : values.indexOf(value);
+  return index > 0 ? index : undefined;
+};
+
+/**
  * NumberPicker component for selecting numeric values from a list
  * Optimized for field use with large touch targets
- * Commonly used for distance selection with presets (100, 200, 300, 400, 500, 600)
+ * Commonly used for distance selection with presets (100, 125, 150, ... 1000)
  */
 export const NumberPicker: React.FC<NumberPickerProps> = ({
   label,
@@ -55,6 +66,7 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
   };
 
   const values = generateValues();
+  const listRef = useRef<FlatList<number>>(null);
 
   const handleSelect = (selectedValue: number) => {
     onValueChange(selectedValue);
@@ -122,7 +134,21 @@ export const NumberPicker: React.FC<NumberPickerProps> = ({
             </View>
 
             <FlatList
+              ref={listRef}
               data={values}
+              // A picker list is bounded (the 25-yard distances are under forty
+              // rows), so every row is mounted: no option is missing until it is
+              // scrolled to, and the row to open at is always measured.
+              initialNumToRender={values.length}
+              initialScrollIndex={initialIndexFor(values, value)}
+              // Rows grow with the text size, so there is no fixed getItemLayout.
+              // If a row has not been measured yet, scroll to the estimate.
+              onScrollToIndexFailed={(info) => {
+                listRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: false,
+                });
+              }}
               accessibilityRole="radiogroup"
               accessibilityLabel={label}
               accessibilityHint={`Choose one ${label.toLowerCase()} value`}

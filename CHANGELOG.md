@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The distance selectors on Start Session, the active session and the
+  Ballistic Calculator now offer 100 to 1000 in 25-yard steps instead of
+  100-yard steps, and open their list at the current distance. In meters the
+  calculator offers the same figures, so 25-meter steps. A preset list that is
+  still the old default moves to the new one; a list you edited in Settings →
+  Distance Presets is kept.
 - Gusting wind in the ballistic calculator: an optional Gust Speed beside Wind
   Speed (which is then the lull). The solution shows a windage bracket, the
   hold for the lull to the hold for the gust.
