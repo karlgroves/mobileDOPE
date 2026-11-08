@@ -91,6 +91,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A shot logged from a range session or the calculator now appears at the top
+  of DOPE Logs, with its date, without a pull to refresh. The new log had no
+  timestamp until it was read back from the database, so the date sort put it
+  last. DOPE Logs also reloads every log each time it comes back into view, so
+  it no longer shows the one rifle's logs another screen loaded.
+- New DOPE Log starts Dial Corrections in the selected rifle's turret unit
+  (its click value type), and follows the rifle if another is picked, rather
+  than always starting at MIL. Settings → Default Units → Angular Unit is the
+  fallback. Choosing a unit by hand still wins, and an edited log keeps the
+  unit it was saved in.
 - New DOPE Log no longer says "No environmental data captured" and disables
   Save on a fresh launch when conditions were recorded in the last day. It
   shows that latest snapshot, with its age, and saves the log against it, by

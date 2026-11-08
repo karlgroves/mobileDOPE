@@ -18,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useDopeLog } from '../hooks/useDopeLog';
 import { dopeLogRepository } from '../services/database';
 import { useAmmoStore } from '../store/useAmmoStore';
+import { useAppStore } from '../store/useAppStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useEnvironmentStore } from '../store/useEnvironmentStore';
 import { useRifleStore } from '../store/useRifleStore';
@@ -113,9 +114,18 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   const [windageCorrection, setWindageCorrection] = useState<number | undefined>(
     existingLog?.windageCorrection || 0
   );
-  const [correctionUnit, setCorrectionUnit] = useState<'MIL' | 'MOA'>(
-    existingLog?.correctionUnit || 'MIL'
-  );
+  // The shooter's choice, if they made one; otherwise the log's own unit, the
+  // selected rifle's turret unit, or the Settings default. Derived like the
+  // rifle above, so a rifle that loads after the first render -- or a change
+  // of rifle -- still sets it. A fixed 'MIL' start let a shooter save numbers
+  // dialled on a MOA turret labelled MIL (#230).
+  const defaultCorrectionUnit = useAppStore((state) => state.settings.defaultCorrectionUnit);
+  const [chosenCorrectionUnit, setCorrectionUnit] = useState<'MIL' | 'MOA' | undefined>();
+  const correctionUnit: 'MIL' | 'MOA' =
+    chosenCorrectionUnit ??
+    existingLog?.correctionUnit ??
+    rifles.find((r) => r.id === selectedRifleId)?.clickValueType ??
+    defaultCorrectionUnit;
 
   // Target info
   const [targetType, setTargetType] = useState<'steel' | 'paper' | 'vital_zone' | 'other'>(
