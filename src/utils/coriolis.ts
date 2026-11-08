@@ -32,8 +32,8 @@
  * at about 2.8", inside Litz's published 2.5-3.0" for a typical 1000 yard
  * small-arms trajectory (Applied Ballistics, "Gyroscopic (spin) Drift and
  * Coriolis Effect"). Until #222 this file used 2ω·v·t, which is a VELOCITY, not
- * a distance: it overstated the deflection about fivefold at 300 yards and
- * understated it past 2 seconds of flight.
+ * a distance: for a .308 it overstated the deflection about fivefold at 300
+ * yards and by half at 1000, and understated it past about 3 seconds of flight.
  * `__tests__/unit/advancedCorrectionsValidation.test.ts` pins the closed forms,
  * the published band, and the integral over the solver's own trajectory.
  */

@@ -12,7 +12,7 @@
  * - Coriolis again, independently, by integrating over the solver's own
  *   trajectory. Drag slows the sideways velocity the Coriolis acceleration
  *   builds up in the same proportion as the bullet, so the deflection is
- *   2ω·trig·∫t dx, not the drag-free 2ω·trig·∫x dt (which is about 30% high at
+ *   2ω·trig·∫t dx, not the drag-free 2ω·trig·∫x dt (about a third high at
  *   1000 yards). This needs no assumption about an average speed, so it is the
  *   reference the closed form has to agree with.
  * - Coriolis against Litz's published magnitudes for a typical 1000 yard

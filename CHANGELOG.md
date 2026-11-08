@@ -114,9 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exists, Session → Current Conditions, instead of a Range tab the app does
   not have. Editing an existing log no longer needs conditions recorded first.
 - The Coriolis correction is now a distance. It was computed as 2ω·v·t, which
-  has the units of a velocity, so it overstated the deflection about five times
-  at 300 yards, about twice at 600, and understated it past two seconds of
-  flight; at 1000 yards it happened to be only about 10% high. It is now the
+  has the units of a velocity, so for a .308 it overstated the deflection about
+  five times at 300 yards, two and a half times at 600 and by half at 1000,
+  and understated it past about three seconds of flight. It is now the
   Coriolis acceleration integrated over the flight, with drag slowing the
   sideways speed it builds up, which at constant speed is the textbook
   ω·X·t·sin(latitude). A .308 at 1000 yards and 45° now drifts about 2.8",
