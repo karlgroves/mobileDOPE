@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Android export folder. Settings → Data Management → Choose Export Folder picks
+  a folder in the system picker; every manual export then also saves a copy
+  there, and the share sheet still opens. If the folder can no longer be
+  reached, exports go to the share sheet only and Settings says so. Automatic
+  backups stay in the app's private storage. Not offered on iOS.
 - Gusting wind in the ballistic calculator: an optional Gust Speed beside Wind
   Speed (which is then the lull). The solution shows a windage bracket, the
   hold for the lull to the hold for the gust.
