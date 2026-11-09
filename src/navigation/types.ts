@@ -74,12 +74,38 @@ export type SessionStackParamList = {
 };
 
 /**
+ * The solved shot the Dashboard's Confirm Shot carries into a new DOPE log (#245).
+ *
+ * Both units travel with the numbers they label. `correctionUnit` is the unit the
+ * Dashboard solved `elevationCorrection` and `windageCorrection` in, so it has to
+ * stay with them: labelling MIL numbers with a rifle's MOA turret is the defect
+ * #230 fixed on this screen, and this path would have reintroduced it.
+ */
+export type DOPELogPrefill = {
+  rifleId?: number | null;
+  ammoId?: number | null;
+  distance?: number;
+  distanceUnit?: 'yards' | 'meters';
+  elevationCorrection?: number;
+  windageCorrection?: number;
+  correctionUnit?: 'MIL' | 'MOA';
+};
+
+/**
  * History Stack Navigator (formerly Logs)
  */
 export type HistoryStackParamList = {
   DOPELogList: undefined;
   DOPELogDetail: { logId: number };
-  DOPELogEdit: { logId?: number };
+  /**
+   * A new log, an edit with a `logId`, or a quick entry carrying a `prefill`.
+   *
+   * `prefill` is what the Dashboard's Confirm Shot hands over: the shot it just
+   * solved. It is the starting point for the form's fields, not a record -- the
+   * shooter can change anything before saving, and an edited log's own recorded
+   * values outrank it (#245).
+   */
+  DOPELogEdit: { logId?: number; prefill?: DOPELogPrefill };
   DOPECurve: { rifleId: number; ammoId: number };
   /** Marks points of impact on the target for a log (#63). */
   TargetMarking: { logId: number };
