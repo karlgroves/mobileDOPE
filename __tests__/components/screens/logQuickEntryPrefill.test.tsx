@@ -167,6 +167,50 @@ describe('Quick entry prefill on New DOPE Log (#245)', () => {
     expect(chosenCorrectionUnit(screen)).toBe('MOA');
   });
 
+  it('takes a second quick entry that lands on an open form', async () => {
+    // Confirm Shot navigates to DOPELogEdit; when that screen is already the
+    // History stack's focused route (a quick entry left open, then another
+    // shot confirmed), React Navigation 7 updates its params on the same route
+    // key instead of pushing a new one. The form must start over from the new
+    // shot, not keep the first shot's numbers under the second shot's labels.
+    const nav = navigation();
+    const route = (prefill: DOPELogPrefill) =>
+      ({ params: { prefill }, key: 'k', name: 'DOPELogEdit' }) as never;
+    const screen = renderWithProviders(
+      <DOPELogEntry navigation={nav as never} route={route(quickEntry())} />
+    );
+    await waitFor(() => {
+      expect(fieldText(screen, 'Target Distance')).toBe('600');
+    });
+
+    screen.rerender(
+      <DOPELogEntry
+        navigation={nav as never}
+        route={route(
+          quickEntry({
+            rifleId: 1,
+            ammoId: 1,
+            distance: 300,
+            distanceUnit: 'yards',
+            elevationCorrection: 1.5,
+            windageCorrection: 0.25,
+            correctionUnit: 'MOA',
+          })
+        )}
+      />
+    );
+
+    await waitFor(() => {
+      expect(fieldText(screen, 'Target Distance')).toBe('300');
+    });
+    expect(pickerSelection(screen, 'Rifle Profile')).toBe('1');
+    expect(pickerSelection(screen, 'Ammunition')).toBe('1');
+    expect(chosenDistanceUnit(screen)).toBe('Yards');
+    expect(fieldText(screen, 'Elevation Correction')).toBe('1.50');
+    expect(fieldText(screen, 'Windage Correction')).toBe('0.25');
+    expect(chosenCorrectionUnit(screen)).toBe('MOA');
+  });
+
   it('leaves New DOPE Log alone when there is no prefill', async () => {
     const screen = render();
 

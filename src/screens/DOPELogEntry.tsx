@@ -40,7 +40,7 @@ type Props = LogsStackScreenProps<'DOPELogEdit'>;
  * after the log arrived (#141).
  */
 export function DOPELogEntry(props: Props) {
-  const { logId } = props.route.params || {};
+  const { logId, prefill } = props.route.params || {};
   const { colors } = useTheme().theme;
   const { log, status } = useDopeLog(logId);
 
@@ -65,7 +65,15 @@ export function DOPELogEntry(props: Props) {
     );
   }
 
-  return <DOPELogForm {...props} existingLog={log} />;
+  // A quick entry's prefill only seeds the form's initial state. When Confirm
+  // Shot lands on this screen while it is already the History stack's focused
+  // route, React Navigation updates the params on the same route key instead
+  // of pushing a new screen, so a new prefill starts the form over (#245).
+  // Without the key the form kept the first shot's numbers while its derived
+  // rifle and correction unit followed the second shot.
+  return (
+    <DOPELogForm key={prefill ? JSON.stringify(prefill) : 'form'} {...props} existingLog={log} />
+  );
 }
 
 function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?: DOPELog }) {

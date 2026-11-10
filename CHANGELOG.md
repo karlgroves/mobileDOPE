@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Confirm Shot on the Dashboard now opens New DOPE Log filled in with the shot
+  it just solved: rifle, ammunition, distance and unit, and the elevation and
+  windage corrections in the unit they were solved in. The form used to open
+  empty. Anything can still be changed before saving.
 - New DOPE Log starts the Distance unit at Settings → Default Units → Distance
   Unit instead of always starting at yards. Choosing a unit by hand still wins,
   and an edited log keeps the unit it was saved in.
