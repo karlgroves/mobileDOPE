@@ -114,9 +114,15 @@ function DOPELogForm({ route, navigation, existingLog }: Props & { existingLog?:
   const [distance, setDistance] = useState<number | undefined>(
     existingLog?.distance ?? prefill?.distance ?? 100
   );
-  const [distanceUnit, setDistanceUnit] = useState<'yards' | 'meters'>(
-    existingLog?.distanceUnit ?? prefill?.distanceUnit ?? 'yards'
-  );
+  // The shooter's choice, if they made one; otherwise the log's own unit, then
+  // a quick-entry prefill's unit, then the Settings default. There is no
+  // per-rifle distance unit, so Settings decides for a new log. A fixed 'yards'
+  // start ignored Settings -> Default Units -> Distance Unit, the same class of
+  // defect #230 fixed for the dial correction unit (#242).
+  const defaultDistanceUnit = useAppStore((state) => state.settings.defaultDistanceUnit);
+  const [chosenDistanceUnit, setDistanceUnit] = useState<'yards' | 'meters' | undefined>();
+  const distanceUnit: 'yards' | 'meters' =
+    chosenDistanceUnit ?? existingLog?.distanceUnit ?? prefill?.distanceUnit ?? defaultDistanceUnit;
 
   // Corrections
   const [elevationCorrection, setElevationCorrection] = useState<number | undefined>(
