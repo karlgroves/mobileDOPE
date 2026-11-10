@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 import { AmmoProfile } from '../../../src/models/AmmoProfile';
@@ -80,6 +80,21 @@ describe('Distance unit on New DOPE Log (#242)', () => {
     await waitFor(() => {
       expect(chosenUnit(screen)).toBe('Yards');
     });
+  });
+
+  it('follows a Settings default that arrives after the form opens', async () => {
+    // Settings load from AsyncStorage asynchronously, so a restored launch can
+    // render this screen before the stored default has arrived.
+    const screen = render();
+    await waitFor(() => {
+      expect(chosenUnit(screen)).toBe('Yards');
+    });
+
+    act(() => {
+      setDefaultUnit('meters');
+    });
+
+    expect(chosenUnit(screen)).toBe('Meters');
   });
 
   it("keeps the shooter's own choice over the Settings default", async () => {

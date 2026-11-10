@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- New DOPE Log starts the Distance unit at Settings → Default Units → Distance
+  Unit instead of always starting at yards. Choosing a unit by hand still wins,
+  and an edited log keeps the unit it was saved in.
+
 ## [1.2.0] - 2026-11-09
 
 A feature release built on your own logged DOPE: the solution can now be
