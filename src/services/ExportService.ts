@@ -12,6 +12,7 @@ import {
   newestAutomaticBackup,
   selectBackupsToPrune,
 } from '../utils/backupSchedule';
+import { parseDbTimestamp } from '../utils/dbTimestamp';
 
 import { deliverExport } from './exportFolder';
 
@@ -211,7 +212,7 @@ function dopeLogsToCSV(
   const rows = logs.map((log) => {
     const env = environmentsById.get(log.environmentId);
     return [
-      sanitizeCsvCell(log.timestamp ? new Date(log.timestamp).toISOString() : ''),
+      sanitizeCsvCell(log.timestamp ? parseDbTimestamp(log.timestamp).toISOString() : ''),
       sanitizeCsvCell(getRifleName(log.rifleId)),
       sanitizeCsvCell(getAmmoName(log.ammoId)),
       sanitizeCsvCell(log.distance),
@@ -329,7 +330,7 @@ function generateDOPELogsPDFHtml(
 
   const formatDate = (timestamp?: string): string => {
     if (!timestamp) return 'N/A';
-    const date = new Date(timestamp);
+    const date = parseDbTimestamp(timestamp);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',

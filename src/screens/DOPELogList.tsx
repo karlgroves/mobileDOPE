@@ -24,6 +24,7 @@ import { exportDOPELogsCSV, exportDOPELogsJSON } from '../services/ExportService
 import { useAmmoStore } from '../store/useAmmoStore';
 import { useDOPEStore } from '../store/useDOPEStore';
 import { useRifleStore } from '../store/useRifleStore';
+import { parseDbTimestamp } from '../utils/dbTimestamp';
 
 import type { DOPELog } from '../models/DOPELog';
 import type { LogsStackScreenProps } from '../navigation/types';
@@ -67,8 +68,8 @@ export function DOPELogList({ navigation }: Props) {
       switch (sortBy) {
         case 'date':
           // Most recent first
-          const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-          const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          const dateA = a.timestamp ? parseDbTimestamp(a.timestamp).getTime() : 0;
+          const dateB = b.timestamp ? parseDbTimestamp(b.timestamp).getTime() : 0;
           return dateB - dateA;
         case 'distance':
           return a.distance - b.distance;
@@ -254,7 +255,7 @@ export function DOPELogList({ navigation }: Props) {
 
           {item.timestamp && (
             <Text style={[styles.timestamp, { color: colors.text.secondary }]}>
-              {new Date(item.timestamp).toLocaleString()}
+              {parseDbTimestamp(item.timestamp).toLocaleString()}
             </Text>
           )}
 

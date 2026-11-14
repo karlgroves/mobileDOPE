@@ -178,6 +178,12 @@ describe('recencyFactor', () => {
     expect(recencyFactor(undefined, NOW)).toBe(1);
     expect(recencyFactor('not a date', NOW)).toBe(1);
   });
+
+  it('reads a zone-less SQLite timestamp as UTC (#228)', () => {
+    // One half-life before NOW, as `datetime('now')` stores it. Read as local
+    // time it lands hours off, and the factor is no longer a half.
+    expect(recencyFactor('2026-03-17 12:00:00', NOW)).toBeCloseTo(0.5, 10);
+  });
 });
 
 describe('environmentSimilarity', () => {

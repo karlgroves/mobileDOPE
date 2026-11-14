@@ -10,6 +10,8 @@
  * to be under a day old, and the caption names whichever case applied.
  */
 
+import { parseDbTimestamp } from './dbTimestamp';
+
 import type { MatchableEnvironment } from './dopeMatching';
 
 /** A snapshot older than this is not used as today's air. */
@@ -30,9 +32,6 @@ export interface MatchConditions {
   source: MatchConditionsSource;
 }
 
-/** SQLite's `datetime('now')`: UTC, space-separated, no zone designator. */
-const SQLITE_DATETIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/;
-
 /**
  * Epoch milliseconds of a snapshot timestamp.
  *
@@ -45,8 +44,7 @@ const SQLITE_DATETIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/;
  */
 export const snapshotTime = (timestamp: string | undefined): number | undefined => {
   if (timestamp === undefined) return undefined;
-  const iso = SQLITE_DATETIME.test(timestamp) ? `${timestamp.replace(' ', 'T')}Z` : timestamp;
-  const time = Date.parse(iso);
+  const time = parseDbTimestamp(timestamp).getTime();
   return Number.isNaN(time) ? undefined : time;
 };
 
