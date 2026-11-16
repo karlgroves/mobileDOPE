@@ -23,6 +23,7 @@
     "lint:cpd": "jscpd . --config .jscpd.json",
     "lint:cpd:ci": "jscpd . --config .jscpd.json",
     "links": "lychee --no-progress \"**/*.md\"",
+    "lint:workflows": "bash scripts/lint-workflows.sh",
     "security:audit": "node scripts/security-audit.mjs",
     "security:check": "npm audit --audit-level=high",
     "security:osv": "node scripts/security-osv.mjs",

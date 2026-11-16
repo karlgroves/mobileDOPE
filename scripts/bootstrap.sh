@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # Installs the optional, non-npm security/quality binaries used by the Husky
-# hooks and the `security:*` / `links` npm scripts. The hooks degrade gracefully
-# when these are absent, so this script is a convenience, not a requirement.
+# hooks and the `security:*` / `links` / `lint:workflows` npm scripts. The hooks
+# degrade gracefully when these are absent, so this script is a convenience, not a
+# requirement.
 set -euo pipefail
 
 # Presence is not the same as working. #78: a Linux gitleaks build sat in
@@ -53,6 +54,14 @@ if have lychee; then
 else
   echo "… installing lychee"
   brew install lychee 2>/dev/null || cargo install lychee 2>/dev/null || echo "  ! install lychee manually: https://github.com/lycheeverse/lychee/releases"
+fi
+
+# actionlint — GitHub Actions workflow lint (npm run lint:workflows)
+if have actionlint; then
+  echo "✓ actionlint present"
+else
+  echo "… installing actionlint"
+  brew install actionlint 2>/dev/null || echo "  ! install actionlint manually: https://github.com/rhysd/actionlint/releases"
 fi
 
 echo ""

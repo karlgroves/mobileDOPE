@@ -15,37 +15,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - name: Validate workflow syntax
+      # actionlint is not on the runner image. Pin the release and verify its
+      # checksum rather than piping an install script into a shell.
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
         run: |
-          echo "Validating GitHub Actions workflow files..."
-          errors=0
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$tarball" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${tarball}"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" actionlint
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
-          for f in .github/workflows/*.yml .github/workflows/*.yaml; do
-            [ -f "$f" ] || continue
-            echo "Checking $f..."
-
-            # Basic YAML syntax check
-            if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
-              echo "ERROR: Invalid YAML in $f"
-              errors=$((errors + 1))
-            fi
-
-            # Check for required 'on' and 'jobs' keys
-            if ! grep -q '^on:' "$f" && ! grep -q "^'on':" "$f" && ! grep -q '^"on":' "$f"; then
-              echo "WARNING: Missing 'on' trigger in $f"
-            fi
-
-            if ! grep -q '^jobs:' "$f"; then
-              echo "WARNING: Missing 'jobs' section in $f"
-            fi
-          done
-
-          if [ $errors -gt 0 ]; then
-            echo "Found $errors workflow file(s) with errors"
-            exit 1
-          fi
-
-          echo "All workflow files are valid"
+      # Same script as `npm run lint:workflows` and the pre-push hook (#249).
+      - name: Validate workflow syntax
+        run: bash scripts/lint-workflows.sh
 
   # The `ci-check` job was REMOVED.
   #

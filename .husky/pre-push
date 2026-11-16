@@ -39,6 +39,14 @@ else
   echo "ℹ osv-scanner not installed — lockfile scan skipped (npm audit gate still ran)"
 fi
 
+# Workflow lint (#249): the same script pr-check.yml runs. Optional binary,
+# like the scanners below; install it with ./scripts/bootstrap.sh.
+if command -v actionlint >/dev/null 2>&1; then
+  npm run lint:workflows || exit 1
+else
+  echo "ℹ actionlint not installed — workflow lint skipped (run ./scripts/bootstrap.sh to enable)"
+fi
+
 # SAST. ERROR-severity rules block; WARNING-severity rules are advisory.
 # See security/config/semgrep.yml and security-thresholds.json.
 if command -v semgrep >/dev/null 2>&1; then

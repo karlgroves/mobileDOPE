@@ -144,7 +144,8 @@ Quality is enforced **locally** through Husky hooks rather than additional CI
   content.
 - **commit-msg** — Conventional Commits via commitlint.
 - **pre-push** — `npm run check`, the waiver-gated dependency audit, `osv-scanner`,
-  Semgrep, and a full-history `trufflehog` scan.
+  the `actionlint` workflow lint (`npm run lint:workflows`), Semgrep, and a
+  full-history `trufflehog` scan.
 
 The secret-scan steps **fail when the tool is absent, or present but unable to run**,
 rather than printing a note and continuing. A gate that silently skips is not a gate,
@@ -155,8 +156,8 @@ and deliberately. See
 
 - **post-merge** — re-installs and audits when `package-lock.json` changes.
 
-`osv-scanner`, `semgrep` and `lychee` are optional — the hooks report and continue when
-they are absent. `trufflehog` is **not** optional; see above. Install them with:
+`osv-scanner`, `actionlint`, `semgrep` and `lychee` are optional — the hooks report and
+continue when they are absent. `trufflehog` is **not** optional; see above. Install them with:
 
 ```bash
 bash scripts/bootstrap.sh
