@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # Installs the optional, non-npm security/quality binaries used by the Husky
-# hooks and the `security:*` / `links` npm scripts. The hooks degrade gracefully
-# when these are absent, so this script is a convenience, not a requirement.
+# hooks and the `security:*` / `links` / `lint:workflows` npm scripts. The hooks
+# degrade gracefully when these are absent, so this script is a convenience, not a
+# requirement.
 set -euo pipefail
 
 # Presence is not the same as working. #78: a Linux gitleaks build sat in
