@@ -55,5 +55,13 @@ else
   brew install lychee 2>/dev/null || cargo install lychee 2>/dev/null || echo "  ! install lychee manually: https://github.com/lycheeverse/lychee/releases"
 fi
 
+# actionlint — GitHub Actions workflow lint (npm run lint:workflows)
+if have actionlint; then
+  echo "✓ actionlint present"
+else
+  echo "… installing actionlint"
+  brew install actionlint 2>/dev/null || echo "  ! install actionlint manually: https://github.com/rhysd/actionlint/releases"
+fi
+
 echo ""
 echo "Done. Run 'npm run check' for the npm-only gate, or the 'security:*' scripts for the binary-backed scans."

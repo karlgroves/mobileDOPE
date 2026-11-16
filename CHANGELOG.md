@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `npm run lint:workflows` lints the GitHub Actions workflows with actionlint
+  (`scripts/lint-workflows.sh`). It replaces the YAML-parse-and-grep check that
+  lived only inside `pr-check.yml`, which now calls the same script; the
+  pre-push hook runs it too when actionlint is installed (#249).
+
 ### Fixed
 
 - Confirm Shot on the Dashboard now opens New DOPE Log filled in with the shot
